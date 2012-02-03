@@ -2,7 +2,6 @@ package vultura.factors
 
 import org.specs2._
 import specification.Fragments
-import vultura.cnf.dsl._
 
 /**
  * <enter description>
@@ -16,7 +15,7 @@ class DenseFactorTest extends Specification {
   val table1 = DenseFactor.fromFunction(0 :: Nil, Array(0, 1) :: Nil, _ => 1)
   //two by two table with entries are the sum of arguments
   val table2 = DenseFactor.fromFunction(
-    0 :: 1 :: Nil,
+    Array(0,1),
     Array(0, 1) :: Array(0, 1) :: Nil,
     l => l.sum
   )
@@ -34,8 +33,10 @@ class DenseFactorTest extends Specification {
         ((table2.evaluate(Array(0, 0)) === 0) and
           (table2.evaluate(Array(0, 1)) === 1) and
           (table2.evaluate(Array(1, 0)) === 1) and
-          (table2.evaluate(Array(1, 1)) === 2))
-
+          (table2.evaluate(Array(1, 1)) === 2)) ^
   "condition on second value of second variable in table2" !
-    (table2.genMarg(Array(1), Array(Array(1))).evaluate(Array(0)) === 1)
+    (table2.genMarg(Array(1), Array(Array(1))).evaluate(Array(0)) === 1) ^
+  "sum over first variable of table2" !
+    (table2.genMarg(Array(0), Array(Array(0,1))).evaluate(Array(0)) === 1 and
+      table2.genMarg(Array(0), Array(Array(0,1))).evaluate(Array(1)) === 3)
 }
