@@ -46,7 +46,7 @@ class DenseFactor[@specialized T: ClassManifest] protected[DenseFactor](val vari
       var intoVariables = 0
       val result = new Array[Int](variables.size)
       while (intoVariables < variables.size) {
-        if (variables(intoVariables) == vars(intoVars)) {
+        if (intoVars < vars.size && variables(intoVariables) == vars(intoVars)) {
           result(intoVariables) = intoVars | MASK
           intoVars += 1
         } else {
