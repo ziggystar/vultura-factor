@@ -28,11 +28,14 @@ package object util {
   implicit def seq2randomSeq[A](s: Iterable[A]) = new RichRandomSeq(s.toIndexedSeq)
   implicit def array2randomSeq[A](s: Array[A]) = new RichRandomSeq(s)
 
-  //convert nested sequences to AArray which provides the allCombinations function
+  //convert nested sequences to AArray which provides the crossProduct function
   type AA[A] = Array[Array[A]]
   implicit def seqseq2aa[T: ClassManifest](ss: Seq[Seq[T]]): AA[T] = ss.map(_.toArray).toArray.asInstanceOf[AA[T]]
   implicit def seqarray2aa[T: ClassManifest](sa: Seq[Array[T]]): AA[T] = sa.toArray.asInstanceOf[AA[T]]
   implicit def aa2aa[T: ClassManifest](aa: Array[Array[T]]): AA[T] = aa.asInstanceOf[AA[T]]
+
+  /** Convenience method. */
+  def crossProduct[T: ClassManifest](aa: AA[T]) = new DomainCPI(aa)
 
   implicit def statisticsPimper[A: Numeric](xs: Iterable[A]) = new {
       def mean: Double = implicitly[Numeric[A]].toDouble(xs.sum) / xs.size

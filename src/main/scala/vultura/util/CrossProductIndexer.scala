@@ -8,15 +8,13 @@ package vultura.util
  * User: Thomas Geier
  * Date: 02.09.11
  */
-class CrossProductIndexer(_ranges: Seq[Int], val lsbf: Boolean = true) {
+class CrossProductIndexer(_ranges: Seq[Int], val lsbf: Boolean = true) extends IndexedSeq[Array[Int]]{
   assert(_ranges.map(BigInt(_)).product < Integer.MAX_VALUE, "cannot create an indexer this big")
 
   private val variableRanges: Array[Int] = if (lsbf) _ranges.toArray else _ranges.reverse.toArray
 
   def ranges: IndexedSeq[Int] = variableRanges
 
-  /**The biggest index - 1. */
-  val size: Int = variableRanges.product
   private val multipliers: Array[Int] = variableRanges.scanLeft(1)(_ * _)
 
   /**
@@ -69,17 +67,19 @@ class CrossProductIndexer(_ranges: Seq[Int], val lsbf: Boolean = true) {
     if (lsbf) result else result.reverse
   }
 
+  /** @return A fresh empty array that is the right size to hold a cross-product element. */
   def createArray: Array[Int] = new Array[Int](variableRanges.length)
 
-  def iterator: Iterator[Array[Int]] = Iterator.from(0).map(index2Seq(_)).take(size)
-
-  /**Always returns the same array, thus overwriting the old results. Use with care. */
+  /** @return An iterator reusing always the same array, thus overwriting the old results. Use with care. */
   def mutableIterator: Iterator[Array[Int]] = {
     val mutableArray: Array[Int] = createArray
     Iterator.from(0).map {
       i =>
         index2Seq(i, mutableArray)
         mutableArray
-    }.take(size)
+    }.take(length)
   }
+
+  val length: Int = variableRanges.product
+  def apply(idx: Int): Array[Int] = index2Seq(idx)
 }
