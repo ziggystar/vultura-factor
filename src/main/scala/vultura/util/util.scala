@@ -30,9 +30,8 @@ package object util {
 
   //convert nested sequences to AArray which provides the crossProduct function
   type AA[A] = Array[Array[A]]
-  implicit def seqseq2aa[T: ClassManifest](ss: Seq[Seq[T]]): AA[T] = ss.map(_.toArray).toArray.asInstanceOf[AA[T]]
-  implicit def seqarray2aa[T: ClassManifest](sa: Seq[Array[T]]): AA[T] = sa.toArray.asInstanceOf[AA[T]]
-  implicit def aa2aa[T: ClassManifest](aa: Array[Array[T]]): AA[T] = aa.asInstanceOf[AA[T]]
+  implicit def seqseq2aa[T: ClassManifest](ss: Seq[Seq[T]]): AA[T] = ss.map(_.toArray).toArray
+  implicit def seqarray2aa[T: ClassManifest](sa: Seq[Array[T]]): AA[T] = sa.toArray
 
   /** Convenience method. */
   def crossProduct[T: ClassManifest](aa: AA[T]) = new DomainCPI(aa)
