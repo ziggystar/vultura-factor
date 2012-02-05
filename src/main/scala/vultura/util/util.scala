@@ -32,6 +32,7 @@ package object util {
   type AA[A] = Array[Array[A]]
   implicit def seqseq2aa[T: ClassManifest](ss: Seq[Seq[T]]): AA[T] = ss.map(_.toArray).toArray
   implicit def seqarray2aa[T: ClassManifest](sa: Seq[Array[T]]): AA[T] = sa.toArray
+  implicit def arraySeq2aa[T: ClassManifest](as: Array[Seq[T]]): AA[T] = as.map(_.toArray)
 
   /** Convenience method. */
   def crossProduct[T: ClassManifest](aa: AA[T]) = new DomainCPI(aa)
