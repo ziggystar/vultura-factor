@@ -7,7 +7,7 @@ object CNFasBIFun {
 
   import CNF._
 
-  implicit object ClauseAsFun extends Factor[Clause, BigInt, DenseFactor[BigInt]] {
+  implicit object ClauseAsFun extends Factor[Clause, BigInt] {
     def variables(f: CNF.Clause): Array[Int] = f.map(_ & ~CNF.NEG_MASK).distinct.toArray
 
     def domains(f: CNF.Clause): Array[Array[Int]] = variables(f).map(_ => Array(0,1))
@@ -32,11 +32,6 @@ object CNFasBIFun {
       else
         f.filterNot(i => variables.contains(i & ~CNF.NEG_MASK))
     }
-
-    def marginalize(f: CNF.Clause,
-                    variables: Array[Int],
-                    domains: Array[Array[Int]])(implicit monoid: Monoid[BigInt]): DenseFactor[BigInt] =
-      marginalizeDense(f,variables,domains)
 
     def makesClauseTrue(f: CNF.Clause, variable: Int, value: Int): Boolean =
       if(value == 1) f.contains(variable) else f.contains(variable | CNF.NEG_MASK)

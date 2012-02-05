@@ -9,13 +9,12 @@ import vultura.util._
  *
  * @tparam A This type functions as a factor.
  * @tparam B This is the result type of the factor. This means the return type of `evaluate`.
- * @tparam C This is the type that is returned in case of marginalization. This might be different from `A` for some
  *  implementations, e.g. when counting SAT problem solutions.
  * @author Thomas Geier
  * @since 30.01.12
  */
 
-trait Factor[A, B, C] {
+trait Factor[A,B] {
   def variables(f: A): Array[Int]
 
   def domains(f: A): Array[Array[Int]]
@@ -26,7 +25,15 @@ trait Factor[A, B, C] {
    * but not marginalized without loosing their type.
    */
   def condition(f: A, variables: Array[Int], value: Array[Int]): A
+}
 
+/**A factor implementation can provide an instance of this type-class if it supports marginalization to a certain
+ * target type 'M'.
+ * @tparam T The type of the factor.
+ * @tparam R Factor evaluates to this result.
+ * @tparam M Supports marginalization to this type.
+ */
+trait TransMarginalize[T,R,M]{
   /**
    * Generalization of marginalization and conditioning. This method sums over all given domain values
    * for the specified variables. Specifying only one domain value for a variable is equivalent to conditioning
@@ -40,64 +47,5 @@ trait Factor[A, B, C] {
    * @param monoid Use this for summing the result values of type `T`.
    * @return A `Factor` that does not depend on any variable in `variables`.
    */
-  def marginalize(f: A, variables: Array[Int], domains: Array[Array[Int]])(implicit monoid: Monoid[B]): C
-
-  def marginalizeDense(f: A, _vars: Array[Int], _doms: Array[Array[Int]])(implicit monoid: Monoid[B], manifestB: ClassManifest[B]): DenseFactor[B] = {
-      val (vars, doms) = _vars.zip(_doms).sortBy(_._1).unzip
-
-      val MASK = 0x80000000
-
-      val (variables,domains) = (this.variables(f),this.domains(f))
-
-      val (remainingVars, remainingDomains) = variables.zip(domains).filterNot(t => vars.contains(t._1)).unzip
-
-      //this tells us where to look for a value when constructing an assignment to this Fun
-      //if high bit is unset remainingVars and else to the summed out vars
-      //this is not in imperative style for optimization purposes but for readability:/
-      val lookUp: Array[Int] = {
-        var intoVars = 0
-        var intoRemaining = 0
-        var intoVariables = 0
-        val result = new Array[Int](variables.size)
-        while (intoVariables < variables.size) {
-          if (intoVars < vars.size && variables(intoVariables) == vars(intoVars)) {
-            result(intoVariables) = intoVars | MASK
-            intoVars += 1
-          } else {
-            assert(variables(intoVariables) == remainingVars(intoRemaining))
-            result(intoVariables) = intoRemaining
-            intoRemaining += 1
-          }
-          intoVariables += 1
-        }
-
-        result
-      }
-
-      val _cpi = new DomainCPI(doms)
-      val reusedAssignment = new Array[Int](variables.size)
-
-      //fix the assignment to the remaining variables and sum over everything in vars/doms
-      //the argument to sumOut goes to the remaining variables
-      val sumOut: Array[Int] => B = {
-        assignment =>
-          def reconstructAssignment(remainAss: Array[Int], newAss: Array[Int]): Array[Int] = {
-            var i = 0
-            while (i < reusedAssignment.size) {
-              val index = lookUp(i)
-              val value = if ((index & MASK) != 0) newAss(index ^ MASK) else remainAss(index)
-              reusedAssignment(i) = value
-              i += 1
-            }
-            reusedAssignment
-          }
-
-          _cpi.iterator.map {
-            newAssign =>
-              evaluate(f,reconstructAssignment(assignment, newAssign))
-          }.reduce(_ |+| _)
-      }
-
-      DenseFactor.fromFunction(remainingVars, remainingDomains, sumOut)
-    }
+  def marginalize(f: T, variables: Array[Int], domains: Array[Array[Int]])(implicit evF: Factor[T,R], monoid: Monoid[R]): M
 }

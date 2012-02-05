@@ -2,12 +2,13 @@ package vultura.factors
 
 import org.specs2._
 import specification.Fragments
+import scalaz.Monoid
 
 /**
  * <enter description>
  *
  * @author Thomas Geier
- * Date: 01.02.12
+ * @since 01.02.12
  */
 
 class DenseFactorTest extends Specification {
@@ -28,9 +29,9 @@ class DenseFactorTest extends Specification {
     "create a simple table fun" !
       (table1.evaluate(Array(0)) === 1) ^
       "sum over a variable using genMarg" !
-        ((marginalizeDense[DenseFactor[Int],Int](table1,Array(0), Array(Array(0, 1))).evaluate(Array()): Int) === 2) ^
+        ((DenseFactor.marginalizeDense(table1,Array(0), Array(Array(0, 1)))(SelfFactor.sf2f[Int],implicitly[Monoid[Int]],implicitly[ClassManifest[Int]]).evaluate(Array()): Int) === 2) ^
       "condition on a variable using genMarg" !
-        (marginalizeDense[DenseFactor[Int],Int](table1,Array(0), Array(Array(0))).evaluate(Array()) === 1) ^
+        (DenseFactor.marginalizeDense(table1,Array(0), Array(Array(0))).evaluate(Array()) === 1) ^
       "data of table2 must be 0,1,1,2" !
         (table2.data === Array(0, 1, 1, 2)) ^
       "read out table2" !
@@ -39,8 +40,8 @@ class DenseFactorTest extends Specification {
           (table2.evaluate(Array(1, 0)) === 1) and
           (table2.evaluate(Array(1, 1)) === 2)) ^
   "condition on second value of second variable in table2" !
-    (marginalizeDense[DenseFactor[Int],Int](table2,Array(1), Array(Array(1))).evaluate(Array(0)) === 1) ^
+    (DenseFactor.marginalizeDense(table2,Array(1), Array(Array(1))).evaluate(Array(0)) === 1) ^
   "sum over first variable of table2" !
-    (marginalizeDense[DenseFactor[Int],Int](table2,Array(0), Array(Array(0,1))).evaluate(Array(0)) === 1 and
-      marginalizeDense[DenseFactor[Int],Int](table2,Array(0), Array(Array(0,1))).evaluate(Array(1)) === 3)
+    (DenseFactor.marginalizeDense(table2,Array(0), Array(Array(0,1))).evaluate(Array(0)) === 1 and
+      DenseFactor.marginalizeDense(table2,Array(0), Array(Array(0,1))).evaluate(Array(1)) === 3)
 }
