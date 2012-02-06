@@ -1,7 +1,9 @@
 package vultura.factors
 
-import scalaz.Monoid
+import scalaz._
+import scalaz.Scalaz._
 import vultura.{factors => vf}
+import collection.Iterable
 
 /**
  * Can only wrap factors of a type that marginalizes to itself, thus `Factor[T,R,T]` for some `T`.
@@ -34,7 +36,10 @@ case class ProductFactor[T,R](factors: Iterable[Either[T,DenseFactor[R]]],
       //take only
       (fvars,fvals) = zipped.filter(t => fv.contains(t._1)).unzip
     ) yield vf.condition(f,fvars.toArray,fvals.toArray)
-    ProductFactor(reducedFactors,productMonoid)
+    val (constant,varying: Iterable[Either[T, DenseFactor[R]]]) = reducedFactors.partition(vf.variables(_).size == 0)
+    val constantValue = constant.map(vf.evaluate(_, Array())).reduce(productMonoid.append(_,_))
+    val singleConstantFactor: DenseFactor[R] = DenseFactor.constantFactor(constantValue)
+    ProductFactor(varying.toIndexedSeq :+ Right(singleConstantFactor),productMonoid)
   }
 }
 

@@ -52,6 +52,8 @@ object DenseFactor {
     new DenseFactor(sortedVars.toArray, sortedDomains.map(_.toArray).toArray, table)
   }
 
+  def constantFactor[T: ClassManifest](singleValue: T) = new DenseFactor(Array(),Array.empty[Array[Int]],Array(singleValue))
+
   implicit def dfAsFactor[R]: Factor[DenseFactor[R],R] = new Factor[DenseFactor[R],R]{
     def variables(f: DenseFactor[R]): Array[Int] =
       f.variables
