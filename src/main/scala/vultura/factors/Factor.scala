@@ -24,7 +24,7 @@ trait Factor[A,B] {
   /**This is provided to retain the type of the factor after conditioning. E.g. SAT clauses can be conditioned
    * but not marginalized without loosing their type.
    */
-  def condition(f: A, variables: Array[Int], value: Array[Int]): A
+  def condition(f: A, variables: Array[Int], values: Array[Int]): A
 }
 
 /**A factor implementation can provide an instance of this type-class if it supports marginalization to a certain
