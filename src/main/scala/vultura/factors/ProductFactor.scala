@@ -9,12 +9,12 @@ import vultura.{factors => vf}
  * @since 05.02.12
  */
 
-case class ProductFactor[T,R](factors: Iterable[Either[T,SelfFactor[R]]],
+case class ProductFactor[T,R](factors: Iterable[Either[T,DenseFactor[R]]],
                               productMonoid: Monoid[R])
                              (implicit fev: Factor[T,R],
-                              cmr: ClassManifest[R]) extends SelfFactor[R] {
+                              cmr: ClassManifest[R]) {
 
-  val variables: Array[Int] = factors.flatMap(f => vf.variables(f)(eitherFactor(fev,SelfFactor.sf2f[R]))).toSeq.distinct.toArray
+  val variables: Array[Int] = factors.flatMap(f => vf.variables(f)).toSeq.distinct.toArray
   val domains: Array[Array[Int]] = variables.map(factors.flatMap(f => vf.variables(f).zip(vf.domains(f))).toMap)
 
   def evaluate(assignment: Array[Int]): R = {
@@ -35,5 +35,18 @@ case class ProductFactor[T,R](factors: Iterable[Either[T,SelfFactor[R]]],
       (fvars,fvals) = zipped.filter(t => fv.contains(t._1)).unzip
     ) yield vf.condition(f,fvars.toArray,fvals.toArray)
     ProductFactor(reducedFactors,productMonoid)
+  }
+}
+
+object ProductFactor {
+  implicit def pfAsFactor[T,R]: Factor[ProductFactor[T,R],R] = new Factor[ProductFactor[T,R],R] {
+    def variables(f: ProductFactor[T, R]): Array[Int] =
+      f.variables
+    def domains(f: ProductFactor[T, R]): Array[Array[Int]] =
+      f.domains
+    def evaluate(f: ProductFactor[T, R], assignment: Array[Int]): R =
+      f.evaluate(assignment)
+    def condition(f: ProductFactor[T, R], variables: Array[Int], values: Array[Int]): ProductFactor[T, R] =
+      f.condition(variables,values)
   }
 }

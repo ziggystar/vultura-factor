@@ -14,8 +14,7 @@ import vultura.util._
  */
 class DenseFactor[@specialized T: ClassManifest] protected[DenseFactor](val variables: Array[Int],
                                                                         val domains: Array[Array[Int]],
-                                                                        val data: Array[T])
-extends SelfFactor[T]{
+                                                                        val data: Array[T]){
   val cpi = new CrossProductIndexer(domains.map(_.size))
 
   def evaluate(assignment: Array[Int]): T = {
@@ -26,18 +25,14 @@ extends SelfFactor[T]{
 
   /** Condition via marginalization. */
   def condition(vars: Array[Int],
-                values: Array[Int]): SelfFactor[T] = new FactorView[SelfFactor[T],T](vars.zip(values).toMap, this)
-  
+                values: Array[Int]): DenseFactor[T] = {
+    implicit val fakeMonoid: Monoid[T] = new Monoid[T]{
+      def append(s1: T, s2: => T): T = sys.error("monoid on marginalization for conditioning should not be used")
+      val zero: T = sys.error("monoid on marginalization for conditioning should not be used")
+    }
+    DenseFactor.marginalizeDense(this, vars, values.map(Array(_)))
+  }
 }
-
-class FactorView[A,R](val condition: Map[Int,Int], val factor: A)(implicit evF: Factor[A,R]) extends SelfFactor[R] {
-  import vultura.{factors => vf}
-  val variables = vf.variables(factor).filterNot(condition.contains)
-  val domains = variables.map(vf.variables(factor).zip(vf.domains(factor)).toMap)
-  def evaluate(assignment: Array[Int]) = vf.evaluate(factor,variables.map((variables zip assignment).toMap ++ condition))
-  def condition(variables: Array[Int], values: Array[Int]) = new FactorView(condition ++ (variables zip values).toMap,factor)(evF)
-}
-
 
 object DenseFactor {
   def fromFunction[T: ClassManifest](_vars: Seq[Int], _domains: Seq[Array[Int]], f: Array[Int] => T) = {
@@ -55,6 +50,17 @@ object DenseFactor {
     }
 
     new DenseFactor(sortedVars.toArray, sortedDomains.map(_.toArray).toArray, table)
+  }
+
+  implicit def dfAsFactor[R]: Factor[DenseFactor[R],R] = new Factor[DenseFactor[R],R]{
+    def variables(f: DenseFactor[R]): Array[Int] =
+      f.variables
+    def domains(f: DenseFactor[R]): Array[Array[Int]] =
+      f.domains
+    def evaluate(f: DenseFactor[R], assignment: Array[Int]): R =
+      f.evaluate(assignment)
+    def condition(f: DenseFactor[R], variables: Array[Int], values: Array[Int]): DenseFactor[R] =
+      f.condition(variables,values)
   }
 
   /**

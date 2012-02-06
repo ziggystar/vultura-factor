@@ -13,5 +13,5 @@ class DomainCPITest extends Specification {
     (cpi1.iterator.flatten.toSeq === Seq(1, 3, 2, 3)) ^
     (cpi2.iterator.flatten.toSeq === Seq(1, 3, 2, 3, 1, 4, 2, 4)) ^
     "test empty CPI" ! (cpiEmpty.size === 0) ^
-    (cpiBI(3).deep === Seq(BigInt(2),BigInt(0)))
+    (cpiBI(3).deep === Seq(BigInt(2),BigInt(1)))
 }

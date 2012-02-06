@@ -1,8 +1,6 @@
 package vultura.factors
 
-import scalaz._
-import Scalaz._
-import vultura.util._
+import scalaz.Monoid
 
 /**
  * Generic multi-variate functions type class.

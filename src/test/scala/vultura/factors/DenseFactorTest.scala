@@ -29,7 +29,7 @@ class DenseFactorTest extends Specification {
     "create a simple table fun" !
       (table1.evaluate(Array(0)) === 1) ^
       "sum over a variable using genMarg" !
-        ((DenseFactor.marginalizeDense(table1,Array(0), Array(Array(0, 1)))(SelfFactor.sf2f[Int],implicitly[Monoid[Int]],implicitly[ClassManifest[Int]]).evaluate(Array()): Int) === 2) ^
+        ((DenseFactor.marginalizeDense(table1,Array(0), Array(Array(0, 1))).evaluate(Array()): Int) === 2) ^
       "condition on a variable using genMarg" !
         (DenseFactor.marginalizeDense(table1,Array(0), Array(Array(0))).evaluate(Array()) === 1) ^
       "data of table2 must be 0,1,1,2" !
