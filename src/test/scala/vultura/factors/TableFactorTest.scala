@@ -11,15 +11,15 @@ import scalaz.Monoid
  * @since 01.02.12
  */
 
-class DenseFactorTest extends Specification {
+class TableFactorTest extends Specification {
   //one variable with two values 0,1 and every entry is 1
-  val table1 = DenseFactor.fromFunction(
+  val table1 = TableFactor.fromFunction(
     Array(0),
     Array(0, 1) :: Nil,
     _ => 1
   )
   //two by two table with entries are the sum of arguments
-  val table2 = DenseFactor.fromFunction(
+  val table2 = TableFactor.fromFunction(
     Array(0,1),
     Array(0, 1) :: Array(0, 1) :: Nil,
     l => l.sum
@@ -29,9 +29,9 @@ class DenseFactorTest extends Specification {
     "create a simple table fun" !
       (table1.evaluate(Array(0)) === 1) ^
       "sum over a variable using genMarg" !
-        ((DenseFactor.marginalizeDense(table1,Array(0), Array(Array(0, 1))).evaluate(Array()): Int) === 2) ^
+        ((TableFactor.marginalizeDense(table1,Array(0), Array(Array(0, 1))).evaluate(Array()): Int) === 2) ^
       "condition on a variable using genMarg" !
-        (DenseFactor.marginalizeDense(table1,Array(0), Array(Array(0))).evaluate(Array()) === 1) ^
+        (TableFactor.marginalizeDense(table1,Array(0), Array(Array(0))).evaluate(Array()) === 1) ^
       "data of table2 must be 0,1,1,2" !
         (table2.data === Array(0, 1, 1, 2)) ^
       "read out table2" !
@@ -40,8 +40,8 @@ class DenseFactorTest extends Specification {
           (table2.evaluate(Array(1, 0)) === 1) and
           (table2.evaluate(Array(1, 1)) === 2)) ^
   "condition on second value of second variable in table2" !
-    (DenseFactor.marginalizeDense(table2,Array(1), Array(Array(1))).evaluate(Array(0)) === 1) ^
+    (TableFactor.marginalizeDense(table2,Array(1), Array(Array(1))).evaluate(Array(0)) === 1) ^
   "sum over first variable of table2" !
-    (DenseFactor.marginalizeDense(table2,Array(0), Array(Array(0,1))).evaluate(Array(0)) === 1 and
-      DenseFactor.marginalizeDense(table2,Array(0), Array(Array(0,1))).evaluate(Array(1)) === 3)
+    (TableFactor.marginalizeDense(table2,Array(0), Array(Array(0,1))).evaluate(Array(0)) === 1 and
+      TableFactor.marginalizeDense(table2,Array(0), Array(Array(0,1))).evaluate(Array(1)) === 3)
 }

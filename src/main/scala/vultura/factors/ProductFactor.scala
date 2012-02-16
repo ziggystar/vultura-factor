@@ -6,15 +6,13 @@ import vultura.{factors => vf}
 import collection.Iterable
 
 /**
- * Can only wrap factors of a type that marginalizes to itself, thus `Factor[T,R,T]` for some `T`.
  * @author Thomas Geier
  * @since 05.02.12
  */
 
-case class ProductFactor[T,R](factors: Iterable[Either[T,DenseFactor[R]]],
+case class ProductFactor[T,R](factors: Iterable[T],
                               productMonoid: Monoid[R])
-                             (implicit fev: Factor[T,R],
-                              cmr: ClassManifest[R]) {
+                             (implicit fev: Factor[T,R]) {
 
   val variables: Array[Int] = factors.flatMap(f => vf.variables(f)).toSeq.distinct.toArray
   val domains: Array[Array[Int]] = variables.map(factors.flatMap(f => vf.variables(f).zip(vf.domains(f))).toMap)
@@ -36,15 +34,16 @@ case class ProductFactor[T,R](factors: Iterable[Either[T,DenseFactor[R]]],
       //take only
       (fvars,fvals) = zipped.filter(t => fv.contains(t._1)).unzip
     ) yield vf.condition(f,fvars.toArray,fvals.toArray)
-    val (constant,varying: Iterable[Either[T, DenseFactor[R]]]) = reducedFactors.partition(vf.variables(_).size == 0)
-    val constantValue = constant.map(vf.evaluate(_, Array())).reduce(productMonoid.append(_,_))
-    val singleConstantFactor: DenseFactor[R] = DenseFactor.constantFactor(constantValue)
-    ProductFactor(varying.toIndexedSeq :+ Right(singleConstantFactor),productMonoid)
+    val (constant,varying) = reducedFactors.partition(vf.variables(_).size == 0)
+    val constantNotZero = constant.filterNot(f => vf.evaluate(f,Array()) == productMonoid.zero)
+    ProductFactor(varying.toIndexedSeq ++ constantNotZero,productMonoid)
   }
+
+  def filter(p: T => Boolean): ProductFactor[T, R] = ProductFactor(factors.filter(p),productMonoid)
 }
 
 object ProductFactor {
-  implicit def pfAsFactor[T,R]: Factor[ProductFactor[T,R],R] = new Factor[ProductFactor[T,R],R] {
+  implicit def pfAsFactor[T,R]: Factor[ProductFactor[T,R],R] = new DenseFactor[ProductFactor[T,R],R] {
     def variables(f: ProductFactor[T, R]): Array[Int] =
       f.variables
     def domains(f: ProductFactor[T, R]): Array[Array[Int]] =

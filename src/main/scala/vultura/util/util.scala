@@ -36,6 +36,8 @@ package object util {
 
   /** Convenience method. */
   def crossProduct[T: ClassManifest](aa: AA[T]) = new DomainCPI(aa)
+  /** Take a random element from each entry in aa. */
+  def randomAssignment[T: ClassManifest](aa: AA[T], random: Random): Array[T] = aa.map(a => a(random.nextInt(a.size)))
 
   implicit def statisticsPimper[A: Numeric](xs: Iterable[A]) = new {
       def mean: Double = implicitly[Numeric[A]].toDouble(xs.sum) / xs.size

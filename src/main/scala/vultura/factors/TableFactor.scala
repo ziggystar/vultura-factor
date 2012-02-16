@@ -12,7 +12,7 @@ import vultura.util._
  * @param domains
  * @param data
  */
-class DenseFactor[@specialized T: ClassManifest] protected[DenseFactor](val variables: Array[Int],
+class TableFactor[@specialized T: ClassManifest] protected[TableFactor](val variables: Array[Int],
                                                                         val domains: Array[Array[Int]],
                                                                         val data: Array[T]){
   val cpi = new CrossProductIndexer(domains.map(_.size))
@@ -25,16 +25,16 @@ class DenseFactor[@specialized T: ClassManifest] protected[DenseFactor](val vari
 
   /** Condition via marginalization. */
   def condition(vars: Array[Int],
-                values: Array[Int]): DenseFactor[T] = {
+                values: Array[Int]): TableFactor[T] = {
     implicit val fakeMonoid: Monoid[T] = new Monoid[T]{
       def append(s1: T, s2: => T): T = sys.error("monoid on marginalization for conditioning should not be used")
       val zero: T = sys.error("monoid on marginalization for conditioning should not be used")
     }
-    DenseFactor.marginalizeDense(this, vars, values.map(Array(_)))
+    TableFactor.marginalizeDense(this, vars, values.map(Array(_)))
   }
 }
 
-object DenseFactor {
+object TableFactor {
   def fromFunction[T: ClassManifest](_vars: Seq[Int], _domains: Seq[Array[Int]], f: Array[Int] => T) = {
     require(_vars.size == _domains.size, "variable number and domain number don't match")
 
@@ -49,19 +49,19 @@ object DenseFactor {
         i += 1
     }
 
-    new DenseFactor(sortedVars.toArray, sortedDomains.map(_.toArray).toArray, table)
+    new TableFactor(sortedVars.toArray, sortedDomains.map(_.toArray).toArray, table)
   }
 
-  def constantFactor[T: ClassManifest](singleValue: T) = new DenseFactor(Array(),Array.empty[Array[Int]],Array(singleValue))
+  def constantFactor[T: ClassManifest](singleValue: T) = new TableFactor(Array(),Array.empty[Array[Int]],Array(singleValue))
 
-  implicit def dfAsFactor[R]: Factor[DenseFactor[R],R] = new Factor[DenseFactor[R],R]{
-    def variables(f: DenseFactor[R]): Array[Int] =
+  implicit def dfAsFactor[R]: DenseFactor[TableFactor[R],R] = new DenseFactor[TableFactor[R],R]{
+    def variables(f: TableFactor[R]): Array[Int] =
       f.variables
-    def domains(f: DenseFactor[R]): Array[Array[Int]] =
+    def domains(f: TableFactor[R]): Array[Array[Int]] =
       f.domains
-    def evaluate(f: DenseFactor[R], assignment: Array[Int]): R =
+    def evaluate(f: TableFactor[R], assignment: Array[Int]): R =
       f.evaluate(assignment)
-    def condition(f: DenseFactor[R], variables: Array[Int], values: Array[Int]): DenseFactor[R] =
+    def condition(f: TableFactor[R], variables: Array[Int], values: Array[Int]): TableFactor[R] =
       f.condition(variables,values)
   }
 
@@ -83,7 +83,7 @@ object DenseFactor {
                             _doms: Array[Array[Int]])
                            (implicit evF: Factor[A,B],
                             monoid: Monoid[B],
-                            manifestB: ClassManifest[B]): DenseFactor[B] = {
+                            manifestB: ClassManifest[B]): TableFactor[B] = {
     import vultura.{factors => vf}
 
     val (vars, doms) = _vars.zip(_doms).sortBy(_._1).unzip
@@ -141,6 +141,6 @@ object DenseFactor {
         }.reduce(_ |+| _)
     }
 
-    DenseFactor.fromFunction(remainingVars, remainingDomains, sumOut)
+    TableFactor.fromFunction(remainingVars, remainingDomains, sumOut)
   }
 }

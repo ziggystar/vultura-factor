@@ -1,6 +1,10 @@
 package vultura.factors
 
-import scalaz.Monoid
+import scalaz._
+import Scalaz._
+import collection.mutable.WrappedArray
+import util.Random
+import vultura.util.{Measure, DomainCPI}
 
 /**
  * Generic multi-variate functions type class.
@@ -12,7 +16,7 @@ import scalaz.Monoid
  * @since 30.01.12
  */
 
-trait Factor[A,B] {
+sealed trait Factor[A,B] {
   def variables(f: A): Array[Int]
 
   def domains(f: A): Array[Array[Int]]
@@ -23,6 +27,57 @@ trait Factor[A,B] {
    * but not marginalized without loosing their type.
    */
   def condition(f: A, variables: Array[Int], values: Array[Int]): A
+
+  def iterator(f: A): Iterator[(Array[Int], B)] = new DomainCPI(domains(f)).iterator.map(a => a -> evaluate(f, a))
+
+  /**uses two traversals of the domain of the factor to generate an exact sample. */
+  def sample(problem: A, random: Random)(implicit m: Measure[B]): Array[Int] = {
+    def weightIterator: Iterator[(Array[Int],Double)] = this.iterator(problem).map(argVal => argVal :-> (m.weight(_)))
+
+    val partitionFunction: Double = weightIterator.map(_._2).sum
+    val sampleWeight = random.nextDouble() * partitionFunction
+
+    weightIterator.scanLeft((null: Array[Int],0d)){case ((_,acc),(assignment,weight)) => (assignment,acc + weight)}
+      .find(_._2 > sampleWeight).get._1
+  }
+}
+
+trait DenseFactor[A,B] extends Factor[A,B]
+trait SparseFactor[A,B] extends Factor[A,B] {
+  def evaluate(f: A, assignment: Array[Int]): B = points(f).withDefaultValue(defaultValue(f)).apply(wrapIntArray(assignment))
+  def defaultValue(f: A): B
+  def points(f: A): Map[WrappedArray[Int],B]
+
+  /**
+   * samples from this sparse factor. If the weight of `defaultValue` is non-zero, then rejection sampling is used
+   * if, if the sample would be drawn from the default assignments. This should be efficient if the factor is indeed
+   * sparse.
+   */
+  override def sample(f: A, random: Random)(implicit m: Measure[B]): Array[Int] = {
+    def sparseWeightIterator: Iterator[(Array[Int],Double)] =
+      this.points(f).iterator.map(argVal => ((_:WrappedArray[Int]).toArray) <-: argVal :-> (m.weight(_)))
+
+    val totalSize: BigInt = this.domains(f).map(d => BigInt(d.size)).product
+
+    val defaultWeight = (totalSize - this.points(f).size).toDouble * m.weight(this.defaultValue(f))
+
+    val partitionFunction: Double = sparseWeightIterator.map(_._2).sum + defaultWeight
+
+    val sampleWeight = random.nextDouble() * partitionFunction
+
+    //we assume that the default weight comes first
+    if(sampleWeight < defaultWeight) {
+      //do rejection sampling to find an assignment which is not in points
+      Iterator
+        .continually(vultura.util.randomAssignment(this.domains(f), random))
+        .filterNot(ass => points(f).contains(wrapIntArray(ass)))
+        .next()
+    } else {
+      val correctedWeight = sampleWeight - defaultWeight
+      sparseWeightIterator.scanLeft((null: Array[Int],0d)){case ((_,acc),(assignment,weight)) => (assignment,acc + weight)}
+        .find(_._2 > correctedWeight).get._1
+    }
+  }
 }
 
 /**A factor implementation can provide an instance of this type-class if it supports marginalization to a certain

@@ -7,7 +7,7 @@ object CNFasBIFun {
 
   import CNF._
 
-  implicit object ClauseAsFun extends Factor[Clause, BigInt] {
+  implicit object ClauseAsFun extends DenseFactor[Clause, BigInt] {
     def variables(f: CNF.Clause): Array[Int] = f.map(_ & ~CNF.NEG_MASK).distinct.toArray
 
     def domains(f: CNF.Clause): Array[Array[Int]] = variables(f).map(_ => Array(0,1))
