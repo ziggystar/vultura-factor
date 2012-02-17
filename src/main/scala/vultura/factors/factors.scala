@@ -3,8 +3,7 @@ package vultura
 import scalaz.Monoid
 import collection.mutable.WrappedArray
 import scala.util.Random
-import util.Measure
-import collection.immutable.Iterable
+import util.{AbelianGroup, Measure}
 
 /**
  * @author Thomas Geier
@@ -42,6 +41,8 @@ package object factors {
     )(implicitly[Factor[ProductFactor[Either[F,TableFactor[R]],R],R]],sumMonoid,cmr)
     ProductFactor(unaffected.toIndexedSeq :+ Right(resultingFactor),product.productMonoid)
   }
+
+  def partition[A,R](f: A, m: Measure[R]): R
 
   /** Support for wrapping factors. */
   implicit def eitherFactor[A,B,R](implicit evA: Factor[A,R], evB: Factor[B,R]): Factor[Either[A,B],R] = new DenseFactor[Either[A,B],R]{
