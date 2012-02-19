@@ -42,7 +42,7 @@ package object factors {
     ProductFactor(unaffected.toIndexedSeq :+ Right(resultingFactor),product.productMonoid)
   }
 
-  def partition[A,R](f: A, m: Measure[R]): R
+  def partition[A,R](f: A, m: Measure[R]): R = error("not implemented")
 
   /** Support for wrapping factors. */
   implicit def eitherFactor[A,B,R](implicit evA: Factor[A,R], evB: Factor[B,R]): Factor[Either[A,B],R] = new DenseFactor[Either[A,B],R]{

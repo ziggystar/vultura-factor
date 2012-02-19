@@ -31,15 +31,8 @@ sealed trait Factor[A,B] {
   def iterator(f: A): Iterator[(Array[Int], B)] = new DomainCPI(domains(f)).iterator.map(a => a -> evaluate(f, a))
 
   /**uses two traversals of the domain of the factor to generate an exact sample. */
-  def sample(problem: A, random: Random)(implicit m: Measure[B]): Array[Int] = {
-    def weightIterator: Iterator[(Array[Int],Double)] = this.iterator(problem).map(argVal => argVal :-> (m.weight(_)))
-
-    val partitionFunction: Double = weightIterator.map(_._2).sum
-    val sampleWeight = random.nextDouble() * partitionFunction
-
-    weightIterator.scanLeft((null: Array[Int],0d)){case ((_,acc),(assignment,weight)) => (assignment,acc + weight)}
-      .find(_._2 > sampleWeight).get._1
-  }
+  def sample(problem: A, random: Random)(implicit m: Measure[B]): Array[Int] = vultura.util.drawRandomlyBy(
+    new DomainCPI(domains(problem)).toIterable, random)(a => m.weight(this.evaluate(problem,a)))
 }
 
 trait DenseFactor[A,B] extends Factor[A,B]
