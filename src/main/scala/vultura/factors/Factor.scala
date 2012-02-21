@@ -30,6 +30,9 @@ sealed trait Factor[A,B] {
 
   def iterator(f: A): Iterator[(Array[Int], B)] = new DomainCPI(domains(f)).iterator.map(a => a -> evaluate(f, a))
 
+  def partition(f: A, sumMonoid: Monoid[B]): B =
+    vultura.util.crossProduct(this.domains(f)).iterator.map(this.evaluate(f,_)).reduce(sumMonoid.append(_,_))
+
   /**uses two traversals of the domain of the factor to generate an exact sample. */
   def sample(problem: A, random: Random)(implicit m: Measure[B]): Array[Int] = {
     def weightIterator: Iterator[(Array[Int],Double)] = this.iterator(problem).map(argVal => argVal :-> (m.weight(_)))

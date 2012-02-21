@@ -12,7 +12,7 @@ import vultura.util._
  * @param domains
  * @param data
  */
-class TableFactor[@specialized T: ClassManifest] protected[TableFactor](val variables: Array[Int],
+class TableFactor[T: ClassManifest] protected[TableFactor](val variables: Array[Int],
                                                                         val domains: Array[Array[Int]],
                                                                         val data: Array[T]){
   val cpi = new CrossProductIndexer(domains.map(_.size))
@@ -27,8 +27,8 @@ class TableFactor[@specialized T: ClassManifest] protected[TableFactor](val vari
   def condition(vars: Array[Int],
                 values: Array[Int]): TableFactor[T] = {
     implicit val fakeMonoid: Monoid[T] = new Monoid[T]{
-      def append(s1: T, s2: => T): T = sys.error("monoid on marginalization for conditioning should not be used")
-      val zero: T = sys.error("monoid on marginalization for conditioning should not be used")
+      def append(s1: T, s2: => T): T = sys.error("append on monoid on marginalization for conditioning should not be used")
+      lazy val zero: T = sys.error("zero on monoid on marginalization for conditioning should not be used")
     }
     TableFactor.marginalizeDense(this, vars, values.map(Array(_)))
   }
@@ -86,38 +86,40 @@ object TableFactor {
                             manifestB: ClassManifest[B]): TableFactor[B] = {
     import vultura.{factors => vf}
 
-    val (vars, doms) = _vars.zip(_doms).sortBy(_._1).unzip
+    val (margVars, margDoms) = _vars.zip(_doms).sortBy(_._1).unzip
 
     val MASK = 0x80000000
 
-    val (variables,domains) = (vf.variables(f),vf.domains(f))
+    val (variables,domains) = (vf.variables(f) zip vf.domains(f)).sortBy(_._1).unzip
 
-    val (remainingVars, remainingDomains) = variables.zip(domains).filterNot(t => vars.contains(t._1)).unzip
+    assert(margVars.forall(variables.contains), "trying to marginalize a variable that's not there")
+
+    val (remainingVars, remainingDomains) = variables.zip(domains).filterNot(t => margVars.contains(t._1)).unzip
 
     //this tells us where to look for a value when constructing an assignment to this Fun
     //if high bit is unset remainingVars and else to the summed out vars
-    //this is not in imperative style for optimization purposes but for readability:/
+    //this is not in imperative style for optimization purposes but for readability :/
     val lookUp: Array[Int] = {
-      var intoVars = 0
+      var intoMargVars = 0
       var intoRemaining = 0
-      var intoVariables = 0
+      var intoResult = 0
       val result = new Array[Int](variables.size)
-      while (intoVariables < variables.size) {
-        if (intoVars < vars.size && variables(intoVariables) == vars(intoVars)) {
-          result(intoVariables) = intoVars | MASK
-          intoVars += 1
+      while (intoResult < variables.size) {
+        if (intoMargVars < margVars.size && variables(intoResult) == margVars(intoMargVars)) {
+          result(intoResult) = intoMargVars | MASK
+          intoMargVars += 1
         } else {
-          assert(variables(intoVariables) == remainingVars(intoRemaining))
-          result(intoVariables) = intoRemaining
+          assert(variables(intoResult) == remainingVars(intoRemaining))
+          result(intoResult) = intoRemaining
           intoRemaining += 1
         }
-        intoVariables += 1
+        intoResult += 1
       }
 
       result
     }
 
-    val _cpi = new DomainCPI(doms)
+    val _cpi = new DomainCPI(margDoms)
     val reusedAssignment = new Array[Int](variables.size)
 
     //fix the assignment to the remaining variables and sum over everything in vars/doms

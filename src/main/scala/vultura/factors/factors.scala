@@ -16,7 +16,7 @@ package object factors {
   def evaluate[A,B](a: A, assignment: Array[Int])(implicit f: Factor[A,B]): B = f.evaluate(a,assignment)
   def condition[A,B](a: A, variables: Array[Int], values: Array[Int])(implicit f: Factor[A,B]): A = f.condition(a,variables,values)
   def sample[A,B](a: A, random: Random)(implicit f: Factor[A,B], m: Measure[B]): Array[Int] = f.sample(a,random)
-
+  def partition[A,B](a: A,sumMonoid: Monoid[B])(implicit f: Factor[A,B]): B = f.partition(a,sumMonoid)
   def marginalize[A,B,C](a: A,
                          variables: Array[Int],
                          domains: Array[Array[Int]])(implicit monoid: Monoid[B], f: Factor[A,B], tm: TransMarginalize[A,B,C]): C =
@@ -41,8 +41,6 @@ package object factors {
     )(implicitly[Factor[ProductFactor[Either[F,TableFactor[R]],R],R]],sumMonoid,cmr)
     ProductFactor(unaffected.toIndexedSeq :+ Right(resultingFactor),product.productMonoid)
   }
-
-  def partition[A,R](f: A, m: Measure[R]): R
 
   /** Support for wrapping factors. */
   implicit def eitherFactor[A,B,R](implicit evA: Factor[A,R], evB: Factor[B,R]): Factor[Either[A,B],R] = new DenseFactor[Either[A,B],R]{
