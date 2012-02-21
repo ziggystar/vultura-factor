@@ -1,6 +1,7 @@
 package vultura
 
 import scala.util.Random
+import collection.Seq
 
 /**
  * Utility functions.
@@ -13,16 +14,25 @@ package object util {
   /**
    * @return Those elements of s where fitness evaluates to the highest value.
    */
-  def maxByMultiple[A](s: Seq[A])(fitness: (A) => Int): Seq[A] = {
-    val seq = s.map(x => (fitness(x), x))
-    val max = seq.max(Ordering.by {
-      t: (Int, A) => t._1
-    })._1
+  def maxByMultiple[A,B: Ordering](s: Seq[A])(fitness: (A) => B): Seq[A] = {
+    val seq: Seq[(B, A)] = s.map(x => (fitness(x), x))
+    val max = seq.maxBy(_._1)._1
     seq.filter(t => t._1 == max).map(_._2)
+  }
+
+  def drawRandomlyBy[A](s: Iterable[A], random: Random)(weight: A => Double): A = {
+    def weightIterator: Iterator[(A,Double)] = s.iterator.map(a => (a,weight(a)))
+
+    val partitionFunction: Double = weightIterator.map(_._2).sum
+    val sampleWeight = random.nextDouble() * partitionFunction
+
+    weightIterator.scanLeft((null.asInstanceOf[A],0d)){case ((_,acc),(assignment,weight)) => (assignment,acc + weight)}
+      .find(_._2 > sampleWeight).get._1
   }
 
   class RichRandomSeq[A](val s: IndexedSeq[A]) {
     def pickRandom(r: Random): A = s(r.nextInt(s.size))
+    def pickRandomOpt(r: Random): Option[A] = if(s.isEmpty) None else Some(s(r.nextInt(s.size)))
   }
 
   implicit def seq2randomSeq[A](s: Iterable[A]) = new RichRandomSeq(s.toIndexedSeq)
@@ -38,6 +48,13 @@ package object util {
   def crossProduct[T: ClassManifest](aa: AA[T]) = new DomainCPI(aa)
   /** Take a random element from each entry in aa. */
   def randomAssignment[T: ClassManifest](aa: AA[T], random: Random): Array[T] = aa.map(a => a(random.nextInt(a.size)))
+  implicit def iteratorLast[A](it: Iterator[A]) = new {
+    def last: A = {
+      var elem = it.next()
+      while(it.hasNext){elem = it.next()}
+      elem
+    }
+  }
 
   implicit def statisticsPimper[A: Numeric](xs: Iterable[A]) = new {
       def mean: Double = implicitly[Numeric[A]].toDouble(xs.sum) / xs.size
