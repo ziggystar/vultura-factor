@@ -26,7 +26,7 @@ package object util {
     val partitionFunction: Double = weightIterator.map(_._2).sum
     val sampleWeight = random.nextDouble() * partitionFunction
 
-    weightIterator.scanLeft((null.asInstanceOf[A],0d)){case ((_,acc),(assignment,weight)) => (assignment,acc + weight)}
+    weightIterator.scanLeft((null.asInstanceOf[A],0d)){case ((_,acc),(assignment,w)) => (assignment,acc + w)}
       .find(_._2 > sampleWeight).get._1
   }
 
@@ -54,6 +54,22 @@ package object util {
       while(it.hasNext){elem = it.next()}
       elem
     }
+  }
+  def randomFlip(ordering: scala.IndexedSeq[Int], random: Random): IndexedSeq[Int] = {
+    val (i1, i2) = (random.nextInt(ordering.size), random.nextInt(ordering.size))
+    val builder = IndexedSeq.newBuilder[Int]
+    builder.sizeHint(ordering.size)
+    var idx = 0
+    while (idx < ordering.size) {
+      if (idx == i2)
+        builder += ordering(i1)
+      else if (idx == i1)
+        builder += ordering(i2)
+      else
+        builder += ordering(idx)
+      idx += 1
+    }
+    builder.result()
   }
 
   implicit def statisticsPimper[A: Numeric](xs: Iterable[A]) = new {
