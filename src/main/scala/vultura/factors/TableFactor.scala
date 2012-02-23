@@ -13,8 +13,8 @@ import vultura.util._
  * @param data
  */
 class TableFactor[T: ClassManifest] protected[TableFactor](val variables: Array[Int],
-                                                                        val domains: Array[Array[Int]],
-                                                                        val data: Array[T]){
+                                                           val domains: Array[Array[Int]],
+                                                           val data: Array[T]){
   val cpi = new CrossProductIndexer(domains.map(_.size))
 
   def evaluate(assignment: Array[Int]): T = {
@@ -30,7 +30,7 @@ class TableFactor[T: ClassManifest] protected[TableFactor](val variables: Array[
       def append(s1: T, s2: => T): T = sys.error("append on monoid on marginalization for conditioning should not be used")
       lazy val zero: T = sys.error("zero on monoid on marginalization for conditioning should not be used")
     }
-    TableFactor.marginalizeDense(this, vars, values.map(Array(_)))
+    TableFactor.marginalizeDense(this, vars, values.map(Array(_)),fakeMonoid)
   }
 }
 
@@ -38,7 +38,7 @@ object TableFactor {
   def fromFunction[T: ClassManifest](_vars: Seq[Int], _domains: Seq[Array[Int]], f: Array[Int] => T) = {
     require(_vars.size == _domains.size, "variable number and domain number don't match")
 
-    val (sortedVars, sortedDomains) = _vars.zip(_domains).sortBy(_._1).unzip
+    val (sortedVars, sortedDomains) = _vars.zip(_domains).unzip
 
     val cpi = new DomainCPI(seqarray2aa(sortedDomains))
     val table = new Array[T](cpi.size)
@@ -80,19 +80,19 @@ object TableFactor {
    */
   def marginalizeDense[A,B](f: A,
                             _vars: Array[Int],
-                            _doms: Array[Array[Int]])
+                            _doms: Array[Array[Int]],
+                            monoid: Monoid[B])
                            (implicit evF: Factor[A,B],
-                            monoid: Monoid[B],
                             manifestB: ClassManifest[B]): TableFactor[B] = {
     import vultura.{factors => vf}
 
-    val (margVars, margDoms) = _vars.zip(_doms).sortBy(_._1).unzip
+    val (margVars, margDoms) = _vars.zip(_doms).unzip
 
     val MASK = 0x80000000
 
-    val (variables,domains) = (vf.variables(f) zip vf.domains(f)).sortBy(_._1).unzip
+    val (variables,domains) = (vf.variables(f) zip vf.domains(f)).unzip
 
-    assert(margVars.forall(variables.contains), "trying to marginalize a variable that's not there")
+    require(margVars.forall(variables.contains), "trying to marginalize a variable that's not there")
 
     val (remainingVars, remainingDomains) = variables.zip(domains).filterNot(t => margVars.contains(t._1)).unzip
 
@@ -100,18 +100,17 @@ object TableFactor {
     //if high bit is unset remainingVars and else to the summed out vars
     //this is not in imperative style for optimization purposes but for readability :/
     val lookUp: Array[Int] = {
-      var intoMargVars = 0
-      var intoRemaining = 0
       var intoResult = 0
       val result = new Array[Int](variables.size)
       while (intoResult < variables.size) {
-        if (intoMargVars < margVars.size && variables(intoResult) == margVars(intoMargVars)) {
-          result(intoResult) = intoMargVars | MASK
-          intoMargVars += 1
+        val margVarIndex = margVars.indexOf(variables(intoResult))
+        //got -1 if the variable is not contained in `margVars`
+        if(margVarIndex != -1){
+          result(intoResult) = margVarIndex | MASK
         } else {
-          assert(variables(intoResult) == remainingVars(intoRemaining))
-          result(intoResult) = intoRemaining
-          intoRemaining += 1
+          //we need to find a match here
+          val remainVarIndex = remainingVars.indexOf(variables(intoResult))
+          result(intoResult) = remainVarIndex
         }
         intoResult += 1
       }
@@ -119,28 +118,31 @@ object TableFactor {
       result
     }
 
-    val _cpi = new DomainCPI(margDoms)
     val reusedAssignment = new Array[Int](variables.size)
+    /**`reconstructAssignment` reconstructs an assignment to `f`, given an assignment to remaining variables and
+     * to marginalized variables, separately. Both given arrays have to adhere to the order of `margVars` and `remainingVars`.
+     * @return `reusedAssignment` is overwritten and returned.
+     */
+    def reconstructAssignment(remainAss: Array[Int], newAss: Array[Int]): Array[Int] = {
+      var i = 0
+      while (i < reusedAssignment.size) {
+        val index = lookUp(i)
+        val value = if ((index & MASK) != 0) newAss(index ^ MASK) else remainAss(index)
+        reusedAssignment(i) = value
+        i += 1
+      }
+      reusedAssignment
+    }
+
+    val _cpi = new DomainCPI(margDoms)
 
     //fix the assignment to the remaining variables and sum over everything in vars/doms
     //the argument to sumOut goes to the remaining variables
-    val sumOut: Array[Int] => B = {
-      assignment =>
-        def reconstructAssignment(remainAss: Array[Int], newAss: Array[Int]): Array[Int] = {
-          var i = 0
-          while (i < reusedAssignment.size) {
-            val index = lookUp(i)
-            val value = if ((index & MASK) != 0) newAss(index ^ MASK) else remainAss(index)
-            reusedAssignment(i) = value
-            i += 1
-          }
-          reusedAssignment
-        }
-
-        _cpi.iterator.map {
-          newAssign =>
-            evaluate(f,reconstructAssignment(assignment, newAssign))
-        }.reduce(_ |+| _)
+    val sumOut: Array[Int] => B = { assignmentToRemaining =>
+      _cpi.iterator.map {
+        assignmentToNew =>
+          evaluate(f,reconstructAssignment(assignmentToRemaining, assignmentToNew))
+      }.reduce(monoid.append(_,_))
     }
 
     TableFactor.fromFunction(remainingVars, remainingDomains, sumOut)

@@ -1,8 +1,6 @@
 package vultura.factors
 
-import vultura.factors._
-import vultura.util.{DomainCPI, Measure, CrossProductIndexer}
-import collection.Seq
+import vultura.util.{DomainCPI, Measure}
 import collection.mutable.WrappedArray
 
 /**
@@ -18,11 +16,11 @@ package object uai {
       "all domains must be ranges beginning with zero")
 
     val (vs: Seq[Int],ds: Seq[WrappedArray[Int]]) =
-      fs.flatMap(f => variables(f).zip(domains(f).map(wrapIntArray))).distinct.unzip
+      fs.flatMap(f => variables(f).zip(domains(f).map(wrapIntArray))).distinct.sortBy(_._1).unzip
 
     require(
       vs.size == vs.distinct.size,
-      "no variable may have a different domains between factors"
+      "no variable may have different domains between factors"
     )
 
     def generatePreambleFactorString(f: A): String = {

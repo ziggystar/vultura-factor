@@ -3,7 +3,6 @@ package vultura.factors
 import scalaz._
 import scalaz.Scalaz._
 import vultura.{factors => vf}
-import collection.Iterable
 
 /**
  * @author Thomas Geier

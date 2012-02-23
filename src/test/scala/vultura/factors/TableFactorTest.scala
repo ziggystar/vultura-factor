@@ -29,9 +29,9 @@ class TableFactorTest extends Specification {
     "create a simple table fun" !
       (table1.evaluate(Array(0)) === 1) ^
       "sum over a variable using genMarg" !
-        ((TableFactor.marginalizeDense(table1,Array(0), Array(Array(0, 1))).evaluate(Array()): Int) === 2) ^
+        ((TableFactor.marginalizeDense(table1,Array(0), Array(Array(0, 1)),implicitly[Monoid[Int]]).evaluate(Array()): Int) === 2) ^
       "condition on a variable using genMarg" !
-        (TableFactor.marginalizeDense(table1,Array(0), Array(Array(0))).evaluate(Array()) === 1) ^
+        (TableFactor.marginalizeDense(table1,Array(0), Array(Array(0)),implicitly[Monoid[Int]]).evaluate(Array()) === 1) ^
       "data of table2 must be 0,1,1,2" !
         (table2.data === Array(0, 1, 1, 2)) ^
       "read out table2" !
@@ -40,8 +40,8 @@ class TableFactorTest extends Specification {
           (table2.evaluate(Array(1, 0)) === 1) and
           (table2.evaluate(Array(1, 1)) === 2)) ^
   "condition on second value of second variable in table2" !
-    (TableFactor.marginalizeDense(table2,Array(1), Array(Array(1))).evaluate(Array(0)) === 1) ^
+    (TableFactor.marginalizeDense(table2,Array(1), Array(Array(1)),implicitly[Monoid[Int]]).evaluate(Array(0)) === 1) ^
   "sum over first variable of table2" !
-    (TableFactor.marginalizeDense(table2,Array(0), Array(Array(0,1))).evaluate(Array(0)) === 1 and
-      TableFactor.marginalizeDense(table2,Array(0), Array(Array(0,1))).evaluate(Array(1)) === 3)
+    (TableFactor.marginalizeDense(table2,Array(0), Array(Array(0,1)),implicitly[Monoid[Int]]).evaluate(Array(0)) === 1 and
+      TableFactor.marginalizeDense(table2,Array(0), Array(Array(0,1)),implicitly[Monoid[Int]]).evaluate(Array(1)) === 3)
 }

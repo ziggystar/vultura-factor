@@ -24,8 +24,9 @@ package object factors {
 
   def marginalizeDense[A,B](a: A,
                             vars: Array[Int],
-                            doms: Array[Array[Int]])(implicit monoid: Monoid[B], manifestB: ClassManifest[B], f: Factor[A,B]): TableFactor[B] =
-    TableFactor.marginalizeDense(a,vars,doms)
+                            doms: Array[Array[Int]],
+                            monoid: Monoid[B])(implicit manifestB: ClassManifest[B], f: Factor[A,B]): TableFactor[B] =
+    TableFactor.marginalizeDense(a,vars,doms,monoid)
 
   /** sumMonoid needs to distribute over product.productMonoid. */
   def eliminateDense[F,R](product: ProductFactor[Either[F,TableFactor[R]],R],
@@ -37,8 +38,9 @@ package object factors {
     val resultingFactor: TableFactor[R] = TableFactor.marginalizeDense(
       affectedProduct,
       Array(eliminationVariable),
-      Array(domains(affectedProduct).apply(variables(affectedProduct).indexOf(eliminationVariable)))
-    )(implicitly[Factor[ProductFactor[Either[F,TableFactor[R]],R],R]],sumMonoid,cmr)
+      Array(domains(affectedProduct).apply(variables(affectedProduct).indexOf(eliminationVariable))),
+      sumMonoid
+    )(implicitly[Factor[ProductFactor[Either[F,TableFactor[R]],R],R]],cmr)
     ProductFactor(unaffected.toIndexedSeq :+ Right(resultingFactor),product.productMonoid)
   }
 
