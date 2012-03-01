@@ -24,7 +24,7 @@ sealed trait Factor[A,B] {
   def evaluate(f: A, assignment: Array[Int]): B
 
   /**This is provided to retain the type of the factor after conditioning. E.g. SAT clauses can be conditioned
-   * but not marginalized without loosing their type.
+   * but not marginalized without losing their type.
    */
   def condition(f: A, variables: Array[Int], values: Array[Int]): A
 
@@ -36,6 +36,17 @@ sealed trait Factor[A,B] {
   /**uses two traversals of the domain of the factor to generate an exact sample. */
   def sample(problem: A, random: Random)(implicit m: Measure[B]): Array[Int] = vultura.util.drawRandomlyBy(
     new DomainCPI(domains(problem)).toIterable, random)(a => m.weight(this.evaluate(problem,a)))
+}
+
+trait ValueConditionable[A]{ self: Factor[A,B] forSome {type B} =>
+  /**This is provided to retain the type of the factor after conditioning. E.g. SAT clauses can be conditioned
+   * but not marginalized without losing their type. */
+  def condition(f: A, variables: Array[Int], values: Array[Int]): A
+}
+
+trait RangeConditionable[A] extends ValueConditionable[A]{self: Factor[A,B] forSome {type B} =>
+  def conditionRange(f: A, variables: Array[Int], values: Array[Array[Int]]): A
+  def condition(f: A, variables: Array[Int], values: Array[Int]) = conditionRange(f,variables,values.map(Array(_)))
 }
 
 trait DenseFactor[A,B] extends Factor[A,B]

@@ -14,7 +14,7 @@ import vultura.util.RingWithZero
 
 object SequentialImportanceSampling {
   /** @return a set of samples and associated weights.    */
-  def weightedImportanceSampling[A](factorSequence: Seq[Seq[A]], numSamples: Int, ring: RingWithZero[Double], random: Random)(implicit ev: Factor[A,Double]): ParticleSeq[Double] = {
+  def weightedImportanceSampling[A](factorSequence: Iterable[Seq[A]], numSamples: Int, ring: RingWithZero[Double], random: Random)(implicit ev: Factor[A,Double]): ParticleSeq[Double] = {
     //draw initial samples
     val initialFactor: ProductFactor[A, Double] = ProductFactor(factorSequence.head, ring.multiplication)
     val initalParticleStream: Seq[(Array[Int], Double)] = IndexedSeq.fill(numSamples)(sample(initialFactor, random)).map(a => a -> (1.toDouble / numSamples))

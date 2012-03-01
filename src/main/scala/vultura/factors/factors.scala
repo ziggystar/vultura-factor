@@ -44,6 +44,10 @@ package object factors {
     ProductFactor(unaffected.toIndexedSeq :+ Right(resultingFactor),product.productMonoid)
   }
 
+  implicit def seq2Product[A,B](fs: Iterable[A])(implicit evF: Factor[A,B]) = new {
+    def productFactor(monoid: Monoid[B]) = ProductFactor(fs,monoid)
+  }
+
   /** Support for wrapping factors. */
   implicit def eitherFactor[A,B,R](implicit evA: Factor[A,R], evB: Factor[B,R]): Factor[Either[A,B],R] = new DenseFactor[Either[A,B],R]{
     def variables(f: Either[A, B]): Array[Int] =

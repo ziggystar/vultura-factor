@@ -22,7 +22,7 @@ case class ProductFactor[T,R](factors: Iterable[T],
       f <- factors;
       ass = vf.variables(f).map(lookup)
     ) yield vf.evaluate(f,ass)
-    results.reduce(productMonoid.append(_,_))
+    results.foldLeft(productMonoid.zero)(productMonoid.append(_,_))
   }
 
   def condition(variables: Array[Int], value: Array[Int]): ProductFactor[T,R] = {
