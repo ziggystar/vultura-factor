@@ -15,9 +15,9 @@ import vultura.util._
 class TableFactor[T: ClassManifest] protected[TableFactor](val variables: Array[Int],
                                                            val domains: Array[Array[Int]],
                                                            val data: Array[T]){
-  val cpi = new CrossProductIndexer(domains.map(_.size))
+  val cpi = new DomainCPI(domains)
 
-  def evaluate(assignment: Array[Int]): T = {
+  def evaluate(assignment: Array[Int]): T = cpi.(assignment){
     val domainIndices: Array[Int] = assignment.zip(domains).map(t => t._2.indexOf(t._1))
     val index: Int = cpi.array2Index(domainIndices)
     data(index)
