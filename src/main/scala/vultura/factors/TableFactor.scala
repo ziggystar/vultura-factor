@@ -17,11 +17,7 @@ class TableFactor[T: ClassManifest] protected[TableFactor](val variables: Array[
                                                            val data: Array[T]){
   val cpi = new DomainCPI(domains)
 
-  def evaluate(assignment: Array[Int]): T = cpi.(assignment){
-    val domainIndices: Array[Int] = assignment.zip(domains).map(t => t._2.indexOf(t._1))
-    val index: Int = cpi.array2Index(domainIndices)
-    data(index)
-  }
+  def evaluate(assignment: Array[Int]): T = data(cpi.seq2Index(assignment))
 
   /** Condition via marginalization. */
   def condition(vars: Array[Int],

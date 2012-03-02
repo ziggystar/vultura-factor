@@ -14,8 +14,16 @@ class DomainCPI[A: ClassManifest](val domains: AA[A],val lsbf: Boolean = true) e
     }
     builder
   }
+  
+  def index2Seq(idx: Int): Array[A] = apply(idx)
 
   def seq2Index(s: Array[A]): Int = {
-
+    val indiced = new Array[Int](s.size)
+    var i = 0
+    while(i < indiced.size){
+      indiced(i) = domains(i).indexOf(s(i))
+      i += 1
+    }
+    cpi.seq2Index(indiced)
   }
 }
