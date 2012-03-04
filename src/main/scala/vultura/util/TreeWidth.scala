@@ -38,4 +38,10 @@ object TreeWidth {
       }.takeWhile(_._2 != Nil)
     simplicialIter.foldLeft((cliques,List.empty[A])){case ((_,elims),(rem,newElim)) => (rem,elims ++ newElim)}
   }
+
+  def intSet2BS(is: Iterable[Int]): BitSet = {
+    val result = new BitSet
+    is.foreach(result.set)
+    result
+  }
 }

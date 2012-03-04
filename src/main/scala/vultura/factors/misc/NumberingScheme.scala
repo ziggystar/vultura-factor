@@ -1,7 +1,5 @@
 package vultura.factors.misc
 
-import collection.Seq
-
 /**
  * @author Thomas Geier
  * @since 29.02.12

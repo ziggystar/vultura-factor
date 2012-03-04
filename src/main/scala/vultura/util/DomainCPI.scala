@@ -14,8 +14,4 @@ class DomainCPI[A: ClassManifest](val domains: AA[A],val lsbf: Boolean = true) e
     }
     builder
   }
-
-  def seq2Index(s: Array[A]): Int = {
-
-  }
 }
