@@ -39,6 +39,8 @@ case class ProductFactor[T,R](factors: Iterable[T],
   }
 
   def filter(p: T => Boolean): ProductFactor[T, R] = ProductFactor(factors.filter(p),productMonoid)
+
+  //TODO more efficient condition and sample if there are completely independent subsets of factors
 }
 
 object ProductFactor {

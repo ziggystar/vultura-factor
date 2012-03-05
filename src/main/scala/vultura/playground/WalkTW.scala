@@ -13,7 +13,7 @@ import java.util.BitSet
  */
 
 object WalkTW {
-  def treeWidthBS(cliques: Array[BitSet], ordering: Array[Int], hints: Array[Int] = null): Int = {
+  def treeWidthBS(cliques: IndexedSeq[BitSet], ordering: Array[Int], hints: Array[Int] = null): Int = {
     val bitSetSize = ordering.size
     ordering.foldLeft((cliques,0)){case ((remainingCliques,max),variable) =>
       val newCliques = new Array[BitSet](remainingCliques.size)
@@ -80,7 +80,7 @@ object WalkTW {
     }
   }
 
-  case class CompiledCNF(variableSets: Array[BitSet], variables: Array[Int]){
+  case class CompiledCNF(variableSets: IndexedSeq[BitSet], variables: Array[Int]){
     val hints = new Array[Int](variables.max + 1)
   }
 
@@ -88,14 +88,14 @@ object WalkTW {
     import vultura.cnf.CNFasBIFun._
     import vultura.factors._
 
-    def variableBitSets(a: CNF): Array[BitSet] = {
+    def variableBitSets(a: CNF): IndexedSeq[BitSet] = {
       a.clauses.map{clause =>
         val bs = new BitSet
         variables(clause).foreach(bs.set(_))
         bs
       }
     }
-    CompiledCNF(variableBitSets(aCnf),aCnf.clauses.flatMap(variables(_)).distinct)
+    CompiledCNF(variableBitSets(aCnf),aCnf.clauses.flatMap(variables(_)).distinct.toArray)
   }
 
   def randomSearch[A,S](problem: A, steps: Int, random: Random, acceptThreshold: Double = 0, noiseRatio: Double = 0)(implicit evUS: UndirectedSearch[A,S,Double]): Double = {

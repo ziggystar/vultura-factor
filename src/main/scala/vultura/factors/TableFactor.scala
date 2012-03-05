@@ -39,13 +39,21 @@ object TableFactor {
     val cpi = new DomainCPI(seqarray2aa(sortedDomains))
     val table = new Array[T](cpi.size)
     var i = 0
+    val firstValue: T = f(cpi.iterator.next())
+    var isConstant = true
     cpi.iterator.foreach {
       assign =>
-        table(i) = f(assign)
+        val value: T = f(assign)
+        if(isConstant && value != firstValue)
+          isConstant = false
+        table(i) = value
         i += 1
     }
 
-    new TableFactor(sortedVars.toArray, sortedDomains.map(_.toArray).toArray, table)
+    if(isConstant)
+      constantFactor(firstValue)
+    else
+      new TableFactor(sortedVars.toArray, sortedDomains.map(_.toArray).toArray, table)
   }
 
   def constantFactor[T: ClassManifest](singleValue: T) = new TableFactor(Array(),Array.empty[Array[Int]],Array(singleValue))
