@@ -3,8 +3,6 @@ package vultura.factors
 import scalaz._
 import scalaz.Scalaz._
 import vultura.{factors => vf}
-import vultura.graph.{GraphOps, Graph}
-import collection.immutable.Set
 
 /**
  * @author Thomas Geier
@@ -41,17 +39,6 @@ case class ProductFactor[T,R](factors: Iterable[T],
   }
 
   def filter(p: T => Boolean): ProductFactor[T, R] = ProductFactor(factors.filter(p),productMonoid)
-
-  lazy val independentComponents: Set[Set[T]] = {
-    assert(factors.toSet.size == factors.size, "cannot proceed with equal factors inside this product")
-
-    implicit val factorsNodes: Graph[Iterable[T],T] = new Graph[Iterable[T],T]{
-      def nodes(g: Iterable[T]): Set[T] = g.toSet
-      def adjacent(g: Iterable[T], n1: T, n2: T): Boolean = fev.variables(n1).exists(fev.variables(n2).contains(_))
-    }
-
-    GraphOps.components(this.factors)
-  }
 }
 
 object ProductFactor {
@@ -65,11 +52,20 @@ object ProductFactor {
     def condition(f: ProductFactor[T, R], variables: Array[Int], values: Array[Int]): ProductFactor[T, R] =
       f.condition(variables,values)
     //TODO more efficient partition and sample if there are completely independent subsets of factors
-//    override def partition(f: ProductFactor[T, R], sumMonoid: Monoid[R]): R = {
-//      if(f.independentComponents.size <= 1)
-//        super.partition(f,sumMonoid)
-//      else
-//        f.independentComponents.map(ProductFactor(_,f.productMonoid)(f.fev)).map(super.partition(_,sumMonoid)).foldLeft(f.productMonoid.zero)(f.productMonoid.append(_,_))
-//    }
+    override def partition(f: ProductFactor[T, R], sumMonoid: Monoid[R])(implicit cm: ClassManifest[R]): R = {
+      if(f.factors.isEmpty) return f.productMonoid.zero
+      implicit val factorEvidence: Factor[T, R] = f.fev
+      val ordering = f.variables zip f.domains
+      //obtain a sequence of factors, retaining the elimination factor
+      val leftFactors: Seq[Either[T, TableFactor[R]]] = f.factors.toSeq.map(Left(_))
+      val eliminationSeries: Either[T, TableFactor[R]] = ordering.foldLeft(leftFactors){
+          case (remainingFactors, (eliminationVariable,domain)) =>
+            val (participating, agnostic) = remainingFactors.partition(factor => vf.variables(factor).contains(eliminationVariable))
+            val eliminationFactor = ProductFactor(participating,f.productMonoid)
+            val marginalizedEliminationFactor: TableFactor[R] = vf.marginalizeDense(eliminationFactor,Array(eliminationVariable),Array(domain),sumMonoid)
+            agnostic :+ Right(marginalizedEliminationFactor)
+        }.last
+      vf.evaluate(eliminationSeries,Array())
+    }
   }
 }

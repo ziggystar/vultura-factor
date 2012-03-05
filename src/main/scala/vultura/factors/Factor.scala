@@ -30,7 +30,7 @@ sealed trait Factor[A,B] {
 
   def iterator(f: A): Iterator[(Array[Int], B)] = new DomainCPI(domains(f)).iterator.map(a => a -> evaluate(f, a))
 
-  def partition(f: A, sumMonoid: Monoid[B]): B =
+  def partition(f: A, sumMonoid: Monoid[B])(implicit cm: ClassManifest[B]): B =
     vultura.util.crossProduct(this.domains(f)).iterator.map(this.evaluate(f,_)).reduce(sumMonoid.append(_,_))
 
   /**uses two traversals of the domain of the factor to generate an exact sample. */
