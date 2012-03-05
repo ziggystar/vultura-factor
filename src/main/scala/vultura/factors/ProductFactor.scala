@@ -3,6 +3,8 @@ package vultura.factors
 import scalaz._
 import scalaz.Scalaz._
 import vultura.{factors => vf}
+import vultura.graph.{GraphOps, Graph}
+import collection.immutable.Set
 
 /**
  * @author Thomas Geier
@@ -11,7 +13,7 @@ import vultura.{factors => vf}
 
 case class ProductFactor[T,R](factors: Iterable[T],
                               productMonoid: Monoid[R])
-                             (implicit fev: Factor[T,R]) {
+                             (implicit val fev: Factor[T,R]) {
 
   val variables: Array[Int] = factors.flatMap(f => vf.variables(f)).toSeq.distinct.toArray
   val domains: Array[Array[Int]] = variables.map(factors.flatMap(f => vf.variables(f).zip(vf.domains(f))).toMap)
@@ -40,7 +42,16 @@ case class ProductFactor[T,R](factors: Iterable[T],
 
   def filter(p: T => Boolean): ProductFactor[T, R] = ProductFactor(factors.filter(p),productMonoid)
 
-  //TODO more efficient condition and sample if there are completely independent subsets of factors
+  lazy val independentComponents: Set[Set[T]] = {
+    assert(factors.toSet.size == factors.size, "cannot proceed with equal factors inside this product")
+
+    implicit val factorsNodes: Graph[Iterable[T],T] = new Graph[Iterable[T],T]{
+      def nodes(g: Iterable[T]): Set[T] = g.toSet
+      def adjacent(g: Iterable[T], n1: T, n2: T): Boolean = fev.variables(n1).exists(fev.variables(n2).contains(_))
+    }
+
+    GraphOps.components(this.factors)
+  }
 }
 
 object ProductFactor {
@@ -53,5 +64,12 @@ object ProductFactor {
       f.evaluate(assignment)
     def condition(f: ProductFactor[T, R], variables: Array[Int], values: Array[Int]): ProductFactor[T, R] =
       f.condition(variables,values)
+    //TODO more efficient partition and sample if there are completely independent subsets of factors
+//    override def partition(f: ProductFactor[T, R], sumMonoid: Monoid[R]): R = {
+//      if(f.independentComponents.size <= 1)
+//        super.partition(f,sumMonoid)
+//      else
+//        f.independentComponents.map(ProductFactor(_,f.productMonoid)(f.fev)).map(super.partition(_,sumMonoid)).foldLeft(f.productMonoid.zero)(f.productMonoid.append(_,_))
+//    }
   }
 }
