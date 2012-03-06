@@ -58,14 +58,16 @@ object ProductFactor {
       val ordering = f.variables zip f.domains
       //obtain a sequence of factors, retaining the elimination factor
       val leftFactors: Seq[Either[T, TableFactor[R]]] = f.factors.toSeq.map(Left(_))
-      val eliminationSeries: Either[T, TableFactor[R]] = ordering.foldLeft(leftFactors){
+      //this should hold the final elimination clique and all constant factors
+      val eliminationSeries: Seq[Either[T, TableFactor[R]]] = ordering.foldLeft(leftFactors){
           case (remainingFactors, (eliminationVariable,domain)) =>
             val (participating, agnostic) = remainingFactors.partition(factor => vf.variables(factor).contains(eliminationVariable))
             val eliminationFactor = ProductFactor(participating,f.productMonoid)
             val marginalizedEliminationFactor: TableFactor[R] = vf.marginalizeDense(eliminationFactor,Array(eliminationVariable),Array(domain),sumMonoid)
             agnostic :+ Right(marginalizedEliminationFactor)
-        }.last
-      vf.evaluate(eliminationSeries,Array())
+        }
+      val result = vf.evaluate(ProductFactor(eliminationSeries,f.productMonoid),Array())
+      result
     }
   }
 }
