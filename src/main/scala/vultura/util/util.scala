@@ -24,6 +24,7 @@ package object util {
     def weightIterator: Iterator[(A,Double)] = s.iterator.map(a => (a,weight(a)))
 
     val partitionFunction: Double = weightIterator.map(_._2).sum
+    assert(partitionFunction > 0d, "partition function is zero; cannot draw a sample")
     val sampleWeight = random.nextDouble() * partitionFunction
 
     weightIterator.scanLeft((null.asInstanceOf[A],0d)){case ((_,acc),(assignment,w)) => (assignment,acc + w)}

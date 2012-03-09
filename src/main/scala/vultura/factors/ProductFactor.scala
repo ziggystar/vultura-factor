@@ -71,11 +71,17 @@ case class ProductFactor[T,R](factors: Iterable[T],
     val rElimSeries: List[ProductFactor[Either[T, TableFactor[R]], R]] = eliminationSeries.tail.reverse.map(_._2)
     //as input, we need the sample so far (as a list of (variable,value) tuples) to condition the next elimination clique
     val sample = rElimSeries.foldLeft((Array[Int](),Array[Int]())){case ((sampleVariables,sampleValues), eliminationClique) =>
-      //condtition on sample so far
+      //condition on sample so far; this could lead to factors becoming constant and thus variables becoming independent
+      //thus we need to track these variables and sample them in an additional step
+      val priorVariables = eliminationClique.variables zip eliminationClique.domains
       val conditioned: ProductFactor[Either[T, TableFactor[R]], R] = eliminationClique.condition(sampleVariables,sampleValues)
       val extensionVariables = vf.variables(conditioned)
-      val extensionValues = vf.sample(conditioned, random)
-      (sampleVariables ++ extensionVariables, sampleValues ++ extensionValues)
+
+      val extensionValues = if(conditioned.domains.size > 0) vf.sample(conditioned, random) else Array[Int]()
+
+      import vultura.util._
+      val (indiVars, indiVals) = priorVariables.filterNot(extensionVariables.contains).map{case (variable,domain) => (variable,domain.toIndexedSeq.pickRandom(random))}.unzip
+      (indiVars.toArray ++ sampleVariables ++ extensionVariables, indiVals.toArray ++ sampleValues ++ extensionValues)
     }
 
     //now sort the sample to the order of this factor

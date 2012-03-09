@@ -15,7 +15,7 @@ object SequentialImportanceSampling {
   def weightedImportanceSampling[A](factorSequence: Iterable[Seq[A]], numSamples: Int, random: Random)(implicit ev: Factor[A,Double]): ParticleSeq = {
     //draw initial samples
     val initialFactor: ProductFactor[A, Double] = ProductFactor(factorSequence.head, RingWithZero.sumProduct[Double].multiplication)
-    val initalParticleStream: Seq[(Array[Int], Double)] = IndexedSeq.fill(numSamples)(sample(initialFactor, random)).map(a => a -> (1.toDouble / numSamples))
+    val initalParticleStream: Seq[(Array[Int], Double)] = IndexedSeq.fill(numSamples)(initialFactor.partitionAndSample(random,RingWithZero.sumProduct[Double].addition)._2).map(a => a -> (1.toDouble / numSamples))
     val initialParticles = ParticleSeq(
       initialFactor,
       initalParticleStream

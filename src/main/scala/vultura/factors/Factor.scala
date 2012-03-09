@@ -34,8 +34,8 @@ sealed trait Factor[A,B] {
     vultura.util.crossProduct(this.domains(f)).iterator.map(this.evaluate(f,_)).reduce(sumMonoid.append(_,_))
 
   /**uses two traversals of the domain of the factor to generate an exact sample. */
-  def sample(problem: A, random: Random)(implicit m: Measure[B]): Array[Int] = vultura.util.drawRandomlyBy(
-    new DomainCPI(domains(problem)).toIterable, random)(a => m.weight(this.evaluate(problem,a)))
+  def sample(problem: A, random: Random)(implicit m: Measure[B]): Array[Int] = if(domains(problem).isEmpty) Array() else
+    vultura.util.drawRandomlyBy(new DomainCPI(domains(problem)).toIterable, random)(a => m.weight(this.evaluate(problem,a)))
 }
 
 trait DenseFactor[A,B] extends Factor[A,B]
