@@ -1,6 +1,8 @@
 package vultura.util
 
 import java.util.BitSet
+import collection.Seq
+import annotation.tailrec
 
 /**
  * @author Thomas Geier
@@ -43,5 +45,19 @@ object TreeWidth {
     val result = new BitSet
     is.foreach(result.set)
     result
+  }
+
+  @tailrec
+  def minDegreeOrdering(cliques: Seq[Set[Int]], acc: List[Int] = Nil): List[Int] = {
+    val vertices = cliques.flatten.distinct
+    if (vertices.isEmpty) {
+      acc.reverse
+    } else {
+      def degree(v: Int): Int = cliques.foldLeft(Set[Int]()) {
+        case (in, next) => if (next(v)) in union next else in
+      }.size - 1
+      val minDegreeVertex = vertices.minBy(degree)
+      minDegreeOrdering(eliminateVertex(cliques, minDegreeVertex), minDegreeVertex :: acc)
+    }
   }
 }

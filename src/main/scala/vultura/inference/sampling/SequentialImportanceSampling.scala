@@ -28,12 +28,14 @@ object SequentialImportanceSampling {
       val resampledParticles = remainingParticles.resample(numSamples,random)
       val newFactor = ProductFactor(newFactors, RingWithZero.sumProduct[Double].multiplication)
       val unweightedParticles = for(
-        (oldAssignment,oldWeights) <- resampledParticles.particles.toSeq.par;
+        (oldAssignment,oldWeights) <- resampledParticles.particles.toSeq;
         oldWeight <- oldWeights
       ) yield {
         val conditionedNewFactor: ProductFactor[A, Double] = newFactor.condition(vars,oldAssignment.toArray)
-        val conditionedPartition = partition(conditionedNewFactor, RingWithZero.sumProduct[Double].addition)
-        val sampleExtension = sample(conditionedNewFactor,random)
+        val (conditionedPartition, sampleExtension) = conditionedNewFactor.partitionAndSample(random,RingWithZero.sumProduct[Double].addition)
+        //this is the old/brute force code
+//        val conditionedPartition = partition(conditionedNewFactor, RingWithZero.sumProduct[Double].addition)
+//        val sampleExtension = sample(conditionedNewFactor,random)
         val newParticle = oldAssignment ++ sampleExtension
         (newParticle,oldWeight * conditionedPartition)
       }
@@ -43,7 +45,7 @@ object SequentialImportanceSampling {
       ParticleSeq(
         (vars ++ variables(newFactor)).distinct,
         (doms ++ domains(newFactor)).distinct,
-        ParticleSeq.particleSeqToMap(normalizedParticles.seq))
+        ParticleSeq.particleSeqToMap(normalizedParticles))
     }
 
     particles
