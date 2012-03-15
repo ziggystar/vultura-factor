@@ -34,7 +34,9 @@ sealed trait Factor[A,B] {
     vultura.util.crossProduct(this.domains(f)).iterator.map(this.evaluate(f,_)).reduce(sumMonoid.append(_,_))
 
   /**uses two traversals of the domain of the factor to generate an exact sample. */
-  def sample(problem: A, random: Random)(implicit m: Measure[B]): Array[Int] = if(domains(problem).isEmpty) Array() else
+  def sample(problem: A, random: Random)(implicit m: Measure[B]): Option[Array[Int]] = if(domains(problem).isEmpty)
+    Some(Array())
+  else
     vultura.util.drawRandomlyBy(new DomainCPI(domains(problem)).toIterable, random)(a => m.weight(this.evaluate(problem,a)))
 }
 
@@ -49,7 +51,7 @@ trait SparseFactor[A,B] extends Factor[A,B] {
    * if, if the sample would be drawn from the default assignments. This should be efficient if the factor is indeed
    * sparse.
    */
-  override def sample(f: A, random: Random)(implicit m: Measure[B]): Array[Int] = {
+  override def sample(f: A, random: Random)(implicit m: Measure[B]): Option[Array[Int]] = {
     def sparseWeightIterator: Iterator[(Array[Int],Double)] =
       this.points(f).iterator.map(argVal => ((_:WrappedArray[Int]).toArray) <-: argVal :-> (m.weight(_)))
 
@@ -59,19 +61,21 @@ trait SparseFactor[A,B] extends Factor[A,B] {
 
     val partitionFunction: Double = sparseWeightIterator.map(_._2).sum + defaultWeight
 
-    val sampleWeight = random.nextDouble() * partitionFunction
+    Some(partitionFunction).filter(_ > 0).map{pf =>
+      val sampleWeight = random.nextDouble() * pf
 
-    //we assume that the default weight comes first
-    if(sampleWeight < defaultWeight) {
-      //do rejection sampling to find an assignment which is not in points
-      Iterator
-        .continually(vultura.util.randomAssignment(this.domains(f), random))
-        .filterNot(ass => points(f).contains(wrapIntArray(ass)))
-        .next()
-    } else {
-      val correctedWeight = sampleWeight - defaultWeight
-      sparseWeightIterator.scanLeft((null: Array[Int],0d)){case ((_,acc),(assignment,weight)) => (assignment,acc + weight)}
-        .find(_._2 > correctedWeight).get._1
+      //we assume that the default weight comes first
+      if(sampleWeight < defaultWeight) {
+        //do rejection sampling to find an assignment which is not in points
+        Iterator
+          .continually(vultura.util.randomAssignment(this.domains(f), random))
+          .filterNot(ass => points(f).contains(wrapIntArray(ass)))
+          .next()
+      } else {
+        val correctedWeight = sampleWeight - defaultWeight
+        sparseWeightIterator.scanLeft((null: Array[Int],0d)){case ((_,acc),(assignment,weight)) => (assignment,acc + weight)}
+          .find(_._2 > correctedWeight).get._1
+      }
     }
   }
 }

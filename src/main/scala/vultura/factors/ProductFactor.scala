@@ -43,9 +43,9 @@ case class ProductFactor[T,R](factors: Iterable[T],
 
   def filter(p: T => Boolean): ProductFactor[T, R] = ProductFactor(factors.filter(p),productMonoid)
 
-  def partitionAndSample(random: Random, sumMonoid: Monoid[R])(implicit cm: ClassManifest[R], measure: Measure[R]): (R,Array[Int]) = {
+  def partitionAndSample(random: Random, sumMonoid: Monoid[R])(implicit cm: ClassManifest[R], measure: Measure[R]): (R,Option[Array[Int]]) = {
     if(this.factors.isEmpty)
-      return (this.productMonoid.zero, Array())
+      return (this.productMonoid.zero, Some(Array()))
 
     //work along this variable ordering; currently obtained by min degree heuristic
     val ordering = TreeWidth.minDegreeOrdering(this.factors.toSeq.map(vf.variables(_).toSet)).map(this.variables zip this.domains map(t => t._1 -> t) toMap)
@@ -70,22 +70,29 @@ case class ProductFactor[T,R](factors: Iterable[T],
     //now sample by using the elimination cliques in reverse order
     val rElimSeries: List[ProductFactor[Either[T, TableFactor[R]], R]] = eliminationSeries.tail.reverse.map(_._2)
     //as input, we need the sample so far (as a list of (variable,value) tuples) to condition the next elimination clique
-    val sample = rElimSeries.foldLeft((Array[Int](),Array[Int]())){case ((sampleVariables,sampleValues), eliminationClique) =>
-      //condition on sample so far; this could lead to factors becoming constant and thus variables becoming independent
-      //thus we need to track these variables and sample them in an additional step
-      val priorVariables = eliminationClique.variables zip eliminationClique.domains
-      val conditioned: ProductFactor[Either[T, TableFactor[R]], R] = eliminationClique.condition(sampleVariables,sampleValues)
-      val extensionVariables = vf.variables(conditioned)
+    //sample holds a sequence of variables and their assignment
+    val sample: Option[(Array[Int], Array[Int])] = rElimSeries.foldLeft(Some((Array[Int](),Array[Int]())): Option[(Array[Int],Array[Int])]){
+      case (None,_) => None
+      case (Some((sampleVariables,sampleValues)), eliminationClique) => {
+        //condition on sample so far; this could lead to factors becoming constant and thus variables becoming independent
+        //thus we need to track these variables and sample them in an additional step
+        val priorVariables = eliminationClique.variables zip eliminationClique.domains
+        val conditioned: ProductFactor[Either[T, TableFactor[R]], R] = eliminationClique.condition(sampleVariables,sampleValues)
+        val extensionVariables = vf.variables(conditioned)
 
-      val extensionValues = if(conditioned.domains.size > 0) vf.sample(conditioned, random) else Array[Int]()
-
-      import vultura.util._
-      val (indiVars, indiVals) = priorVariables.filterNot(extensionVariables.contains).map{case (variable,domain) => (variable,domain.toIndexedSeq.pickRandom(random))}.unzip
-      (indiVars.toArray ++ sampleVariables ++ extensionVariables, indiVals.toArray ++ sampleValues ++ extensionValues)
+        val extensionValues: Option[Array[Int]] = if(conditioned.domains.size > 0) vf.sample(conditioned, random) else Some(Array[Int]())
+        extensionValues.map{ eV =>
+          import vultura.util._
+          val (indiVars, indiVals) = priorVariables.filterNot(extensionVariables.contains).map{
+            case (variable,domain) => (variable,domain.toIndexedSeq.pickRandom(random))
+          }.unzip
+          (indiVars.toArray ++ sampleVariables ++ extensionVariables, indiVals.toArray ++ sampleValues ++ eV)
+        }
+      }
     }
 
     //now sort the sample to the order of this factor
-    val sortedSampleValues = this.variables.map(sample.zipped.toMap)
+    val sortedSampleValues = sample.map(s => this.variables.map(s.zipped.toMap))
 
     (partition, sortedSampleValues)
   }

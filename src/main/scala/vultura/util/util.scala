@@ -20,15 +20,18 @@ package object util {
     seq.filter(t => t._1 == max).map(_._2)
   }
 
-  def drawRandomlyBy[A](s: Iterable[A], random: Random)(weight: A => Double): A = {
+  /** @return None if partition function is not positive. */
+  def drawRandomlyBy[A](s: Iterable[A], random: Random)(weight: A => Double): Option[A] = {
     def weightIterator: Iterator[(A,Double)] = s.iterator.map(a => (a,weight(a)))
 
     val partitionFunction: Double = weightIterator.map(_._2).sum
-    assert(partitionFunction > 0d, "partition function is zero; cannot draw a sample")
-    val sampleWeight = random.nextDouble() * partitionFunction
+    //only generate a result if partition function is positive
+    Some(partitionFunction).filter(_ > 0).map{ pf =>
+      val sampleWeight = random.nextDouble() * pf
 
-    weightIterator.scanLeft((null.asInstanceOf[A],0d)){case ((_,acc),(assignment,w)) => (assignment,acc + w)}
-      .find(_._2 > sampleWeight).get._1
+      weightIterator.scanLeft((null.asInstanceOf[A],0d)){case ((_,acc),(assignment,w)) => (assignment,acc + w)}
+        .find(_._2 > sampleWeight).get._1
+    }
   }
 
   class RichRandomSeq[A](val s: IndexedSeq[A]) {

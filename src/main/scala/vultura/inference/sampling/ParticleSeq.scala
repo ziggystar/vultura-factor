@@ -11,9 +11,9 @@ case class ParticleSeq(variables: Array[Int],
 
   def resample(numParticles: Int, random: Random): ParticleSeq = {
     val flatParticles  = particles.mapValues(_.sum).toSeq
-    def drawParticle: WrappedArray[Int] = vultura.util.drawRandomlyBy(flatParticles,random)(t => t._2)._1
+    def drawParticle: Option[WrappedArray[Int]] = vultura.util.drawRandomlyBy(flatParticles,random)(t => t._2).map(_._1)
     val newParticles: Map[WrappedArray[Int], Seq[Double]] =
-      Iterator.fill(numParticles)(drawParticle).toSeq.groupBy(x => x).mapValues(_.map(_ => 1d / numParticles))
+      Iterator.continually(drawParticle).flatten.take(numParticles).toSeq.groupBy(x => x).mapValues(_.map(_ => 1d / numParticles))
     this.copy(particles = newParticles)
   }
 }

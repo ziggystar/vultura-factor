@@ -18,9 +18,9 @@ class SamplerTest extends Specification {
     val numSamples = 1000
     val samples = Seq.fill(numSamples)(sample(factor1, random))
 
-    (samples.count(_.deep == Seq(0, 0)) === 0) and
-      (samples.count(_.deep == Seq(0, 1)) / numSamples.toDouble must beCloseTo(0.25, 0.05)) and
-      (samples.count(_.deep == Seq(1, 0)) / numSamples.toDouble must beCloseTo(0.25, 0.05)) and
-      (samples.count(_.deep == Seq(1, 1)) / numSamples.toDouble must beCloseTo(0.5, 0.05))
+    (samples.count(_.get.deep == Seq(0, 0)) === 0) and
+      (samples.count(_.get.deep == Seq(0, 1)) / numSamples.toDouble must beCloseTo(0.25, 0.05)) and
+      (samples.count(_.get.deep == Seq(1, 0)) / numSamples.toDouble must beCloseTo(0.25, 0.05)) and
+      (samples.count(_.get.deep == Seq(1, 1)) / numSamples.toDouble must beCloseTo(0.5, 0.05))
   }
 }
