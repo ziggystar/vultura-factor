@@ -149,6 +149,7 @@ object TableFactor {
       }.reduce(monoid.append(_,_))
     }
 
-    TableFactor.fromFunction(remainingVars, remainingDomains, sumOut)
+    try TableFactor.fromFunction(remainingVars, remainingDomains, sumOut)
+    catch {case e => throw new RuntimeException("possibly condition on value out of domain (arrayindexoutofbounds)",e)}
   }
 }
