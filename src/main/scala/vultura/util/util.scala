@@ -1,7 +1,6 @@
 package vultura
 
 import scala.util.Random
-import collection.Seq
 
 /**
  * Utility functions.
@@ -22,14 +21,24 @@ package object util {
 
   /** @return None if partition function is not positive. */
   def drawRandomlyBy[A](s: Iterable[A], random: Random)(weight: A => Double): Option[A] = {
-    def weightIterator: Iterator[(A,Double)] = s.iterator.map(a => (a,weight(a)))
-
-    val partitionFunction: Double = weightIterator.map(_._2).sum
+    val partitionFunction: Double = s.map(weight).sum
     //only generate a result if partition function is positive
     Some(partitionFunction).filter(_ > 0).map{ pf =>
       val sampleWeight = random.nextDouble() * pf
 
-      weightIterator.scanLeft((null.asInstanceOf[A],0d)){case ((_,acc),(assignment,w)) => (assignment,acc + w)}
+      s.map(a => (a,weight(a))).scanLeft((null.asInstanceOf[A],0d)){case ((_,acc),(assignment,w)) => (assignment,acc + w)}
+        .find(_._2 > sampleWeight).get._1
+    }
+  }
+
+  /** @return None if partition function is not positive. */
+  def drawRandomlyByIS[A](s: IndexedSeq[A], random: Random, partition: Option[Double] = None)(weight: A => Double): Option[A] = {
+    val partitionFunction: Double = partition.getOrElse(s.map(weight).sum)
+    //only generate a result if partition function is positive
+    Some(partitionFunction).filter(_ > 0).map{ pf =>
+      val sampleWeight = random.nextDouble() * pf
+
+      s.map(a => (a,weight(a))).scanLeft((null.asInstanceOf[A],0d)){case ((_,acc),(assignment,w)) => (assignment,acc + w)}
         .find(_._2 > sampleWeight).get._1
     }
   }
@@ -75,6 +84,14 @@ package object util {
     }
     builder.result()
   }
+
+  def addLog(a: Double, b: Double): Double =
+    if(a.isNegInfinity)
+      b
+    else if(b.isNegInfinity)
+      a
+    else
+      a + math.log1p(math.exp(b - a))
 
   implicit def statisticsPimper[A: Numeric](xs: Iterable[A]) = new {
       def mean: Double = implicitly[Numeric[A]].toDouble(xs.sum) / xs.size

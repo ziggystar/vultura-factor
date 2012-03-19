@@ -27,6 +27,19 @@ object RingWithZero{
       val zero = numeric.one
     }
   }
+
+  def logSumProd = new RingWithZero[Double] {
+    def addition: AbelianGroup[Double] = new AbelianGroup[Double] {
+      def inverse(a: Double): Double = sys.error("inverse not available in log domain")
+      def append(s1: Double, s2: => Double): Double = vultura.util.addLog(s1,s2)
+      val zero: Double = Double.NegativeInfinity
+    }
+
+    def multiplication: Monoid[Double] = new Monoid[Double]{
+      def append(s1: Double, s2: => Double): Double = s1 + s2
+      val zero: Double = 1d
+    }
+  }
 }
 
 trait AbelianGroup[A] extends Monoid[A]{

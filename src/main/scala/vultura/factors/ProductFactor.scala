@@ -5,7 +5,6 @@ import scalaz.Scalaz._
 import vultura.{factors => vf}
 import util.Random
 import vultura.util.{Measure, TreeWidth}
-import collection.immutable.List
 
 /**
  * @author Thomas Geier
@@ -66,6 +65,7 @@ case class ProductFactor[T,R](factors: Iterable[T],
 
     //last elimination clique should have singlular domain; just evaluate it
     val partition = vf.evaluate(ProductFactor(eliminationSeries.last._1,this.productMonoid),Array())
+    assert(!partition.asInstanceOf[Double].isPosInfinity, "infinite partition function")
 
     //now sample by using the elimination cliques in reverse order
     val rElimSeries: List[ProductFactor[Either[T, TableFactor[R]], R]] = eliminationSeries.tail.reverse.map(_._2)

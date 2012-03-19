@@ -28,6 +28,8 @@ class TableFactor[T: ClassManifest] protected[TableFactor](val variables: Array[
     }
     TableFactor.marginalizeDense(this, vars, values.map(Array(_)),fakeMonoid)
   }
+
+  def map[S: ClassManifest](f: T => S): TableFactor[S] = new TableFactor(variables, domains, data.map(f))
 }
 
 object TableFactor {
@@ -44,6 +46,7 @@ object TableFactor {
     cpi.iterator.foreach {
       assign =>
         val value: T = f(assign)
+        assert(!value.asInstanceOf[Double].isPosInfinity, "putting infinity into table factor")
         if(isConstant && value != firstValue)
           isConstant = false
         table(i) = value
@@ -149,7 +152,6 @@ object TableFactor {
       }.reduce(monoid.append(_,_))
     }
 
-    try TableFactor.fromFunction(remainingVars, remainingDomains, sumOut)
-    catch {case e => throw new RuntimeException("possibly condition on value out of domain (arrayindexoutofbounds)",e)}
+      TableFactor.fromFunction(remainingVars, remainingDomains, sumOut)
   }
 }

@@ -3,23 +3,24 @@ package vultura.inference.sampling
 import collection.mutable.WrappedArray
 import vultura.factors.{Factor, SparseFactor}
 import util.Random
+import vultura.util.Measure
+import scalaz._
+import Scalaz._
 
-case class ParticleSeq(variables: Array[Int],
-                       domains: Array[Array[Int]],
-                       particles: Map[WrappedArray[Int], Seq[Double]]){
+class ParticleSeq(val variables: Array[Int],
+                  val domains: Array[Array[Int]],
+                  _particles: Seq[(WrappedArray[Int], Double)],
+                  measure: Measure[Double],
+                  sumMonoid: Monoid[Double]){
+  val particles: IndexedSeq[(WrappedArray[Int], Double)] = _particles.groupBy(_._1).mapValues(_.map(_._2).reduce(sumMonoid.append(_,_))).toIndexedSeq
+  val partition = particles.map(_._2).reduce(sumMonoid.append(_,_))
   assert(variables.distinct.size == variables.size, "double entries in `variables`")
-
-  def resample(numParticles: Int, random: Random): ParticleSeq = {
-    val flatParticles  = particles.mapValues(_.sum).toSeq
-    def drawParticle: Option[WrappedArray[Int]] = vultura.util.drawRandomlyBy(flatParticles,random)(t => t._2).map(_._1)
-    val newParticles: Map[WrappedArray[Int], Seq[Double]] =
-      Iterator.continually(drawParticle).flatten.take(numParticles).toSeq.groupBy(x => x).mapValues(_.map(_ => 1d / numParticles))
-    this.copy(particles = newParticles)
-  }
+  def drawParticle(random: Random): Option[WrappedArray[Int]] = vultura.util.drawRandomlyByIS(particles,random,Some(partition))(t => measure.weight(t._2)).map(_._1)
+  def generator(random: Random): Iterator[WrappedArray[Int]] = Iterator.continually{val p = drawParticle(random); if(!p.isDefined) println("reject 1"); p}.flatten
 }
 
 object ParticleSeq {
-  implicit val particleSetAsSparseFactor: SparseFactor[ParticleSeq,Double] = new SparseFactor[ParticleSeq,Double] {
+  implicit def particleSetAsSparseFactor(m: Measure[Double], sum: Monoid[Double]): SparseFactor[ParticleSeq,Double] = new SparseFactor[ParticleSeq,Double] {
     def variables(f: ParticleSeq): Array[Int] = f.variables
     def domains(f: ParticleSeq): Array[Array[Int]] = f.domains
     def condition(f: ParticleSeq, variables: Array[Int], values: Array[Int]): ParticleSeq = {
@@ -32,26 +33,27 @@ object ParticleSeq {
         case (wrappedArray,value) if(matchCondition(wrappedArray)) =>
           (wrapIntArray(survivingIndices.map(wrappedArray)),value)
       }
-      ParticleSeq(condVariables.toArray,condDomains.toArray,condParticles)
+      new ParticleSeq(condVariables.toArray,condDomains.toArray,condParticles,m,sum)
     }
 
     def defaultValue(f: ParticleSeq): Double = 0d
 
-    def points(f: ParticleSeq): Map[WrappedArray[Int], Double] = f.particles.mapValues(_.sum)
+    def points(f: ParticleSeq): Map[WrappedArray[Int], Double] = f.particles.toMap
   }
 
-  def particleSeqToMap[T, A](particles: Seq[(Array[Int],Double)]): Map[WrappedArray[Int], Seq[Double]] = {
-    particles.map(t => (wrapIntArray(t._1),t._2)).groupBy(_._1).map {
-      case (k, vs) => k -> vs.map(_._2)
-    }
-  }
-
-  def apply[A](factor: A, particles: Seq[(Array[Int],Double)])(implicit evF: Factor[A,Double]): ParticleSeq = {
-    ParticleSeq(
+  def apply[A](factor: A, particles: Seq[(Array[Int],Double)],m: Measure[Double], sum: Monoid[Double])(implicit evF: Factor[A,Double]): ParticleSeq = {
+    import scalaz._
+    import Scalaz._
+    new ParticleSeq(
       evF.variables(factor),
       evF.domains(factor),
-      particleSeqToMap(particles)
+      particles map ((wrapIntArray _) <-: _),
+      m,
+      sum
     )
   }
+
+  def unapply(ps: ParticleSeq): Some[(Array[Int], Array[Array[Int]], Seq[(WrappedArray[Int], Double)])] =
+    Some(ps.variables, ps.domains, ps.particles)
 }
 

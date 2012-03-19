@@ -1,8 +1,10 @@
 package vultura.util
 
 import java.util.BitSet
-import collection.Seq
 import annotation.tailrec
+import collection.{Iterator, Seq}
+import collection.immutable.IndexedSeq
+import vultura.graph.{Graph, GraphOps}
 
 /**
  * @author Thomas Geier
@@ -34,8 +36,8 @@ object TreeWidth {
 
   def eliminateSimplicials[A](cliques: Seq[Set[A]],allVariables: Option[Set[A]] = None): (Seq[Set[A]],List[A]) = {
     val simplicialIter: Iterator[(Seq[Set[A]], Seq[A])] =
-      Iterator.iterate((cliques,simplicialEdges((cliques)).toSeq)){case (cliques, simplicials) =>
-        val elminationResult = simplicials.foldLeft(cliques)(eliminateVertex(_,_)._1)
+      Iterator.iterate((cliques,simplicialEdges((cliques)).toSeq)){case (cliqs, simplicials) =>
+        val elminationResult = simplicials.foldLeft(cliqs)(eliminateVertex(_,_)._1)
         (elminationResult,simplicialEdges(elminationResult).toSeq)
       }.takeWhile(_._2 != Nil)
     simplicialIter.foldLeft((cliques,List.empty[A])){case ((_,elims),(rem,newElim)) => (rem,elims ++ newElim)}
@@ -62,5 +64,69 @@ object TreeWidth {
     }
   }
 
-  def minDegreeOrdering(cliques: Seq[Set[Int]]): List[Int] = minDegreeOrderingAndWidth(cliques)._1
+
+  def bs2Iterator(bs: BitSet): Iterator[Int] = Iterator.iterate(0)(n => bs.nextSetBit(n) + 1).drop(1).map(_ - 1).takeWhile(_ >= 0)
+
+  def minDegreeOrderingAndWidthFast(_cliques: Seq[Set[Int]]): (List[Int],Int) = {
+    val cliques = _cliques map intSet2BS
+
+    val vertices: IndexedSeq[Int] = {
+      val bs = new BitSet
+      cliques foreach (bs or _)
+      bs2Iterator(bs).toIndexedSeq
+    }
+
+    val neighbours: IndexedSeq[BitSet] = vertices map {v =>
+      val bs = new BitSet
+      cliques filter (_ get v) foreach (bs or _)
+      bs
+    }
+
+    //warning: mutability is used in here
+    @tailrec
+    def mdo(cliques: Seq[BitSet], vertsWithN: Seq[(Int,BitSet)], acc: (List[Int],Int) = (Nil,0)): (List[Int],Int) = {
+      if(vertsWithN.isEmpty)
+        (acc._1.reverse, acc._2)
+      else {
+        val (elimV,elimN) = vertsWithN minBy (_._2.cardinality)
+        val (collectedCliques, remainingCliques) = cliques partition (_ get elimV)
+        val elimClique = {
+          val bs = new BitSet
+          collectedCliques foreach (bs or _)
+          bs.clear(elimV)
+          bs
+        }
+
+        val newCliques = remainingCliques :+ elimClique
+        val newVwithN = vertsWithN filterNot (_._1 == elimV)
+        //update the bitsets
+        newVwithN.foreach{ case (v,ns) =>
+          if (ns.get(elimV)){
+            ns.or(elimN)
+            ns.clear(elimV)
+          }
+        }
+        //recurse
+        mdo(newCliques, newVwithN, (elimV :: acc._1, acc._2 max elimClique.cardinality))
+      }
+    }
+
+    mdo(cliques,vertices zip neighbours)
+  }
+
+  def minDegreeOrdering(cliques: Seq[Set[Int]]): List[Int] = minDegreeOrderingAndWidthFast(cliques)._1//minDegreeOrderingAndWidth(cliques)._1
+
+  def libtw(_cliques: Seq[Set[Int]]): Int = {
+    val cls: Seq[BitSet] = _cliques map intSet2BS
+    implicit val cls2graph = new Graph[Seq[BitSet],Int] {
+      def nodes(g: Seq[BitSet]): Set[Int] = {
+        val bs = new BitSet
+        g foreach (bs or _)
+        bs2Iterator(bs).toSet
+      }
+
+      def adjacent(g: Seq[BitSet], n1: Int, n2: Int): Boolean = g.exists(c => c.get(n1) && c.get(n2))
+    }
+    GraphOps.treeWidth(cls)
+  }
 }
