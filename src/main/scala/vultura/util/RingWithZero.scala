@@ -13,6 +13,10 @@ trait RingWithZero[A] {
   def multiplication: Monoid[A]
 }
 
+object LogMeasure extends Measure[Double]{
+  def weight(a: Double*): Double = a.map(math.exp).sum
+}
+
 object RingWithZero{
   def sumProduct[A: Numeric] = new RingWithZero[A] {
     val numeric = implicitly[Numeric[A]]
@@ -31,7 +35,7 @@ object RingWithZero{
   def logSumProd = new RingWithZero[Double] {
     def addition: AbelianGroup[Double] = new AbelianGroup[Double] {
       def inverse(a: Double): Double = sys.error("inverse not available in log domain")
-      def append(s1: Double, s2: => Double): Double = vultura.util.addLog(s1,s2)
+      def append(s1: Double, s2: => Double): Double = vultura.util.addLogApproximate(s1,s2)
       val zero: Double = Double.NegativeInfinity
     }
 

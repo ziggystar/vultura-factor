@@ -2,8 +2,6 @@ package vultura.util
 
 import java.util.BitSet
 import annotation.tailrec
-import collection.{Iterator, Seq}
-import collection.immutable.IndexedSeq
 import vultura.graph.{Graph, GraphOps}
 
 /**

@@ -5,7 +5,7 @@ import util.Random
 import collection.mutable.WrappedArray
 import scalaz._
 import Scalaz._
-import vultura.util.{Measure, RingWithZero}
+import vultura.util.{LogMeasure, Measure, RingWithZero}
 
 /**
  * Created by IntelliJ IDEA.
@@ -19,7 +19,7 @@ object SequentialImportanceSampling {
     //draw initial samples
     implicit val ring = RingWithZero.logSumProd
     implicit val sumMonoid = ring.addition
-    implicit val logMeasure = new Measure[Double]{def weight(a: Double*): Double = a.map(math.exp).sum}
+    implicit val logMeasure = LogMeasure
 
     val initialFactor: ProductFactor[A, Double] = ProductFactor(factorSequence.head, ring.multiplication)
     val initalParticleStream: Seq[(Array[Int], Double)] =
@@ -55,7 +55,7 @@ object SequentialImportanceSampling {
         }
       }.flatten.take(numSamples).toSeq
 
-      println("%d distinct particles sampled" format unweightedParticles.map(_._1).distinct.size)
+      //println("%d distinct particles sampled" format unweightedParticles.map(_._1).distinct.size)
 
       val normalizingConstant = unweightedParticles.map(_._2).sum
       //renormalized

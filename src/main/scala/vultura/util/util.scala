@@ -92,6 +92,7 @@ package object util {
       a
     else
       a + math.log1p(math.exp(b - a))
+  def addLogApproximate(a: Double, b: Double): Double = if(math.abs(a - b) > 15)  a max b else addLog(a,b)
 
   implicit def statisticsPimper[A: Numeric](xs: Iterable[A]) = new {
       def mean: Double = implicitly[Numeric[A]].toDouble(xs.sum) / xs.size

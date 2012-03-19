@@ -40,6 +40,8 @@ case class ProductFactor[T,R](factors: Iterable[T],
     ProductFactor(varying.toIndexedSeq ++ constantNotZero,productMonoid)
   }
 
+  def conditionView(variables: Array[Int], value: Array[Int]): ProductFactor[FactorView[T],R] = ProductFactor(factors.map(new FactorView(variables zip value toMap, _)),productMonoid)
+
   def filter(p: T => Boolean): ProductFactor[T, R] = ProductFactor(factors.filter(p),productMonoid)
 
   def partitionAndSample(random: Random, sumMonoid: Monoid[R])(implicit cm: ClassManifest[R], measure: Measure[R]): (R,Option[Array[Int]]) = {
