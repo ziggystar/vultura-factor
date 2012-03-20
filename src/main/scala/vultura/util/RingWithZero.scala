@@ -14,21 +14,24 @@ trait RingWithZero[A] {
 }
 
 object LogMeasure extends Measure[Double]{
+  def normalizedWeight(partition: Double): (Double) => Double = (x: Double) => math.exp(x - partition)
+
+  def sum: Monoid[Double] = RingWithZero.logSumProd.addition
+
   def weight(a: Double*): Double = a.map(math.exp).sum
 }
 
 object RingWithZero{
-  def sumProduct[A: Numeric] = new RingWithZero[A] {
-    val numeric = implicitly[Numeric[A]]
-    def addition = new AbelianGroup[A] {
-      def inverse(a: A) = numeric.negate(a)
-      def append(s1: A, s2: => A) = Seq(s1,s2).sum
-      val zero = numeric.zero
+  def sumProduct = new RingWithZero[Double] {
+    def addition = new AbelianGroup[Double] {
+      def inverse(a: Double) = -a
+      def append(s1: Double, s2: => Double) = s1 + s2
+      val zero = 0d
     }
 
-    def multiplication = new Monoid[A] {
-      def append(s1: A, s2: => A) = Seq(s1,s2).product
-      val zero = numeric.one
+    def multiplication = new Monoid[Double] {
+      def append(s1: Double, s2: => Double) = s1 * s2
+      val zero = 1d
     }
   }
 

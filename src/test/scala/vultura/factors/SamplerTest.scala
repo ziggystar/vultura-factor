@@ -3,6 +3,7 @@ package vultura.factors
 import org.specs2._
 import specification.Fragments
 import util.Random
+import vultura.util.Measure
 
 /**
  * Created by IntelliJ IDEA.
@@ -16,6 +17,7 @@ class SamplerTest extends Specification {
   def is: Fragments = {
     val random = new Random
     val numSamples = 1000
+    implicit val measure = Measure.measureInt
     val samples = Seq.fill(numSamples)(sample(factor1, random))
 
     (samples.count(_.get.deep == Seq(0, 0)) === 0) and

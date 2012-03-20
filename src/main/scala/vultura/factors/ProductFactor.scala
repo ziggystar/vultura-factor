@@ -11,20 +11,25 @@ import vultura.util.{Measure, TreeWidth}
  * @since 05.02.12
  */
 
-case class ProductFactor[T,R](factors: Iterable[T],
+case class ProductFactor[T,R](_factors: Seq[T],
                               productMonoid: Monoid[R])
                              (implicit val fev: Factor[T,R]) {
-
+  val factors = _factors.toIndexedSeq
   val variables: Array[Int] = factors.flatMap(f => vf.variables(f)).toSeq.distinct.toArray
   val domains: Array[Array[Int]] = variables.map(factors.flatMap(f => vf.variables(f).zip(vf.domains(f))).toMap)
 
   def evaluate(assignment: Array[Int]): R = {
     val lookup = variables.zip(assignment).toMap
-    val results = for(
-      f <- factors;
-      ass = vf.variables(f).map(lookup)
-    ) yield vf.evaluate(f,ass)
-    results.foldLeft(productMonoid.zero)(productMonoid.append(_,_))
+    var result = productMonoid.zero
+    var i = 0
+    while(i < factors.size){
+      val f = factors(i)
+      val assignment = vf.variables(f).map(lookup)
+      val evalResult = vf.evaluate(f,assignment)
+      result = productMonoid.append(result,evalResult)
+      i += 1
+    }
+    result
   }
 
   def condition(variables: Array[Int], value: Array[Int]): ProductFactor[T,R] = {
@@ -78,14 +83,14 @@ case class ProductFactor[T,R](factors: Iterable[T],
       case (Some((sampleVariables,sampleValues)), eliminationClique) => {
         //condition on sample so far; this could lead to factors becoming constant and thus variables becoming independent
         //thus we need to track these variables and sample them in an additional step
-        val priorVariables = eliminationClique.variables zip eliminationClique.domains
+        val priorVariablesAndDomains: Array[(Int, Array[Int])] = eliminationClique.variables zip eliminationClique.domains
         val conditioned: ProductFactor[Either[T, TableFactor[R]], R] = eliminationClique.condition(sampleVariables,sampleValues)
         val extensionVariables = vf.variables(conditioned)
 
-        val extensionValues: Option[Array[Int]] = if(conditioned.domains.size > 0) vf.sample(conditioned, random) else Some(Array[Int]())
+        val extensionValues: Option[Array[Int]] = if(extensionVariables.size > 0) vf.sample(conditioned, random) else Some(Array[Int]())
         extensionValues.map{ eV =>
           import vultura.util._
-          val (indiVars, indiVals) = priorVariables.filterNot(extensionVariables.contains).map{
+          val (indiVars, indiVals) = priorVariablesAndDomains.filterNot(vd => extensionVariables.contains(vd._1) || sampleVariables.contains(vd._1)).map{
             case (variable,domain) => (variable,domain.toIndexedSeq.pickRandom(random))
           }.unzip
           (indiVars.toArray ++ sampleVariables ++ extensionVariables, indiVals.toArray ++ sampleValues ++ eV)
@@ -98,6 +103,7 @@ case class ProductFactor[T,R](factors: Iterable[T],
 
     (partition, sortedSampleValues)
   }
+
 }
 
 object ProductFactor {

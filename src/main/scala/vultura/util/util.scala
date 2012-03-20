@@ -24,6 +24,7 @@ package object util {
     val partitionFunction: Double = s.map(weight).sum
     //only generate a result if partition function is positive
     Some(partitionFunction).filter(_ > 0).map{ pf =>
+      assert(!pf.isInfinite, "got infinite partition function")
       val sampleWeight = random.nextDouble() * pf
 
       s.map(a => (a,weight(a))).scanLeft((null.asInstanceOf[A],0d)){case ((_,acc),(assignment,w)) => (assignment,acc + w)}

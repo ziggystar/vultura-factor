@@ -7,17 +7,26 @@ import vultura.util._
 /**
  * Stores all function values inside an array.
  * `variables` is guaranteed to be sorted.
- *
- * @param variables
- * @param domains
- * @param data
  */
-class TableFactor[T: ClassManifest] protected[TableFactor](val variables: Array[Int],
-                                                           val domains: Array[Array[Int]],
-                                                           val data: Array[T]){
-  val cpi = new DomainCPI(domains)
+class TableFactor[T: ClassManifest](val variables: Array[Int],
+                                    val domains: Array[Array[Int]],
+                                    val data: Array[T],
+                                    val independentVariables: Array[Int] = Array()){
+  val cpi = new DomainCPI(variables zip domains filterNot (independentVariables contains _._1) map (_._2))
+  assert(variables.size == domains.size && cpi.size == data.size, "creating invalid TableFactor")
 
-  def evaluate(assignment: Array[Int]): T = data(cpi.seq2Index(assignment))
+  val dependentIndices = {
+    val independentIndices = independentVariables map (variables indexOf _)
+    (variables indices).toArray filterNot (independentIndices contains)
+  }
+
+  def evaluate(assignment: Array[Int]): T = {
+    val dependentAssignment: Array[Int] =
+      if (independentVariables.isEmpty) assignment
+      else dependentIndices map assignment
+
+    data(cpi.seq2Index(dependentAssignment))
+  }
 
   /** Condition via marginalization. */
   def condition(vars: Array[Int],
@@ -30,6 +39,13 @@ class TableFactor[T: ClassManifest] protected[TableFactor](val variables: Array[
   }
 
   def map[S: ClassManifest](f: T => S): TableFactor[S] = new TableFactor(variables, domains, data.map(f))
+
+  def withIndependentVariables(ivs: Array[Int], idoms: Array[Array[Int]]): TableFactor[T] = new TableFactor(
+    variables ++ ivs,
+    domains ++ idoms,
+    data,
+    ivs
+  )
 }
 
 object TableFactor {
@@ -54,22 +70,24 @@ object TableFactor {
     }
 
     if(isConstant)
-      constantFactor(firstValue)
+      constantFactor(firstValue).withIndependentVariables(sortedVars.toArray, sortedDomains)
     else
       new TableFactor(sortedVars.toArray, sortedDomains.map(_.toArray).toArray, table)
+  }
+
+  def fromTable[T: ClassManifest](_vars: Seq[Int], _domains: Seq[Array[Int]], f: IndexedSeq[T]) = {
+    import vultura.util._
+    val cpi: DomainCPI[Int] = crossProduct(_domains)
+    this.fromFunction(_vars, _domains, ass => f(cpi.seq2Index(ass.toArray)))
   }
 
   def constantFactor[T: ClassManifest](singleValue: T) = new TableFactor(Array(),Array.empty[Array[Int]],Array(singleValue))
 
   implicit def dfAsFactor[R]: DenseFactor[TableFactor[R],R] = new DenseFactor[TableFactor[R],R]{
-    def variables(f: TableFactor[R]): Array[Int] =
-      f.variables
-    def domains(f: TableFactor[R]): Array[Array[Int]] =
-      f.domains
-    def evaluate(f: TableFactor[R], assignment: Array[Int]): R =
-      f.evaluate(assignment)
-    def condition(f: TableFactor[R], variables: Array[Int], values: Array[Int]): TableFactor[R] =
-      f.condition(variables,values)
+    def variables(f: TableFactor[R]): Array[Int] = f.variables
+    def domains(f: TableFactor[R]): Array[Array[Int]] = f.domains
+    def evaluate(f: TableFactor[R], assignment: Array[Int]): R = f.evaluate(assignment)
+    def condition(f: TableFactor[R], variables: Array[Int], values: Array[Int]): TableFactor[R] = f.condition(variables,values)
   }
 
   /**

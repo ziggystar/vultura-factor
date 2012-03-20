@@ -15,7 +15,7 @@ package object factors {
   def domains[A](a: A)(implicit f: Factor[A,_]): Array[Array[Int]] = f.domains(a)
   def evaluate[A,B](a: A, assignment: Array[Int])(implicit f: Factor[A,B]): B = f.evaluate(a,assignment)
   def condition[A,B](a: A, variables: Array[Int], values: Array[Int])(implicit f: Factor[A,B]): A = f.condition(a,variables,values)
-  def sample[A,B](a: A, random: Random)(implicit f: Factor[A,B], m: Measure[B]): Option[Array[Int]] = f.sample(a,random)
+  def sample[A,B](a: A, random: Random)(implicit f: Factor[A,B], m: Measure[B], cm: ClassManifest[B]): Option[Array[Int]] = f.sample(a,random)
   def partition[A,B](a: A,sumMonoid: Monoid[B])(implicit f: Factor[A,B],cm: ClassManifest[B]): B = f.partition(a,sumMonoid)
   def marginalize[A,B,C](a: A,
                          variables: Array[Int],
@@ -44,7 +44,7 @@ package object factors {
     ProductFactor(unaffected.toIndexedSeq :+ Right(resultingFactor),product.productMonoid)
   }
 
-  implicit def seq2Product[A,B](fs: Iterable[A])(implicit evF: Factor[A,B]) = new {
+  implicit def seq2Product[A,B](fs: Seq[A])(implicit evF: Factor[A,B]) = new {
     def productFactor(monoid: Monoid[B]) = ProductFactor(fs,monoid)
   }
 

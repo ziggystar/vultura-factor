@@ -5,7 +5,7 @@ import util.Random
 import collection.mutable.WrappedArray
 import scalaz._
 import Scalaz._
-import vultura.util.{LogMeasure, Measure, RingWithZero}
+import vultura.util.{AbelianGroup, LogMeasure, Measure, RingWithZero}
 
 /**
  * Created by IntelliJ IDEA.
@@ -15,11 +15,11 @@ import vultura.util.{LogMeasure, Measure, RingWithZero}
 
 object SequentialImportanceSampling {
   /** @return a set of samples and associated weights.    */
-  def weightedImportanceSampling[A](factorSequence: Iterable[Seq[A]], numSamples: Int, random: Random)(implicit ev: Factor[A,Double]): ParticleSeq = {
+  def weightedImportanceSampling[A](factorSequence: Iterable[Seq[A]], numSamples: Int, random: Random, useLogDomain: Boolean = false)(implicit ev: Factor[A,Double]): ParticleSeq = {
     //draw initial samples
-    implicit val ring = RingWithZero.logSumProd
+    implicit val ring: RingWithZero[Double] = if(useLogDomain) RingWithZero.logSumProd else RingWithZero.sumProduct
     implicit val sumMonoid = ring.addition
-    implicit val logMeasure = LogMeasure
+    implicit val logMeasure = if(useLogDomain) LogMeasure else Measure.measureDouble
 
     val initialFactor: ProductFactor[A, Double] = ProductFactor(factorSequence.head, ring.multiplication)
     val initalParticleStream: Seq[(Array[Int], Double)] =
@@ -36,34 +36,32 @@ object SequentialImportanceSampling {
       sumMonoid
     )
     //weights are correct for initial samples
-    val particles: ParticleSeq = factorSequence.tail.foldLeft(initialParticles){ case(remainingParticles,newFactors) =>
+    val particles: ParticleSeq = factorSequence.tail.foldLeft(initialParticles){ case(oldParticles,newFactors) =>
       //extend a particle x by drawing from newFactors | x exactly; weight remains unchanged,
       //multiply weight by partition function over new factors (probability of old sample given new distribution)
-      val ParticleSeq(vars,doms,_) = remainingParticles
+      val ParticleSeq(vars,doms,_) = oldParticles
       val newFactor = ProductFactor(newFactors, ring.multiplication)
       //draw `numSamples` new particles
-      val unweightedParticles: Seq[(WrappedArray[Int], Double)] = remainingParticles.generator(random).map{ oldAssignment =>
+      val unweightedParticles: Seq[(WrappedArray[Int], Double)] = oldParticles.generator(random).map{ oldAssignment =>
         val conditionedNewFactor: ProductFactor[A, Double] = newFactor.condition(vars, oldAssignment.toArray)
         val (conditionedPartition, sampleExtension) = conditionedNewFactor.partitionAndSample(random, ring.addition)
-        if(!sampleExtension.isDefined)
-          println("no sample found 2")
+//        print(sampleExtension.map(ext => (oldAssignment  ++ ext).mkString(",") + " p= " + conditionedPartition).getOrElse("no sample found 2"))
         sampleExtension.map {
           sE =>
             assert(!conditionedPartition.isInfinite, "sampled invalid weight; factor values:\n%s".format(conditionedNewFactor.factors.map(evaluate(_,sE)).mkString(", ")))
+//            println(".")
             val newParticle = oldAssignment ++ sE
             (newParticle, conditionedPartition)
         }
-      }.flatten.take(numSamples).toSeq
+      }.flatten.take(numSamples).toIndexedSeq
 
+      println(":step\n")
       //println("%d distinct particles sampled" format unweightedParticles.map(_._1).distinct.size)
 
-      val normalizingConstant = unweightedParticles.map(_._2).sum
-      //renormalized
-      val normalizedParticles = unweightedParticles.map(t => (t._1.toArray,t._2/normalizingConstant))
       new ParticleSeq(
         (vars ++ variables(newFactor)).distinct,
         (doms ++ domains(newFactor)).distinct,
-        normalizedParticles map ((wrapIntArray _) <-: _),
+        unweightedParticles,
         logMeasure,
         sumMonoid
       )
