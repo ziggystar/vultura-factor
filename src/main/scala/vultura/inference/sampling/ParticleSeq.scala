@@ -13,7 +13,7 @@ class ParticleSeq(val variables: Array[Int],
                   measure: Measure[Double],
                   sumMonoid: Monoid[Double]){
   val particles: IndexedSeq[(WrappedArray[Int], Double)] = _particles.groupBy(_._1).mapValues(_.map(_._2).reduce(sumMonoid.append(_,_))).toIndexedSeq
-  val partition = particles.map(p => p._2).reduce(sumMonoid.append(_,_))
+  val partition = particles.map(p => p._2).foldLeft(sumMonoid.zero)(sumMonoid.append(_,_))
   assert(variables.distinct.size == variables.size, "double entries in `variables`")
   def drawParticle(random: Random): Option[WrappedArray[Int]] =
     vultura.util.drawRandomlyByIS(particles,random)(t => measure.normalizedWeight(partition)(t._2)).map(_._1)
