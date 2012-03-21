@@ -49,7 +49,8 @@ case class ProductFactor[T,R](_factors: Seq[T],
 
   def filter(p: T => Boolean): ProductFactor[T, R] = ProductFactor(factors.filter(p),productMonoid)
 
-  def partitionAndSample(random: Random, sumMonoid: Monoid[R])(implicit cm: ClassManifest[R], measure: Measure[R]): (R,Option[Array[Int]]) = {
+  def partitionAndSample(random: Random, measure: Measure[R])(implicit cm: ClassManifest[R]): (R,Option[Array[Int]]) = {
+    val sumMonoid = measure.sum
     if(this.factors.isEmpty)
       return (this.productMonoid.zero, Some(Array()))
 
@@ -87,7 +88,7 @@ case class ProductFactor[T,R](_factors: Seq[T],
         val conditioned: ProductFactor[Either[T, TableFactor[R]], R] = eliminationClique.condition(sampleVariables,sampleValues)
         val extensionVariables = vf.variables(conditioned)
 
-        val extensionValues: Option[Array[Int]] = if(extensionVariables.size > 0) vf.sample(conditioned, random) else Some(Array[Int]())
+        val extensionValues: Option[Array[Int]] = if(extensionVariables.size > 0) vf.sample(conditioned, random, measure) else Some(Array[Int]())
         extensionValues.map{ eV =>
           import vultura.util._
           val (indiVars, indiVals) = priorVariablesAndDomains.filterNot(vd => extensionVariables.contains(vd._1) || sampleVariables.contains(vd._1)).map{

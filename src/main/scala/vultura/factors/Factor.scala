@@ -34,7 +34,7 @@ sealed trait Factor[A,B] {
     vultura.util.crossProduct(this.domains(f)).iterator.map(this.evaluate(f,_)).reduce(sumMonoid.append(_,_))
 
   /**uses two traversals of the domain of the factor to generate an exact sample. */
-  def sample(problem: A, random: Random)(implicit m: Measure[B], cm: ClassManifest[B]): Option[Array[Int]] = if(domains(problem).isEmpty)
+  def sample(problem: A, random: Random, m: Measure[B])(implicit cm: ClassManifest[B]): Option[Array[Int]] = if(domains(problem).isEmpty)
     Some(Array())
   else {
     val pf = partition(problem, m.sum)
@@ -54,7 +54,7 @@ trait SparseFactor[A,B] extends Factor[A,B] {
    * if, if the sample would be drawn from the default assignments. This should be efficient if the factor is indeed
    * sparse.
    */
-  override def sample(f: A, random: Random)(implicit m: Measure[B], cm: ClassManifest[B]): Option[Array[Int]] = {
+  override def sample(f: A, random: Random, m: Measure[B])(implicit cm: ClassManifest[B]): Option[Array[Int]] = {
     def sparseWeightIterator: Iterator[(Array[Int],Double)] =
       this.points(f).iterator.map(argVal => ((_:WrappedArray[Int]).toArray) <-: argVal :-> (m.weight(_)))
 

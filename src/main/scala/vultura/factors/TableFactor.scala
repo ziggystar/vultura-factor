@@ -38,7 +38,7 @@ class TableFactor[T: ClassManifest](val variables: Array[Int],
     TableFactor.marginalizeDense(this, vars, values.map(Array(_)),fakeMonoid)
   }
 
-  def map[S: ClassManifest](f: T => S): TableFactor[S] = new TableFactor(variables, domains, data.map(f))
+  def map[S: ClassManifest](f: T => S): TableFactor[S] = new TableFactor(variables, domains, data.map(f), independentVariables)
 
   def withIndependentVariables(ivs: Array[Int], idoms: Array[Array[Int]]): TableFactor[T] = new TableFactor(
     variables ++ ivs,

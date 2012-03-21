@@ -19,11 +19,11 @@ object SequentialImportanceSampling {
     //draw initial samples
     implicit val ring: RingWithZero[Double] = if(useLogDomain) RingWithZero.logSumProd else RingWithZero.sumProduct
     implicit val sumMonoid = ring.addition
-    implicit val logMeasure = if(useLogDomain) LogMeasure else Measure.measureDouble
+    implicit val measure = if(useLogDomain) LogMeasure else Measure.measureDouble
 
     val initialFactor: ProductFactor[A, Double] = ProductFactor(factorSequence.head, ring.multiplication)
     val initalParticleStream: Seq[(Array[Int], Double)] =
-      Iterator.continually(initialFactor.partitionAndSample(random,ring.addition)._2)
+      Iterator.continually(initialFactor.partitionAndSample(random,measure)._2)
         .flatten
         .map(a => a -> (1.toDouble / numSamples))
         .take(numSamples)
@@ -32,7 +32,7 @@ object SequentialImportanceSampling {
     val initialParticles = ParticleSeq(
       initialFactor,
       initalParticleStream,
-      logMeasure,
+      measure,
       sumMonoid
     )
     //weights are correct for initial samples
@@ -44,25 +44,23 @@ object SequentialImportanceSampling {
       //draw `numSamples` new particles
       val unweightedParticles: Seq[(WrappedArray[Int], Double)] = oldParticles.generator(random).map{ oldAssignment =>
         val conditionedNewFactor: ProductFactor[A, Double] = newFactor.condition(vars, oldAssignment.toArray)
-        val (conditionedPartition, sampleExtension) = conditionedNewFactor.partitionAndSample(random, ring.addition)
+        val (conditionedPartition, sampleExtension) = conditionedNewFactor.partitionAndSample(random, measure)
 //        print(sampleExtension.map(ext => (oldAssignment  ++ ext).mkString(",") + " p= " + conditionedPartition).getOrElse("no sample found 2"))
         sampleExtension.map {
           sE =>
             assert(!conditionedPartition.isInfinite, "sampled invalid weight; factor values:\n%s".format(conditionedNewFactor.factors.map(evaluate(_,sE)).mkString(", ")))
-//            println(".")
             val newParticle = oldAssignment ++ sE
             (newParticle, conditionedPartition)
         }
       }.flatten.take(numSamples).toIndexedSeq
 
-      println(":step\n")
-      //println("%d distinct particles sampled" format unweightedParticles.map(_._1).distinct.size)
+      println("%d distinct particles sampled" format unweightedParticles.map(_._1).distinct.size)
 
       new ParticleSeq(
         (vars ++ variables(newFactor)).distinct,
         (doms ++ domains(newFactor)).distinct,
         unweightedParticles,
-        logMeasure,
+        measure,
         sumMonoid
       )
     }
