@@ -49,10 +49,11 @@ case class ProductFactor[T,R](_factors: Seq[T],
 
   def filter(p: T => Boolean): ProductFactor[T, R] = ProductFactor(factors.filter(p),productMonoid)
 
-  def partitionAndSample(random: Random, measure: Measure[R])(implicit cm: ClassManifest[R]): (R,Option[Array[Int]]) = {
+  /** @return Partition function and `numSamples` samples or `None` if partition is zero. */
+  def partitionAndSample(random: Random, measure: Measure[R], numSamples: Int)(implicit cm: ClassManifest[R]): Option[(R,IndexedSeq[Array[Int]])] = {
     val sumMonoid = measure.sum
     if(this.factors.isEmpty)
-      return (this.productMonoid.zero, Some(Array()))
+      return Some((this.productMonoid.zero, IndexedSeq.fill(numSamples)(Array.empty[Int])))
 
     //work along this variable ordering; currently obtained by min degree heuristic
     val ordering = TreeWidth.minDegreeOrdering(this.factors.toSeq.map(vf.variables(_).toSet)).map(this.variables zip this.domains map(t => t._1 -> t) toMap)
@@ -75,36 +76,41 @@ case class ProductFactor[T,R](_factors: Seq[T],
     val partition = vf.evaluate(ProductFactor(eliminationSeries.last._1,this.productMonoid),Array())
     assert(!partition.asInstanceOf[Double].isPosInfinity, "infinite partition function")
 
+    if(!measure.isPositive(partition))
+      return None
+
     //now sample by using the elimination cliques in reverse order
-    val rElimSeries: List[ProductFactor[Either[T, TableFactor[R]], R]] = eliminationSeries.tail.reverse.map(_._2)
+    lazy val rElimSeries: List[ProductFactor[Either[T, TableFactor[R]], R]] = eliminationSeries.tail.reverse.map(_._2)
     //as input, we need the sample so far (as a list of (variable,value) tuples) to condition the next elimination clique
     //sample holds a sequence of variables and their assignment
-    val sample: Option[(Array[Int], Array[Int])] = rElimSeries.foldLeft(Some((Array[Int](),Array[Int]())): Option[(Array[Int],Array[Int])]){
-      case (None,_) => None
-      case (Some((sampleVariables,sampleValues)), eliminationClique) => {
-        //condition on sample so far; this could lead to factors becoming constant and thus variables becoming independent
-        //thus we need to track these variables and sample them in an additional step
-        val priorVariablesAndDomains: Array[(Int, Array[Int])] = eliminationClique.variables zip eliminationClique.domains
-        val conditioned: ProductFactor[Either[T, TableFactor[R]], R] = eliminationClique.condition(sampleVariables,sampleValues)
-        val extensionVariables = vf.variables(conditioned)
+    def sample: Array[Int] = {
+      //the sample is produced in the elimination ordering
+      val unsortedSample = rElimSeries.foldLeft((Array[Int](),Array[Int]()): (Array[Int],Array[Int])){
+        case ((sampleVariables,sampleValues), eliminationClique) => {
+          //condition on sample so far; this could lead to factors becoming constant and thus variables becoming independent
+          //thus we need to track these variables and sample them in an additional step
+          val priorVariablesAndDomains: Array[(Int, Array[Int])] = eliminationClique.variables zip eliminationClique.domains
+          val conditioned: ProductFactor[Either[T, TableFactor[R]], R] = eliminationClique.condition(sampleVariables,sampleValues)
+          val extensionVariables = vf.variables(conditioned)
 
-        val extensionValues: Option[Array[Int]] = if(extensionVariables.size > 0) vf.sample(conditioned, random, measure) else Some(Array[Int]())
-        extensionValues.map{ eV =>
+          val extensionValues: Array[Int] = if(extensionVariables.size > 0)
+            vf.sample(conditioned, random, measure).get //we can get here, since we made sure the partition function is not zero
+          else
+            Array[Int]()
+
           import vultura.util._
           val (indiVars, indiVals) = priorVariablesAndDomains.filterNot(vd => extensionVariables.contains(vd._1) || sampleVariables.contains(vd._1)).map{
             case (variable,domain) => (variable,domain.toIndexedSeq.pickRandom(random))
           }.unzip
-          (indiVars.toArray ++ sampleVariables ++ extensionVariables, indiVals.toArray ++ sampleValues ++ eV)
+          (indiVars.toArray ++ sampleVariables ++ extensionVariables, indiVals.toArray ++ sampleValues ++ extensionValues)
         }
       }
+      val sampleAsMap: Map[Int, Int] = unsortedSample.zipped.toMap
+      this.variables.map(sampleAsMap)
     }
 
-    //now sort the sample to the order of this factor
-    val sortedSampleValues = sample.map(s => this.variables.map(s.zipped.toMap))
-
-    (partition, sortedSampleValues)
+    Some((partition, IndexedSeq.fill(numSamples)(sample)))
   }
-
 }
 
 object ProductFactor {

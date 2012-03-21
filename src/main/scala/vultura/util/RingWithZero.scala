@@ -15,10 +15,9 @@ trait RingWithZero[A] {
 
 object LogMeasure extends Measure[Double]{
   def normalizedWeight(partition: Double): (Double) => Double = (x: Double) => math.exp(x - partition)
-
   def sum: Monoid[Double] = RingWithZero.logSumProd.addition
-
   def weight(a: Double*): Double = a.map(math.exp).sum
+  def isPositive(value: Double): Boolean = !value.isNegInfinity
 }
 
 object RingWithZero{
