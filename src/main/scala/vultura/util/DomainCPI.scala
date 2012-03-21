@@ -1,7 +1,7 @@
 package vultura.util
 
 
-class DomainCPI[A: ClassManifest](val domains: AA[A],val lsbf: Boolean = true) extends IndexedSeq[Array[A]]{
+class DomainCPI[@specialized(Int) A: ClassManifest](val domains: AA[A],val lsbf: Boolean = true) extends IndexedSeq[Array[A]]{
   val cpi = new CrossProductIndexer(domains.map(_.size),lsbf)
   def length: Int = cpi.length
   def apply(idx: Int): Array[A] = {
