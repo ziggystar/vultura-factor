@@ -14,6 +14,13 @@ trait RingWithZero[A] {
 }
 
 object LogMeasure extends Measure[Double]{
+  def normalize(seq: Array[Double]): Array[Double] = {
+      //first shift the values for the maximum to be 0
+      val shift = seq.max
+      val shifted = seq.map(_ - shift)
+      val z = shifted.view.map(math.exp).sum
+      shifted.map(_ - math.log(z))
+  }
   def normalizedWeight(partition: Double): (Double) => Double = (x: Double) => math.exp(x - partition)
   def sum: Monoid[Double] = RingWithZero.logSumProd.addition
   def weight(a: Double*): Double = a.map(math.exp).sum

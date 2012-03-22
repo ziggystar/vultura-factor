@@ -1,7 +1,7 @@
 package vultura.util
 
 
-class DomainCPI[@specialized(Int) A: ClassManifest](val domains: AA[A],val lsbf: Boolean = true) extends IndexedSeq[Array[A]]{
+class DomainCPI[A: ClassManifest](val domains: AA[A],val lsbf: Boolean = true) extends IndexedSeq[Array[A]]{
   val cpi = new CrossProductIndexer(domains.map(_.size),lsbf)
   def length: Int = cpi.length
   def apply(idx: Int): Array[A] = {
@@ -27,3 +27,28 @@ class DomainCPI[@specialized(Int) A: ClassManifest](val domains: AA[A],val lsbf:
     cpi.seq2Index(indiced)
   }
 }
+
+//class IntDomainCPI(_domains: AA[Int], _lsbf: Boolean = true) extends DomainCPI[Int](_domains,_lsbf){
+//
+//  val domainMap: Array[Option[Array[Int]]] = domains.map{ range =>
+//      //1 is good, 0 is bad
+//      val efficiency = range.size / range.max.toDouble
+//      if(efficiency < 0.2)
+//        None
+//      else
+//        Some((0 until range.max).map(range.indexOf(_)).toArray)
+//    }
+//  /** @return domains(variable).indexOf(value). */
+//  def indexOfValue(variable: Int, value: Int) = domainMap(variable).map(_.apply(value))
+//    .getOrElse(domains(variable).indexOf(value))
+//
+//  override def seq2Index(s: Array[Int]): Int = {
+//    val indiced = new Array[Int](s.size)
+//    var i = 0
+//    while(i < indiced.size){
+//      indiced(i) = indexOfValue(i,s(i))
+//      i += 1
+//    }
+//    cpi.seq2Index(indiced)
+//  }
+//}

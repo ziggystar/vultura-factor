@@ -1,6 +1,7 @@
 package vultura.util
 
 import scalaz.Monoid
+import collection.IndexedSeq
 
 /**
  * Type class that says that provides a measure for values of type `A`.
@@ -11,8 +12,8 @@ import scalaz.Monoid
  * 3. a > 0 => w(a) > 0
  */
 trait Measure[@specialized(Double) A] {
+  def normalize(seq: Array[A]): Array[Double]
   def normalizedWeight(partition: A): A => Double
-
   /** @return a non-negative real */
   def weight(a: A*): Double
   def sum: Monoid[A]
@@ -22,17 +23,24 @@ trait Measure[@specialized(Double) A] {
 
 object Measure {
   val measureDouble: Measure[Double] = new Measure[Double] {
-    def isPositive(value: Double): Boolean = value > 0
 
+    def normalize(seq: Array[Double]): Array[Double] = {
+      val p = seq.sum
+      seq.map(_ / p)
+    }
+
+    def isPositive(value: Double): Boolean = value > 0
     def normalizedWeight(partition: Double): (Double) => Double = (x: Double) => x / partition
     def weight(a: Double*): Double = a.sum
-
     def sum: Monoid[Double] = new Monoid[Double]{
-      def append(s1: Double, s2: => Double): Double = 1 + s2
+      def append(s1: Double, s2: => Double): Double = s1 + s2
       val zero: Double = 0d
     }
   }
   val measureInt: Measure[Int] = new Measure[Int] {
+
+    def normalize(seq: Array[Int]): Array[Double] = sys.error("this will not do")
+
     def isPositive(value: Int): Boolean = value > 0
 
     def normalizedWeight(partition: Int): (Int) => Double = (x: Int) => x / partition.toDouble
@@ -45,6 +53,8 @@ object Measure {
   }
 
   val measureBigInt: Measure[BigInt] = new Measure[BigInt] {
+
+    def normalize(seq: Array[BigInt]): Array[Double] = sys.error("this will not do!")
 
     def isPositive(value: BigInt): Boolean = value > 0
 
