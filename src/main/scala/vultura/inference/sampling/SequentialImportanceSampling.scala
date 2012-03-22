@@ -4,6 +4,7 @@ import vultura.factors._
 import util.Random
 import collection.mutable.WrappedArray
 import vultura.util.{LogMeasure, Measure, RingWithZero}
+import collection.{Iterable, Seq, Iterator}
 
 /**
  * Created by IntelliJ IDEA.
@@ -32,34 +33,62 @@ object SequentialImportanceSampling {
       initalParticleStream,
       measure
     )
+
     var slice = 1
-    //weights are correct for initial samples
-    val particles: ParticleSeq = factorSequence.tail.foldLeft(initialParticles){ case(oldParticles: ParticleSeq, newFactors: Seq[A]) =>
+
+    /** the loop that processes the slices */
+    val adaptiveAggregate = false
+    //inclusive
+    val thresholdTW = 2
+
+    def filterStep(remainingSlices: Iterable[Seq[A]], particles: ParticleSeq): ParticleSeq = if(remainingSlices.isEmpty)
+      particles
+    else {
       println("Sampling slice %d".format(slice))
       slice += 1
+
+      val (newFactors: Seq[A],rest: Iterable[Seq[A]]) = if(!adaptiveAggregate)
+        (remainingSlices.head,remainingSlices.tail)
+      else {
+        //try to take as many steps at once as feasible
+        val expandingExtensions: Iterator[ProductFactor[A, Double]] = Iterator.from(2)
+          .map(remainingSlices.take)
+          .map(slices => ProductFactor(slices.flatten.toSeq,ring.multiplication) )
+          .take(remainingSlices.size - 1)
+        val treeWidths = expandingExtensions.map(_.minDegreeTreewidth)
+        //0 means that the first examined extension is too complex; that was two; 1 means you can take 2
+        val indexOfWall = treeWidths.indexWhere(_ > thresholdTW) - 1
+        val slicesToTake = if(indexOfWall == -1) remainingSlices.size
+        else 1 + indexOfWall
+        println("taking %d slices at once".format(slicesToTake))
+        (remainingSlices.take(slicesToTake).flatten.toSeq,remainingSlices.drop(slicesToTake))
+      }
+
       //extend a particle x by drawing from newFactors | x exactly; weight remains unchanged,
       //multiply weight by partition function over new factors (probability of old sample given new distribution)
-      val ParticleSeq(vars,doms,_) = oldParticles
+      val ParticleSeq(vars,doms,_) = particles
       val newFactor = ProductFactor(newFactors, ring.multiplication)
 
       //reweigh the particles using the partition function of the extension
-      lazy val reweighedParticles: ParticleSeq = oldParticles.multiplyWeight(
+      lazy val reweighedParticles: ParticleSeq = particles.multiplyWeight(
        oldParticle => newFactor.condition(vars, oldParticle.toArray).partitionAndSample(random,measure,0).map(_._1).getOrElse(measure.sum.zero),
         ring.multiplication).normalized
 
-      println("%d of %d particles have a weight larger than %f".format(
-        reweighedParticles.particles.count(p => measure.weight(p._2) > (1.toDouble/numSamples)),
-        reweighedParticles.particles.size,
-        1.toDouble/numSamples))
+      if(usePreweighing){
+        println("%d of %d particles have a weight larger than %f".format(
+          reweighedParticles.particles.count(p => measure.weight(p._2) > (1.toDouble/numSamples)),
+          reweighedParticles.particles.size,
+          1.toDouble/numSamples))
+      }
 
-      def reweighedExtendedParticles = reweighedParticles.generate(random,numSamples).get.par.map{ oldAssignment =>
+      def reweighedExtendedParticles = reweighedParticles.generate(random,numSamples).get.map{ oldAssignment =>
         val conditionedNewFactor: ProductFactor[A, Double] = newFactor.condition(vars, oldAssignment.toArray)
         val sampleExtension = conditionedNewFactor.partitionAndSample(random, measure, 1).get._2.head //tihs must work, since partition can't be one
         (oldAssignment ++ sampleExtension, 1d)
-      }.seq
+      }
 
       //draw `numSamples` new particles
-      def newParticles: Seq[(WrappedArray[Int], Double)] = Iterator.continually(oldParticles.generate(random,1).get.head).map{ oldAssignment =>
+      def newParticles: Seq[(WrappedArray[Int], Double)] = Iterator.continually(particles.generate(random,1).get.head).map{ oldAssignment =>
         val conditionedNewFactor: ProductFactor[A, Double] = newFactor.condition(vars, oldAssignment.toArray)
         conditionedNewFactor.partitionAndSample(random, measure, 1).map { case (conditionedPartition, sampleExtensions) =>
             assert(!conditionedPartition.isInfinite, "sampled invalid weight; factor values:\n%s".format(conditionedNewFactor.factors.map(evaluate(_,sampleExtensions.head)).mkString(", ")))
@@ -70,14 +99,15 @@ object SequentialImportanceSampling {
       val finalParticles = if(usePreweighing) reweighedExtendedParticles else newParticles
       println("%d distinct particles sampled" format finalParticles.map(_._1).distinct.size)
 
-      new ParticleSeq(
+      val result = new ParticleSeq(
         (vars ++ variables(newFactor)).distinct,
         (doms ++ domains(newFactor)).distinct,
         finalParticles,
         measure
       )
+      filterStep(rest, result)
     }
 
-    particles
+    filterStep(factorSequence.tail, initialParticles)
   }
 }

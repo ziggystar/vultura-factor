@@ -109,7 +109,9 @@ object TreeWidth {
       }
     }
 
-    mdo(cliques,vertices zip neighbours)
+    import scalaz._
+    import Scalaz._
+    mdo(cliques,vertices zip neighbours) :-> ((_:Int) - 1)
   }
 
   def minDegreeOrdering(cliques: Seq[Set[Int]]): List[Int] = minDegreeOrderingAndWidthFast(cliques)._1//minDegreeOrderingAndWidth(cliques)._1

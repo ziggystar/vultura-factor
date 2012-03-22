@@ -25,7 +25,7 @@ class ParticleSeq(val variables: Array[Int],
   //todo refactor this; put product into Measure
   /** Multiplies a factor to each particle. */
   def multiplyWeight(f: WrappedArray[Int] => Double, product: Monoid[Double]): ParticleSeq =
-    new ParticleSeq(variables, domains, particles.par.map(p => p._1 -> product.append(p._2,f(p._1))).seq, measure)
+    new ParticleSeq(variables, domains, particles.map(p => p._1 -> product.append(p._2,f(p._1))), measure)
 
   def drawParticle(random: Random): Option[WrappedArray[Int]] =
     if(measure.isPositive(partition))

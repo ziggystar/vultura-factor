@@ -115,6 +115,8 @@ case class ProductFactor[T,R](_factors: Seq[T],
 
     Some((partition, IndexedSeq.fill(numSamples)(sample)))
   }
+
+  def minDegreeTreewidth: Int = TreeWidth.minDegreeOrderingAndWidthFast(this.factors.toSeq.map(vf.variables(_).toSet))._2
 }
 
 object ProductFactor {
