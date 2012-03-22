@@ -17,15 +17,19 @@ case class ProductFactor[T,R](_factors: Seq[T],
   val factors = _factors.toIndexedSeq
   val variables: Array[Int] = factors.flatMap(f => vf.variables(f)).toSeq.distinct.toArray
   val domains: Array[Array[Int]] = variables.map(factors.flatMap(f => vf.variables(f).zip(vf.domains(f))).toMap)
+  val variableMaps: IndexedSeq[Array[Int]] = {
+    val lookup = variables.zipWithIndex.toMap
+    factors.map(f => vf.variables(f).map(lookup))
+  }
 
   def evaluate(assignment: Array[Int]): R = {
-    val lookup = variables.zip(assignment).toMap
     var result = productMonoid.zero
     var i = 0
     while(i < factors.size){
       val f = factors(i)
-      val assignment = vf.variables(f).map(lookup)
-      val evalResult = vf.evaluate(f,assignment)
+      val vmap = variableMaps(i)
+      val ass = vmap.map(varIdx => assignment(varIdx))
+      val evalResult = vf.evaluate(f,ass)
       result = productMonoid.append(result,evalResult)
       i += 1
     }
