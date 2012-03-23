@@ -17,7 +17,14 @@ class ParticleSeq(val variables: Array[Int],
     val grouped: IndexedSeq[(WrappedArray[Int], Double)] = _particles.groupBy(_._1).mapValues(_.map(_._2).reduce(sumMonoid.append(_,_))).toIndexedSeq
     grouped.sortBy(_._2).reverse
   }
-  lazy val partition = particles.map(_._2).foldLeft(sumMonoid.zero)(sumMonoid.append(_,_))
+
+  assert(particles.forall(!_._2.isNaN),"a particle has illegal weight")
+
+  lazy val partition = {
+    val result = particles.map(_._2).foldLeft(sumMonoid.zero)(sumMonoid.append(_,_))
+    assert(!result.isNaN, "partition function is NaN")
+    result
+  }
 
   assert(variables.distinct.size == variables.size, "double entries in `variables`")
   assert(particles.forall(_._1.size == variables.size), "too short particles")
@@ -29,7 +36,8 @@ class ParticleSeq(val variables: Array[Int],
 
   def drawParticle(random: Random): Option[WrappedArray[Int]] =
     if(measure.isPositive(partition))
-        Some(vultura.util.drawRandomlyByIS(particles,random)(t => measure.normalizedWeight(partition)(t._2)).map(_._1).get)
+        Some(vultura.util.drawRandomlyByIS(particles,random)(t => measure.normalizedWeight(partition)(t._2)).map(_._1)
+          .getOrElse(sys.error("should be possible to draw from factor with positive partition function")))
       else
         None
   def generate(random: Random, num: Int): Option[IndexedSeq[WrappedArray[Int]]] = if(measure.isPositive(partition))
