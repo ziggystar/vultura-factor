@@ -23,7 +23,7 @@ object LogMeasure extends Measure[Double]{
   }
   def normalizedWeight(partition: Double): (Double) => Double = (x: Double) => math.exp(x - partition)
   def sum: Monoid[Double] = RingWithZero.logSumProd.addition
-  def weight(a: Double*): Double = a.map(math.exp).sum
+  def weight(a: Double): Double = math.exp(a)
   def isPositive(value: Double): Boolean = !value.isNegInfinity
 }
 

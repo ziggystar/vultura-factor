@@ -5,6 +5,7 @@ import scalaz.Scalaz._
 import vultura.{factors => vf}
 import util.Random
 import vultura.util.{Measure, TreeWidth}
+import collection.immutable.Stream
 
 /**
  * @author Thomas Geier
@@ -116,7 +117,25 @@ case class ProductFactor[T,R](_factors: Seq[T],
     Some((partition, IndexedSeq.fill(numSamples)(sample)))
   }
 
-  def minDegreeTreewidth: Int = TreeWidth.minDegreeOrderingAndWidthFast(this.factors.toSeq.map(vf.variables(_).toSet))._2
+  def jtPartitionEfficient(measure: Measure[R])(implicit cm: ClassManifest[R]): R = {
+    //tuple first holds the variable scope of the node, second holds the factors
+    val jtrees: Seq[Tree[(Set[Int], Seq[T])]] = TreeWidth.minDegreeJunctionTrees(this.factors.map(f => (vf.variables(f).toSet,f)))._1
+
+    /** marginalize everything except the stuff in variablesOfInterest. */
+    def jtMarginalizeUnless(jt: Tree[(Set[Int],Seq[T])], variablesOfInterest: Set[Int] = Set()): TableFactor[R] = {
+      val children: Stream[TableFactor[R]] =
+        jt.subForest.map(jtMarginalizeUnless(_,jt.rootLabel._1))
+      val localProduct: ProductFactor[Either[T, TableFactor[R]],R] =
+        ProductFactor(jt.rootLabel._2.map(Left(_)) ++ children.map(Right(_)),productMonoid)
+      //marginalize out all variables that are not of interest
+      val (margVars,margDoms) = localProduct.variables.zip(localProduct.domains).filterNot(t => variablesOfInterest.contains(t._1)).unzip
+      vf.marginalizeDense(localProduct, margVars.toArray, margDoms.toArray, measure.sum)
+    }
+
+    jtrees.map(tree => jtMarginalizeUnless(tree).evaluate(Array())).foldLeft(productMonoid.zero)(productMonoid.append(_,_))
+  }
+
+  def minDegreeTreewidth: Int = TreeWidth.minDegreeOrderingAndWidth(this.factors.map(vf.variables(_).toSet))._2
 }
 
 object ProductFactor {
