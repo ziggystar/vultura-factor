@@ -46,6 +46,21 @@ class TableFactor[T: ClassManifest](val variables: Array[Int],
     data,
     ivs
   )
+
+  lazy val hc = variables.deep.hashCode ^ domains.deep.hashCode ^ data.deep.hashCode ^ independentVariables.deep.hashCode
+  override def hashCode(): Int = hc
+
+  override def equals(obj: Any): Boolean = obj match {
+    case tf: TableFactor[T] =>
+      this.hashCode == tf.hashCode &&
+      this.variables.deep == tf.variables.deep &&
+      this.domains.deep == tf.domains.deep &&
+      this.data.deep == tf.data.deep &&
+      this.independentVariables.deep == tf.independentVariables.deep
+    case _ => false
+  }
+
+  override def toString: String = "TableFactor(%s)".format(variables.mkString(","))
 }
 
 object TableFactor {
