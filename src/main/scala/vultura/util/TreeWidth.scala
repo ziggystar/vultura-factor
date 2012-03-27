@@ -5,7 +5,8 @@ import annotation.tailrec
 import vultura.graph.{Graph, GraphOps}
 import scalaz._
 import Scalaz._
-import collection.{Seq, IndexedSeq}
+import collection.mutable.HashSet
+import collection.immutable.Set
 
 /**
  * @author Thomas Geier
@@ -205,7 +206,7 @@ object TreeWidth {
       // cannot pull the childchild into the parent. qed
       scanUp[(BitSet,Seq[A]),(BitSet,Seq[A])](tree){ case ((bs,as),processedChildren) =>
         val (toPull,toLeave) = processedChildren.partition(child => subsumes(bs,child.rootLabel._1))
-        node((bs,as ++ toPull.map(_.rootLabel._2).flatten),toLeave)
+        node((bs,as ++ toPull.map(_.rootLabel._2).flatten),toLeave ++ toPull.flatMap(_.subForest))
       }
     }
     val pulledUpJTs: Seq[Tree[(BitSet,Seq[A])]] = uncompressedJTs.map(pullUp)
@@ -221,10 +222,63 @@ object TreeWidth {
 
     val pushedDownJTs: Seq[Tree[(BitSet,Seq[A])]] = pulledUpJTs.map(pushDown)
 
+//    assert(pushedDownJTs == pushedDownJTs.map(pullUp))
+//    assert(pushedDownJTs == pushedDownJTs.map(pushDown))
+
     //turn the BitSets into scala sets
-    (pushedDownJTs.map(jt => jt.map(treeNode => (bs2Iterator(treeNode._1).toSet,treeNode._2))),tw)
-//    (uncompressedJTs.map(jt => jt.map(treeNode => (bs2Iterator(treeNode._1).toSet,treeNode._2))),tw)
+    val resultJT: Seq[Tree[(Set[Int], Seq[A])]] = pushedDownJTs.map(jt => jt.map(treeNode => (bs2Iterator(treeNode._1).toSet, treeNode._2)))
+
+    println("jt test: " + isJunctionTree(_cliques,resultJT))
+    (resultJT,tw)
   }
+
+  /** Checks the junctiontreedness of the arguments. You need a working equals on the `A`s. */
+  def isJunctionTree[A](cliques: IndexedSeq[(Set[Int],A)], trees: Seq[Tree[(Set[Int],Seq[A])]]): Boolean = {
+    //each clique has to appear exactly once
+    val cliqueCountsFromTrees: Map[A, Int] = trees.map(_.flatten.map(_._2).flatten).flatten.groupBy(identity).mapValues(_.size)
+    val cliqueCountsFromReference: Map[A, Int] = cliques.map(_._2).groupBy(identity).mapValues(_.size)
+    val allCliquesPresent: Boolean = cliqueCountsFromTrees == cliqueCountsFromReference
+    assert(allCliquesPresent, "the counts differ")
+
+    @tailrec
+    def computeNeighbourhoods(cliques: List[(Set[Int],A)], acc: Seq[Set[A]] = Nil): Seq[Set[A]] = cliques match {
+      case Nil => acc
+      case (hv,ha) :: tail => computeNeighbourhoods(
+        tail,
+        tail.collect{case (tv,ta) if (!hv.intersect(tv).isEmpty) => Set(ha,ta)} ++ acc)
+    }
+
+//    val neighbourhoods = computeNeighbourhoods(cliques.toList)
+//    println("going to check on %d neighbourhoods".format(neighbourhoods.size))
+//    //this must be fucking slow
+//    val allDependenciesPresent = neighbourhoods.forall{neigh =>
+//      val isRepresented = trees.exists(tree => tree.flatten.exists(node => neigh.forall(node._2.contains)))
+//      assert(isRepresented, {
+//        printJTs(trees)
+//        "two adjacent nodes exist, that are not together in some junction: " + neigh
+//      })
+//      isRepresented
+//    }
+
+    //the variables in active may still appear, the variables in spent may not appear again
+    def checkTree(t: Tree[Set[Int]], active: Set[Int] = Set(), spent: Set[Int] = Set()): Boolean = {
+      val label = t.rootLabel
+      val reappearers: Set[Int] = (spent -- active).intersect(label)
+      if(!reappearers.isEmpty){
+        println("hit variable(s) again: " + reappearers)
+        false
+      } else {
+        val newSpent = spent ++ label
+        t.subForest.forall(subTree => checkTree(subTree,label,newSpent))
+      }
+    }
+    //check the running intersection property: the junctions a certain variable appears in form  a subtree
+    val runningIntersection = trees.map(_.map(_._1)).forall(checkTree(_))
+    //(i.e. they are connected)
+    allCliquesPresent && runningIntersection
+  }
+
+  def printJTs[A](trees: Seq[Tree[A]]): Unit = println(trees.map(_.map(_.toString).drawTree).mkString("\n---\n"))
 
   def minDegreeOrdering(cliques: Seq[Set[Int]]): List[Int] = minDegreeOrderingAndWidth(cliques.toIndexedSeq)._1//minDegreeOrderingAndWidthSlow(cliques)._1
 
