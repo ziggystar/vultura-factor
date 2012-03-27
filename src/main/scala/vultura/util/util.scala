@@ -158,4 +158,15 @@ package object util {
       .groupBy(_._1) //Map[A,Set[(A,A)]]
       .mapValues(_.map(_._2))
   }
+
+  def unionWithoutContradiction[A,B](ma: Map[A,B], mb: Map[A,B]): Option[Map[A,B]] = {
+    val builder = Map.newBuilder[A,B]
+    builder ++= ma
+    mb.iterator.foreach{ elemb =>
+      if(ma.get(elemb._1).exists(_ != elemb._2))
+        return None
+      builder += elemb
+    }
+    Some(builder.result())
+  }
 }

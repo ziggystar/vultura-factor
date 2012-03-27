@@ -11,6 +11,7 @@ case class NumberingScheme[A](numbering: Map[A,Int], nextFree: Int) {
     val newEntries: Seq[(A, Int)] = newElems.zipWithIndex.map(t => (t._1,t._2 + nextFree))
     NumberingScheme(numbering ++ newEntries, nextFree + newElems.size)
   }
+  def reverseLookup(v: Int) = numbering.find(_._2 == v).get._1
 }
 
 object NumberingScheme {

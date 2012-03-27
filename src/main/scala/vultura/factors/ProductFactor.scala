@@ -117,10 +117,14 @@ case class ProductFactor[T,R](_factors: Seq[T],
     Some((partition, IndexedSeq.fill(numSamples)(sample)))
   }
 
+  def junctionTrees: Seq[Tree[(Set[Int], Seq[T])]] =
+    TreeWidth.minDegreeJunctionTrees(this.factors.map(f => (vf.variables(f).toSet, f)))._1
+
   def jtPartitionEfficient(measure: Measure[R])(implicit cm: ClassManifest[R]): R = {
     //tuple first holds the variable scope of the node, second holds the factors
-    val jtrees: Seq[Tree[(Set[Int], Seq[T])]] = TreeWidth.minDegreeJunctionTrees(this.factors.map(f => (vf.variables(f).toSet,f)))._1
+    val jtrees: Seq[Tree[(Set[Int], Seq[T])]] = junctionTrees
 
+    jtrees.foreach(jt => println(jt.map(_.toString).draw))
     /** marginalize everything except the stuff in variablesOfInterest. */
     def jtMarginalizeUnless(jt: Tree[(Set[Int],Seq[T])], variablesOfInterest: Set[Int] = Set()): TableFactor[R] = {
       val children: Stream[TableFactor[R]] =

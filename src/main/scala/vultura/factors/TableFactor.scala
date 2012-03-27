@@ -13,7 +13,29 @@ class TableFactor[T: ClassManifest](val variables: Array[Int],
                                     val data: Array[T],
                                     val independentVariables: Array[Int] = Array()){
   val cpi = new DomainCPI(variables zip domains filterNot (independentVariables contains _._1) map (_._2))
+
   assert(variables.size == domains.size && cpi.size == data.size, "creating invalid TableFactor")
+
+  def deterministicAssignment(m: Measure[T]): Map[Int,Int] = {
+    var numPositives = 0
+    var lastPositiveIndex = -1
+    var i = 0
+    while(i < data.size){
+      if(m.isPositive(data(i))) {
+        numPositives += 1
+        lastPositiveIndex = i
+        if(numPositives > 1)
+          i = data.size
+      }
+      i += 1
+    }
+    if(numPositives == 1)
+      variables.zip(cpi.index2Seq(lastPositiveIndex)).toMap
+    else
+      Map.empty
+  }
+
+  def constantValue: Option[T] = if(independentVariables.size == variables.size) Some(data(0)) else None
 
   val dependentIndices = {
     val independentIndices = independentVariables map (variables indexOf _)
