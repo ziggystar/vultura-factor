@@ -1,5 +1,7 @@
 package vultura.cnf.dimacs
 
+import java.io.File
+
 /**
  * Reads a SAT instance from a text file in the cnf format of the DIMACS format.
  *
@@ -10,7 +12,8 @@ package vultura.cnf.dimacs
  * Date: 02.05.11 */
 
 object DIMACSParser {
-  def readFile(file: String): DIMACSInstance = {
+  def readFile(file: String): DIMACSInstance = readFile(new File(file))
+  def readFile(file: File): DIMACSInstance = {
     val lines = scala.io.Source.fromFile(file).getLines().takeWhile(_.headOption != Some('%')).toSeq
 
     val description = lines.filter(_.headOption == Some('c')).map(_.drop(1)).mkString("\n")

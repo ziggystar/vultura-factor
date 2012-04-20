@@ -1,5 +1,9 @@
 package vultura.cnf
 
+import dimacs.DIMACSParser
+import java.io.File
+
+
 /**
  * A CNF representation that uses arrays of integers as clauses. Each variable is an integer and
  * if the high bit is set it's a negated atom.
@@ -123,4 +127,7 @@ object CNF {
 
   def fromSeqTupleOfInt(clauses: Iterable[(Iterable[Int], Iterable[Int])]): CNF =
     CNF(clauses.map(c => (c._1 ++ c._2.map(_ | NEG_MASK)).toArray).toIndexedSeq)
+
+  def fromFile(cnfFile: String): CNF = DIMACSParser.readFile(cnfFile).toCNF
+  def fromFile(cnfFile: File): CNF = DIMACSParser.readFile(cnfFile).toCNF
 }
