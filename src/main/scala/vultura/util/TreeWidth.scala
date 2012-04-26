@@ -1,11 +1,11 @@
 package vultura.util
 
 import java.util.BitSet
-import annotation.tailrec
 import vultura.graph.{Graph, GraphOps}
 import scalaz._
 import Scalaz._
 import xml.{NodeSeq, Elem}
+import annotation.tailrec
 
 /**
  * @author Thomas Geier
@@ -220,13 +220,23 @@ object TreeWidth {
     }
     val pulledUpJTs: Seq[Tree[(BitSet,Seq[A])]] = uncompressedJTs.map(pullUp)
 
+    implicit val bitSetMonoid: Monoid[BitSet] = new Monoid[BitSet]{
+      def append(s1: BitSet, s2: => BitSet): BitSet = {
+        val result = new BitSet
+        result.or(s1)
+        result.or(s2)
+        result
+      }
+      val zero: BitSet = new BitSet
+    }
+
     //second, we push parents down into their child if they only have one child.
     //In this constellation, the parent's scope is a subset of the child's scope.
-    def pushDown(tree: Tree[(BitSet,Seq[A])]): Tree[(BitSet,Seq[A])] = if(tree.subForest.size == 1){
-      pushDown(tree.subForest.head)
-    }
-    else
-      node(tree.rootLabel, tree.subForest.map(pushDown))
+    def pushDown(tree: Tree[(BitSet,Seq[A])]): Tree[(BitSet,Seq[A])] =
+      if(tree.subForest.size == 1 && subsumes(tree.subForest.head.rootLabel._1,tree.rootLabel._1))
+        pushDown(node(tree.subForest.head.rootLabel |+| tree.rootLabel, tree.subForest.head.subForest))
+      else
+        node(tree.rootLabel, tree.subForest.map(pushDown))
 
     val pushedDownJTs: Seq[Tree[(BitSet,Seq[A])]] = pulledUpJTs.map(pushDown)
 
@@ -280,14 +290,14 @@ object TreeWidth {
     //check that no variable is contained in two trees
     val allVars = cliques.map(_._1).flatten.distinct
     val containingTrees = allVars.map(v => v -> trees.filter(_.flatten.exists(_._1.contains(v))))
-    val violatedVars = containingTrees.find(_._2.size != 1).map("variable appears in more or less than one tree: " + _)
+    val violatedVars = containingTrees.find(_._2.size != 1).map(t => "variable appears in more or less than one tree: " + (t :-> (printJTs)))
 
     val result = domainViolation orElse partitionViolation orElse runningIntersectionViolation orElse violatedVars
 
     result
   }
 
-  def printJTs[A](trees: Seq[Tree[A]]): Unit = println(trees.map(_.map(_.toString).drawTree).mkString("\n---\n"))
+  def printJTs[A](trees: Seq[Tree[A]]): String = trees.map(_.map(_.toString).drawTree).mkString("\n---\n")
 
   def minDegreeOrdering(cliques: Seq[Set[Int]]): List[Int] = minDegreeOrderingAndWidth(cliques.toIndexedSeq)._1
 

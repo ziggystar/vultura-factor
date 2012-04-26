@@ -130,13 +130,6 @@ case class ProductFactor[T,R](_factors: Seq[T],
         jt.subForest.map(jtMarginalizeUnless(_,jt.rootLabel._1))
       val localProduct: ProductFactor[Either[T, TableFactor[R]],R] =
         ProductFactor(jt.rootLabel._2.map(Left(_)) ++ children.map(Right(_)),productMonoid)
-      //TODO very expensive check; remove!
-      val localProductPartition: Option[(R, IndexedSeq[Array[Int]])] = localProduct.partitionAndSample(null, measure, 0)
-      val flatPartition: Option[(R, IndexedSeq[Array[Int]])] = ProductFactor(jt.flatten.map(_._2).flatten, productMonoid).partitionAndSample(null, measure, 0)
-      if(!(localProductPartition == flatPartition)){
-        println("we're not so fine:" + localProductPartition + " vs " + flatPartition)
-      }
-      assert(localProduct.variables.toSet == jt.rootLabel._1)
       //marginalize out all variables that are not of interest
       val (margVars,margDoms) = localProduct.variables.zip(localProduct.domains).filterNot(t => variablesOfInterest.contains(t._1)).unzip
       TableFactor.marginalizeDense(localProduct, margVars.toArray, margDoms.toArray, measure.sum)
