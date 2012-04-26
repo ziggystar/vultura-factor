@@ -12,7 +12,7 @@ class TableFactor[T: ClassManifest](val variables: Array[Int],
                                     val domains: Array[Array[Int]],
                                     val data: Array[T],
                                     val independentVariables: Array[Int] = Array()){
-  val cpi = new DomainCPI(variables zip domains filterNot (independentVariables contains _._1) map (_._2))
+  val cpi = new IntDomainCPI(variables zip domains filterNot (independentVariables contains _._1) map (_._2))
 
   assert(variables.size == domains.size && cpi.size == data.size, "creating invalid TableFactor")
 
@@ -91,19 +91,18 @@ object TableFactor {
 
     val (sortedVars, sortedDomains) = _vars.zip(_domains).unzip
 
-    val cpi = new DomainCPI(seqarray2aa(sortedDomains))
+    val cpi = new IntDomainCPI(seqarray2aa(sortedDomains))
     val table = new Array[T](cpi.size)
     var i = 0
-    val firstValue: T = f(cpi.iterator.next())
+    val firstValue: T = f(cpi.head)
     var isConstant = true
-    cpi.iterator.foreach {
-      assign =>
-        val value: T = f(assign)
-        assert(!value.asInstanceOf[Double].isPosInfinity, "putting infinity into table factor")
-        if(isConstant && value != firstValue)
-          isConstant = false
-        table(i) = value
-        i += 1
+    while(i < cpi.size){
+      val assign = cpi(i)
+      val value: T = f(assign)
+      //assert(!value.asInstanceOf[Double].isPosInfinity, "putting infinity into table factor")
+      isConstant &= (value == firstValue)
+      table(i) = value
+      i += 1
     }
 
     if(isConstant)
@@ -114,7 +113,7 @@ object TableFactor {
 
   def fromTable[T: ClassManifest](_vars: Seq[Int], _domains: Seq[Array[Int]], f: IndexedSeq[T]) = {
     import vultura.util._
-    val cpi: DomainCPI[Int] = crossProduct(_domains)
+    val cpi = new IntDomainCPI(_domains)
     this.fromFunction(_vars, _domains, ass => f(cpi.seq2Index(ass.toArray)))
   }
 
@@ -196,15 +195,19 @@ object TableFactor {
       reusedAssignment
     }
 
-    val _cpi = new DomainCPI(margDoms)
+    val _cpi = new IntDomainCPI(margDoms)
 
     //fix the assignment to the remaining variables and sum over everything in vars/doms
     //the argument to sumOut goes to the remaining variables
     val sumOut: Array[Int] => B = { assignmentToRemaining =>
-      _cpi.iterator.map {
-        assignmentToNew =>
-          evaluate(f,reconstructAssignment(assignmentToRemaining, assignmentToNew))
-      }.reduce(monoid.append(_,_))
+      //the cpi should not be empty
+      var result = evaluate(f,reconstructAssignment(assignmentToRemaining, _cpi.head))
+      var i = 1
+      while(i < _cpi.size){
+        result = monoid.append(result,evaluate(f,reconstructAssignment(assignmentToRemaining,_cpi(i))))
+        i += 1
+      }
+      result
     }
 
       TableFactor.fromFunction(remainingVars, remainingDomains, sumOut)

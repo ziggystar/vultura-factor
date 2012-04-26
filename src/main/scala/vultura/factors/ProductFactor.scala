@@ -28,8 +28,16 @@ case class ProductFactor[T,R](_factors: Seq[T],
     var i = 0
     while(i < factors.size){
       val f = factors(i)
-      val vmap = variableMaps(i)
-      val ass = vmap.map(varIdx => assignment(varIdx))
+      val vmap: Array[Int] = variableMaps(i)
+      val ass: Array[Int] = {
+        val result = new Array[Int](vmap.size)
+        var i = 0
+        while(i < result.length){
+          result(i) = assignment(vmap(i))
+          i += 1
+        }
+        result
+      }
       val evalResult = vf.evaluate(f,ass)
       result = productMonoid.append(result,evalResult)
       i += 1
