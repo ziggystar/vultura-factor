@@ -14,7 +14,7 @@ import collection.immutable.Stream
 
 case class ProductFactor[T,R](_factors: Seq[T],
                               productMonoid: Monoid[R])
-                             (implicit val fev: Factor[T,R]) {
+                             (implicit val fev: Factor[T,R], cm: ClassManifest[R]) {
   val factors = _factors.toIndexedSeq
   val variables: Array[Int] = factors.flatMap(f => vf.variables(f)).toSeq.distinct.toArray
   val domains: Array[Array[Int]] = variables.map(factors.flatMap(f => vf.variables(f).zip(vf.domains(f))).toMap)
@@ -85,7 +85,7 @@ case class ProductFactor[T,R](_factors: Seq[T],
           (agnostic :+ Right(marginalizedEliminationFactor),eliminationFactor)
       }
 
-    //last elimination clique should have singlular domain; just evaluate it
+    //last elimination clique should have singleton domain; just evaluate it
     val partition = vf.evaluate(ProductFactor(eliminationSeries.last._1,this.productMonoid),Array())
     assert(!partition.asInstanceOf[Double].isPosInfinity, "infinite partition function")
 
@@ -125,26 +125,33 @@ case class ProductFactor[T,R](_factors: Seq[T],
     Some((partition, IndexedSeq.fill(numSamples)(sample)))
   }
 
-  def junctionTrees: Seq[Tree[(Set[Int], Seq[T])]] =
-    TreeWidth.minDegreeJunctionTrees(this.factors.map(f => (vf.variables(f).toSet, f)))._1
+  def jtPartition(sumMonoid: Monoid[R])(implicit cm: ClassManifest[R]): R =
+    upwardCalibratedTrees(sumMonoid).map(_._2).asMA.sum
 
-  def jtPartitionEfficient(measure: Measure[R])(implicit cm: ClassManifest[R]): R = {
-    //tuple first holds the variable scope of the node, second holds the factors
-    val jtrees: Seq[Tree[(Set[Int], Seq[T])]] = junctionTrees
-
-    /** marginalize everything except the stuff in variablesOfInterest. */
-    def jtMarginalizeUnless(jt: Tree[(Set[Int],Seq[T])], variablesOfInterest: Set[Int] = Set()): TableFactor[R] = {
-      val children: Stream[TableFactor[R]] =
-        jt.subForest.map(jtMarginalizeUnless(_,jt.rootLabel._1))
+  /**
+   * Each clique potential inside the trees contains the influence from its children but not from its parent.
+   *
+   * @return A list of upwardly calibrated junction trees together with their partition function. */
+  def upwardCalibratedTrees(sumMonoid: Monoid[R]): Seq[(Tree[TableFactor[R]],R)] = {
+    /** marginalize everything except the stuff in variablesOfInterest.
+     * @return First is the calibrated tree, second is the upward message from the root.
+     */
+    def jtMarginalizeUnless(jt: Tree[(Set[Int],Seq[T])], variablesOfInterest: Set[Int] = Set()): (Tree[TableFactor[R]],TableFactor[R]) = {
+      val Node((variables, cliques), children) = jt
+      val procChildren: Stream[(Tree[TableFactor[R]], TableFactor[R])] = children.map(jtMarginalizeUnless(_,variables))
       val localProduct: ProductFactor[Either[T, TableFactor[R]],R] =
-        ProductFactor(jt.rootLabel._2.map(Left(_)) ++ children.map(Right(_)),productMonoid)
-      //marginalize out all variables that are not of interest
-      val (margVars,margDoms) = localProduct.variables.zip(localProduct.domains).filterNot(t => variablesOfInterest.contains(t._1)).unzip
-      TableFactor.marginalizeDense(localProduct, margVars.toArray, margDoms.toArray, measure.sum)
+        ProductFactor(cliques.map(Left(_)) ++ procChildren.map(c => Right(c._2)),productMonoid)
+
+      val localFactor = TableFactor.fromFactor(localProduct)
+      val upwardMessage = marginalizeAllDense(localFactor,variables -- variablesOfInterest,sumMonoid)
+      (node(localFactor,procChildren.map(_._1)),upwardMessage)
     }
 
-    jtrees.map(tree => jtMarginalizeUnless(tree).evaluate(Array())).foldLeft(productMonoid.zero)(productMonoid.append(_,_))
+    junctionTrees.map(t => jtMarginalizeUnless(t) :-> (_.evaluate(Array())))
   }
+
+  lazy val junctionTrees: Seq[Tree[(Set[Int], Seq[T])]] =
+    TreeWidth.minDegreeJunctionTrees(this.factors.map(f => (vf.variables(f).toSet, f)))._1
 
   def minDegreeTreewidth: Int = TreeWidth.minDegreeOrderingAndWidth(this.factors.map(vf.variables(_).toSet))._2
 }
@@ -159,5 +166,7 @@ object ProductFactor {
       f.evaluate(assignment)
     def condition(f: ProductFactor[T, R], variables: Array[Int], values: Array[Int]): ProductFactor[T, R] =
       f.condition(variables,values)
+    override def partition(f: ProductFactor[T, R], sumMonoid: Monoid[R])(implicit cm: ClassManifest[R]): R =
+      f.jtPartition(sumMonoid)
   }
 }

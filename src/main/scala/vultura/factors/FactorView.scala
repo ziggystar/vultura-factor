@@ -9,8 +9,6 @@ class FactorView[A](val condition: Map[Int, Int], val factor: A)(implicit evF: F
 }
 
 object FactorView{
-
-
   implicit def factorTC[A,R](implicit evF: Factor[A, R]) = new DenseFactor[FactorView[A],R]{
 
     def variables(f: FactorView[A]): Array[Int] = f.variables

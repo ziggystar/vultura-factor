@@ -86,6 +86,8 @@ class TableFactor[T: ClassManifest](val variables: Array[Int],
 }
 
 object TableFactor {
+  import vultura.{factors => vf}
+
   def fromFunction[T: ClassManifest](_vars: Seq[Int], _domains: Seq[Array[Int]], f: Array[Int] => T) = {
     require(_vars.size == _domains.size, "variable number and domain number don't match")
 
@@ -110,6 +112,9 @@ object TableFactor {
     else
       new TableFactor(sortedVars.toArray, sortedDomains.map(_.toArray).toArray, table)
   }
+
+  def fromFactor[T,A](f: A)(implicit ev: Factor[A,T],cm: ClassManifest[T]): TableFactor[T] =
+    TableFactor.fromFunction(vf.variables(f),vf.domains(f),vf.evaluate(f,_))
 
   def fromTable[T: ClassManifest](_vars: Seq[Int], _domains: Seq[Array[Int]], f: IndexedSeq[T]) = {
     import vultura.util._

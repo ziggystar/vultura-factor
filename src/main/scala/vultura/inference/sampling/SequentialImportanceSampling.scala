@@ -4,7 +4,7 @@ import vultura.factors._
 import util.Random
 import collection.mutable.WrappedArray
 import vultura.util.{LogMeasure, Measure, RingWithZero}
-import collection.{Iterable, Seq, Iterator}
+import annotation.tailrec
 
 /**
  * Created by IntelliJ IDEA.
@@ -37,41 +37,23 @@ object SequentialImportanceSampling {
     var slice = 1
 
     /** the loop that processes the slices */
-    val adaptiveAggregate = false
-    //inclusive
-    val thresholdTW = 2
-
+    @tailrec
     def filterStep(remainingSlices: Iterable[Seq[A]], particles: ParticleSeq): ParticleSeq = if(remainingSlices.isEmpty)
       particles
     else {
       println("Sampling slice %d".format(slice))
       slice += 1
 
-      val (newFactors: Seq[A],rest: Iterable[Seq[A]]) = if(!adaptiveAggregate)
-        (remainingSlices.head,remainingSlices.tail)
-      else {
-        //try to take as many steps at once as feasible
-        val expandingExtensions: Iterator[ProductFactor[A, Double]] = Iterator.from(2)
-          .map(remainingSlices.take)
-          .map(slices => ProductFactor(slices.flatten.toSeq,ring.multiplication) )
-          .take(remainingSlices.size - 1)
-        val treeWidths = expandingExtensions.map(_.minDegreeTreewidth)
-        //0 means that the first examined extension is too complex; that was two; 1 means you can take 2
-        val indexOfWall = treeWidths.indexWhere(_ > thresholdTW) - 1
-        val slicesToTake = if(indexOfWall == -1) remainingSlices.size
-        else 1 + indexOfWall
-        println("taking %d slices at once".format(slicesToTake))
-        (remainingSlices.take(slicesToTake).flatten.toSeq,remainingSlices.drop(slicesToTake))
-      }
+      val (newFactors: Seq[A],rest: Iterable[Seq[A]]) = (remainingSlices.head,remainingSlices.tail)
 
       //extend a particle x by drawing from newFactors | x exactly; weight remains unchanged,
-      //multiply weight by partition function over new factors (probability of old sample given new distribution)
+      //multiply weight by estimated partition function over new factors (probability of old sample given new distribution)
       val ParticleSeq(vars,doms,_) = particles
       val newFactor = ProductFactor(newFactors, ring.multiplication)
 
       //reweigh the particles using the partition function of the extension
       lazy val reweighedParticles: ParticleSeq = particles.multiplyWeight(
-       oldParticle => newFactor.condition(vars, oldParticle.toArray).partitionAndSample(random,measure,0).map(_._1).getOrElse(measure.sum.zero),
+       oldParticle => partition(newFactor.condition(vars, oldParticle.toArray),measure.sum),
         ring.multiplication).normalized
 
       if(usePreweighing){
@@ -83,7 +65,8 @@ object SequentialImportanceSampling {
 
       def reweighedExtendedParticles = reweighedParticles.generate(random,numSamples).get.map{ oldAssignment =>
         val conditionedNewFactor: ProductFactor[A, Double] = newFactor.condition(vars, oldAssignment.toArray)
-        val sampleExtension = conditionedNewFactor.partitionAndSample(random, measure, 1).get._2.head //tihs must work, since partition can't be one
+        //this must work, since partition can't be zero
+        val sampleExtension = conditionedNewFactor.partitionAndSample(random, measure, 1).get._2.head
         (oldAssignment ++ sampleExtension, 1d)
       }
 
