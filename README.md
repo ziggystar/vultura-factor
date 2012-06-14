@@ -1,7 +1,16 @@
-#vultura.util
+##General purpose utlities - vultura.util
 
-This library contains general purpose utility functions.
-
- - some simple statistical pimps on numeric collections like mean, variance, sd
  - types to handle `Array[Array[T: Manifest]]` types identically to `Seq[Seq[T: Manifest]]`
- - a high performance cross-product iterator
+ - some simple statistical pimps on numeric collections like mean, variance, sd
+
+##Cross-Product Indexing
+
+ - an optimized cross-product iterator, which can be used to build table-based multi-variate functions
+
+##vultura.factors
+
+##vultura.cnf
+
+#vultura.graph
+
+- fast min-degree tree-decomposition
