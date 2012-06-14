@@ -7,6 +7,9 @@ object CNFasBIFun {
 
   import CNF._
 
+  def makesClauseTrue(f: CNF.Clause, variable: Int, value: Int): Boolean =
+    if(value == 1) f.contains(variable) else f.contains(variable | CNF.NEG_MASK)
+
   implicit object ClauseAsFun extends DenseFactor[Clause, BigInt] {
     def variables(f: CNF.Clause): Array[Int] = CNF.variablesOfClause(f)
 
@@ -23,7 +26,9 @@ object CNFasBIFun {
       }
       if(satisfied) 1 else 0
     }
+  }
 
+  implicit object ClauseConditionable extends Conditionable[Clause] {
     def condition(f: CNF.Clause, variables: Array[Int], values: Array[Int]): CNF.Clause = {
       //we become true?
       if (variables.zip(values).exists{case (vr,vl) => makesClauseTrue(f,vr,vl)})
@@ -32,8 +37,5 @@ object CNFasBIFun {
       else
         f.filterNot(i => variables.contains(i & ~CNF.NEG_MASK))
     }
-
-    def makesClauseTrue(f: CNF.Clause, variable: Int, value: Int): Boolean =
-      if(value == 1) f.contains(variable) else f.contains(variable | CNF.NEG_MASK)
   }
 }

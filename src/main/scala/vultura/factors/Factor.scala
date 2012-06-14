@@ -4,7 +4,7 @@ import scalaz._
 import Scalaz._
 import collection.mutable.WrappedArray
 import util.Random
-import vultura.util.{Measure, DomainCPI}
+import vultura.util.{IntDomainCPI, Measure}
 
 /**
  * Generic multi-variate functions type class.
@@ -18,17 +18,9 @@ import vultura.util.{Measure, DomainCPI}
 
 sealed trait Factor[A,B] {
   def variables(f: A): Array[Int]
-
   def domains(f: A): Array[Array[Int]]
-
   def evaluate(f: A, assignment: Array[Int]): B
-
-  /**This is provided to retain the type of the factor after conditioning. E.g. SAT clauses can be conditioned
-   * but not marginalized without losing their type.
-   */
-  def condition(f: A, variables: Array[Int], values: Array[Int]): A
-
-  def iterator(f: A): Iterator[(Array[Int], B)] = new DomainCPI(domains(f)).iterator.map(a => a -> evaluate(f, a))
+  def iterator(f: A): Iterator[(Array[Int], B)] = new IntDomainCPI(domains(f)).iterator.map(a => a -> evaluate(f, a))
 
   def partition(f: A, sumMonoid: Monoid[B])(implicit cm: ClassManifest[B]): B =
     vultura.util.crossProduct(this.domains(f)).iterator.map(this.evaluate(f,_)).reduce(sumMonoid.append(_,_))
@@ -38,9 +30,13 @@ sealed trait Factor[A,B] {
     Some(Array())
   else {
     val pf = partition(problem, m.sum)
-    val cpi: DomainCPI[Int] = new DomainCPI(domains(problem))
+    val cpi = new IntDomainCPI(domains(problem))
     vultura.util.drawRandomlyByIS(cpi, random)(ass => m.normalizedWeight(pf)(this.evaluate(problem,ass)))
   }
+}
+
+trait Conditionable[A] {
+  def condition(f: A, variables: Array[Int], values: Array[Int]): A
 }
 
 trait DenseFactor[A,B] extends Factor[A,B]

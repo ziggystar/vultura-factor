@@ -14,11 +14,11 @@ import annotation.tailrec
 
 object SequentialImportanceSampling {
   /** @return a set of samples and associated weights.    */
-  def weightedImportanceSampling[A](factorSequence: Iterable[Seq[A]],
+  def weightedImportanceSampling[A: Conditionable : ({type F[T] = Factor[T,Double]})#F](factorSequence: Iterable[Seq[A]],
                                     numSamples: Int,
                                     random: Random,
                                     useLogDomain: Boolean = false,
-                                    usePreweighing: Boolean = true)(implicit ev: Factor[A,Double]): ParticleSeq = {
+                                    usePreweighing: Boolean = true): ParticleSeq = {
     //draw initial samples
     implicit val ring: RingWithZero[Double] = if(useLogDomain) RingWithZero.logSumProd else RingWithZero.sumProduct
     implicit val measure = if(useLogDomain) LogMeasure else Measure.measureDouble
@@ -53,7 +53,7 @@ object SequentialImportanceSampling {
 
       //reweigh the particles using the partition function of the extension
       lazy val reweighedParticles: ParticleSeq = particles.multiplyWeight(
-       oldParticle => partition(newFactor.condition(vars, oldParticle.toArray),measure.sum),
+       oldParticle => partition(condition(newFactor, vars, oldParticle.toArray),measure.sum),
         ring.multiplication).normalized
 
       if(usePreweighing){
@@ -64,7 +64,7 @@ object SequentialImportanceSampling {
       }
 
       def reweighedExtendedParticles = reweighedParticles.generate(random,numSamples).get.map{ oldAssignment =>
-        val conditionedNewFactor: ProductFactor[A, Double] = newFactor.condition(vars, oldAssignment.toArray)
+        val conditionedNewFactor: ProductFactor[A, Double] = condition(newFactor, vars, oldAssignment.toArray)
         //this must work, since partition can't be zero
         val sampleExtension = conditionedNewFactor.partitionAndSample(random, measure, 1).get._2.head
         (oldAssignment ++ sampleExtension, 1d)
@@ -72,7 +72,7 @@ object SequentialImportanceSampling {
 
       //draw `numSamples` new particles
       def newParticles: Seq[(WrappedArray[Int], Double)] = Iterator.continually(particles.generate(random,1).get.head).map{ oldAssignment =>
-        val conditionedNewFactor: ProductFactor[A, Double] = newFactor.condition(vars, oldAssignment.toArray)
+        val conditionedNewFactor: ProductFactor[A, Double] = condition(newFactor, vars, oldAssignment.toArray)
         conditionedNewFactor.partitionAndSample(random, measure, 1).map { case (conditionedPartition, sampleExtensions) =>
             assert(!conditionedPartition.isInfinite, "sampled invalid weight; factor values:\n%s".format(conditionedNewFactor.factors.map(evaluate(_,sampleExtensions.head)).mkString(", ")))
             (oldAssignment ++ sampleExtensions.head, conditionedPartition)

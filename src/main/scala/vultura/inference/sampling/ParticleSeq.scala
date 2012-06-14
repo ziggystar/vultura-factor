@@ -1,11 +1,11 @@
 package vultura.inference.sampling
 
 import collection.mutable.WrappedArray
-import vultura.factors.{Factor, SparseFactor}
 import util.Random
 import vultura.util.Measure
 import scalaz._
 import Scalaz._
+import vultura.factors.{Conditionable, Factor, SparseFactor}
 
 /** Pparicles are sorted by weight. */
 class ParticleSeq(val variables: Array[Int],
@@ -55,6 +55,11 @@ object ParticleSeq {
   implicit val particleSetAsSparseFactor: SparseFactor[ParticleSeq,Double] = new SparseFactor[ParticleSeq,Double] {
     def variables(f: ParticleSeq): Array[Int] = f.variables
     def domains(f: ParticleSeq): Array[Array[Int]] = f.domains
+    def defaultValue(f: ParticleSeq): Double = 0d
+    def points(f: ParticleSeq): Map[WrappedArray[Int], Double] = f.particles.toMap
+  }
+
+  implicit val particleSetConditionable: Conditionable[ParticleSeq] = new Conditionable[ParticleSeq]{
     def condition(f: ParticleSeq, variables: Array[Int], values: Array[Int]): ParticleSeq = {
       //the remaining variables and their domains
       val (condVariables,condDomains) = (f.variables,f.domains).zipped.filterNot(t => variables.contains(t._1)).unzip
@@ -72,10 +77,6 @@ object ParticleSeq {
       }
       new ParticleSeq(condVariables.toArray,condDomains.toArray,condParticles,f.measure)
     }
-
-    def defaultValue(f: ParticleSeq): Double = 0d
-
-    def points(f: ParticleSeq): Map[WrappedArray[Int], Double] = f.particles.toMap
   }
 
   def apply[A](factor: A, particles: Seq[(Array[Int],Double)],m: Measure[Double])(implicit evF: Factor[A,Double]): ParticleSeq = {

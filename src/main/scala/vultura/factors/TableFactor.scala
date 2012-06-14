@@ -3,6 +3,7 @@ package vultura.factors
 import scalaz._
 import Scalaz._
 import vultura.util._
+import util.Random
 
 /**
  * Stores all function values inside an array.
@@ -128,7 +129,10 @@ object TableFactor {
     def variables(f: TableFactor[R]): Array[Int] = f.variables
     def domains(f: TableFactor[R]): Array[Array[Int]] = f.domains
     def evaluate(f: TableFactor[R], assignment: Array[Int]): R = f.evaluate(assignment)
-    def condition(f: TableFactor[R], variables: Array[Int], values: Array[Int]): TableFactor[R] = f.condition(variables,values)
+  }
+
+  implicit def dfConditionable[T: ClassManifest] = new Conditionable[TableFactor[T]]{
+    def condition(f: TableFactor[T], variables: Array[Int], values: Array[Int]): TableFactor[T] = f.condition(variables,values)
   }
 
   /**
