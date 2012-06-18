@@ -12,9 +12,9 @@ import collection.immutable.Stream
  * @since 05.02.12
  */
 
-case class ProductFactor[T,R](_factors: Seq[T],
-                              productMonoid: Monoid[R])
-                             (implicit val fev: Factor[T,R], val cm: ClassManifest[R]) {
+class ProductFactor[T,R](_factors: Seq[T],
+                         val productMonoid: Monoid[R])
+                        (implicit val fev: Factor[T,R], val cm: ClassManifest[R]) {
   val factors = _factors.toIndexedSeq
   val variables: Array[Int] = factors.flatMap(f => vf.variables(f)).toSeq.distinct.toArray
   val domains: Array[Array[Int]] = variables.map(factors.flatMap(f => vf.variables(f).zip(vf.domains(f))).toMap)
@@ -148,9 +148,14 @@ case class ProductFactor[T,R](_factors: Seq[T],
     TreeWidth.minDegreeJunctionTrees(this.factors.map(f => (vf.variables(f).toSet, f)))._1
 
   def minDegreeTreewidth: Int = TreeWidth.minDegreeOrderingAndWidth(this.factors.map(vf.variables(_).toSet))._2
+
+  def addFactor(factor: T) = ProductFactor(factors :+ factor, productMonoid)
 }
 
 object ProductFactor {
+  def apply[T,R](_factors: Seq[T], productMonoid: Monoid[R])(implicit fev: Factor[T,R], cm: ClassManifest[R]) =
+    new ProductFactor(_factors, productMonoid)
+
   implicit def pfAsFactor[T,R]: Factor[ProductFactor[T,R],R] = new DenseFactor[ProductFactor[T,R],R] {
     def variables(f: ProductFactor[T, R]): Array[Int] =
       f.variables
