@@ -126,7 +126,7 @@ case class ProductFactor[T,R](_factors: Seq[T],
   }
 
   def jtPartition(sumMonoid: Monoid[R])(implicit cm: ClassManifest[R]): R =
-    upwardCalibratedTrees(sumMonoid).map(_._2).asMA.sum
+    upwardCalibratedTrees(sumMonoid).map(_._2).foldLeft(productMonoid.zero)(productMonoid.append(_,_))
 
   /**
    * Each clique potential inside the trees contains the influence from its children but not from its parent.

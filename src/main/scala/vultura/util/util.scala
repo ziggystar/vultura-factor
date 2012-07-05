@@ -10,6 +10,7 @@ import scala.util.Random
  */
 
 package object util {
+  //TODO make this function more efficient (mutable builder; restart at index 0 once you hit a higher element)
   /**
    * @return Those elements of s where fitness evaluates to the highest value.
    */
