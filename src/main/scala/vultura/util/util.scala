@@ -1,6 +1,7 @@
 package vultura
 
 import scala.util.Random
+import collection.mutable.ArrayBuffer
 
 /**
  * Utility functions.
@@ -10,14 +11,26 @@ import scala.util.Random
  */
 
 package object util {
-  //TODO make this function more efficient (mutable builder; restart at index 0 once you hit a higher element)
   /**
    * @return Those elements of s where fitness evaluates to the highest value.
    */
-  def maxByMultiple[A,B: Ordering](s: Seq[A])(fitness: (A) => B): Seq[A] = {
-    val seq: Seq[(B, A)] = s.map(x => (fitness(x), x))
-    val max = seq.maxBy(_._1)._1
-    seq.filter(t => t._1 == max).map(_._2)
+  def maxByMultiple[A,B: Ordering](s: Seq[A])(fitness: (A) => B): IndexedSeq[A] = {
+    val maxes = new ArrayBuffer[A]()
+    val ord = implicitly[Ordering[B]]
+    var max: B = fitness(s(0))
+
+    s.foreach{ x =>
+      val v: B = fitness(x)
+      val cmp = ord.compare(max,v)
+      if(cmp < 0){
+        max = v
+        maxes.clear()
+        maxes += x
+      } else if(cmp == 0) {
+        maxes += x
+      }
+    }
+    maxes
   }
 
   /** @return None if partition function is not positive. */
