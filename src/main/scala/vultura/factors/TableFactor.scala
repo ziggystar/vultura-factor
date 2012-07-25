@@ -84,6 +84,9 @@ class TableFactor[T: ClassManifest](val variables: Array[Int],
   }
 
   override def toString: String = "TableFactor(%s)".format(variables.mkString(","))
+
+  def normalized(measure: Measure[T]): TableFactor[Double] =
+    new TableFactor(variables, domains, measure.normalize(data),independentVariables)
 }
 
 object TableFactor {
