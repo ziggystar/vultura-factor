@@ -144,6 +144,8 @@ class ProductFactor[T,R](_factors: Seq[T],
     TreeWidth.minDegreeJunctionTrees(this.factors.map(f => (vf.variables(f).toSet, f)))._1
 
   def minDegreeTreewidth: Int = TreeWidth.minDegreeOrderingAndWidth(this.factors.map(vf.variables(_).toSet))._2
+
+  def addFactor(factor: T) = ProductFactor(factors :+ factor, productMonoid)
 }
 
 object ProductFactor {
