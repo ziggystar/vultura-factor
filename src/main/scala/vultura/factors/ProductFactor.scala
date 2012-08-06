@@ -146,6 +146,21 @@ class ProductFactor[T,R](_factors: Seq[T],
   def minDegreeTreewidth: Int = TreeWidth.minDegreeOrderingAndWidth(this.factors.map(vf.variables(_).toSet))._2
 
   def addFactor(factor: T) = ProductFactor(factors :+ factor, productMonoid)
+
+  def marginalizeOutVariables(variables : Set[Int],
+                              sumMonoid : Monoid[R])(implicit cm : ClassManifest[R],
+                                                     tfIsT : =:=[vultura.factors.TableFactor[R], T]): vultura.factors.ProductFactor[T, R] = {
+    if(variables.isEmpty)
+      this
+    else {
+      val variable = variables.minBy(v => factors.count(f => vf.variables(f).contains(v)))
+      val (affected,unaffected) = factors.partition(f => vf.variables(f).contains(variable))
+      val newFactor = vf.marginalizeAllDense(ProductFactor(affected,productMonoid),Set(variable),sumMonoid)
+      ProductFactor(unaffected :+ tfIsT(newFactor),productMonoid).marginalizeOutVariables(variables - variable, sumMonoid)
+    }
+  }
+
+
 }
 
 object ProductFactor {
