@@ -13,29 +13,30 @@ import java.io.File
 
 object DIMACSParser {
   def readFile(file: String): DIMACSInstance = readFile(new File(file))
-  def readFile(file: File): DIMACSInstance = {
-    val lines = scala.io.Source.fromFile(file).getLines().takeWhile(_.headOption != Some('%')).toSeq
+  def readFile(file: File): DIMACSInstance = parse(scala.io.Source.fromFile(file).getLines())
 
-    val description = lines.filter(_.headOption == Some('c')).map(_.drop(1)).mkString("\n")
+  def parse(lines: Iterator[String]): DIMACSInstance = {
+    val nonCommentLines = lines.filterNot(l => l.headOption == Some('%') || l.isEmpty)
 
-    val problemSpec = lines.filter(_.headOption == Some('p')).map(_.drop(1)).mkString(" ")
+    val description = nonCommentLines.takeWhile(_.headOption == Some('c')).map(_.drop(1)).mkString("\n")
+
+    val problemSpec = nonCommentLines.takeWhile(_.headOption == Some('p')).map(_.drop(1)).mkString(" ")
 
     val splitSpec = problemSpec.split(" ").filter(!_.isEmpty)
-    assert(splitSpec.size == 3, "specification must have three entries")
+
+    assert(splitSpec.size == 3, "specification must have three entries: " + splitSpec.mkString(" "))
     assert(splitSpec(0).contains("cnf"), "format description must contain 'cnf'")
 
     val numVariables = splitSpec(1).toInt
     val numClauses = splitSpec(2).toInt
 
-
-
-    val numberSequence = lines
+    val numberSequence = nonCommentLines
       .filter(!_.headOption.exists(Seq('p', 'c').contains)) //drop comment and spec lines
       .mkString(" ") //join the lines
       .split(" ").filter(!_.isEmpty)
       .map(_.toInt) //turn into a seq of Int
 
-    def splitAt[A](in: List[A], at: A, acc: List[List[A]]): List[List[A]] = {
+    def splitAt[A](in: List[A], at: A, acc: List[List[A]] = List(Nil)): List[List[A]] = {
       in match {
         case Nil => acc
         case x :: tail if x == at => splitAt(tail, at, Nil :: acc)
@@ -43,7 +44,7 @@ object DIMACSParser {
       }
     }
 
-    val clauses = splitAt(numberSequence.toList, 0, List(Nil)).reverse.map(_.reverse)
+    val clauses = splitAt(numberSequence.toList, 0).reverse.map(_.reverse)
       .filter(!_.isEmpty)
       .map {
       vars =>
