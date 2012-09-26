@@ -2,6 +2,7 @@ package vultura.factors
 
 import vultura.util.{DomainCPI, Measure}
 import collection.mutable.WrappedArray
+import java.io.File
 
 /**
  * Created by IntelliJ IDEA.
@@ -44,5 +45,36 @@ package object uai {
     val factorTables = fs.map(factorTable).mkString("\n")
 
     preamble + "\n\n" + factorTables
+  }
+
+  def parseUAIMarkovFromFile(file: File): Seq[TableFactor[Double]] = {
+    val in = io.Source.fromFile(file)
+    val factors = parseUAIMarkov(in.getLines().mkString("\n"))
+    in.close()
+    factors
+  }
+
+  def parseUAIMarkov(description: String): Seq[TableFactor[Double]] = {
+    //split on whitespace
+    val tokens: Iterator[String] = "\\s+".r.split(description).toIterator
+
+    //first token must be 'MARKOV'
+    require(tokens.next().toUpperCase.matches("MARKOV"), "file must begin with 'MARKOV'")
+
+    val numVars = tokens.next().toInt
+    val domains = tokens.take(numVars).toArray.map(_.toInt)
+    val numFactors = tokens.next().toInt
+    val factorVars = Seq.fill(numFactors){
+      val nv = tokens.next().toInt
+      tokens.take(nv).toArray[String].map(_.toInt)
+    }
+    val factorValues = Seq.fill(numFactors){
+      val nv = tokens.next().toInt
+      tokens.take(nv).toArray[String].map(_.toDouble)
+    }
+
+    (factorVars,factorValues).zipped.map{
+      case (vars,vals) => TableFactor.fromTable(vars,vars.map(v => (0 until domains(v)).toArray),vals)
+    }.toSeq
   }
 }
