@@ -31,7 +31,7 @@ trait MCTS[N,S,R] {
 object MCTS {
   def simulateOnce[N,S,R](problem: MCTS[N,S,R], stats: Map[N,S], random: Random): Map[N,S] = {
     val path = Stream.iterate(problem.rootNode)(n => problem.select(n,stats.get,random))
-
+    null
   }
 }
 
