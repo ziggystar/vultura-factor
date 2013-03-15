@@ -62,15 +62,15 @@ package object uai {
     require(tokens.next().toUpperCase.matches("MARKOV"), "file must begin with 'MARKOV'")
 
     val numVars = tokens.next().toInt
-    val domains = tokens.take(numVars).toArray.map(_.toInt)
+    val domains = Array.fill(numVars)(tokens.next().toInt)
     val numFactors = tokens.next().toInt
     val factorVars = Seq.fill(numFactors){
       val nv = tokens.next().toInt
-      tokens.take(nv).toArray[String].map(_.toInt)
+      Array.fill(nv)(tokens.next().toInt)
     }
     val factorValues = Seq.fill(numFactors){
       val nv = tokens.next().toInt
-      tokens.take(nv).toArray[String].map(_.toDouble)
+      Array.fill(nv)(tokens.next().toDouble)
     }
 
     (factorVars,factorValues).zipped.map{
