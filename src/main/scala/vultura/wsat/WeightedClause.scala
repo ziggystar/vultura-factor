@@ -8,12 +8,10 @@ import vultura.wsat.Literal
  * Date: 3/15/13
  */
 case class WeightedClause(literals: Set[Literal], weight: Double){
-  def eval(assignment: Map[Int,Int]): Double = {
-    if(literals.exists(l => assignment(l.variable) == l.sign))
-      weight
-    else
-      1d
-  }
+  def eval(assignment: Map[Int,Int]): Double = if (isSatisfied(assignment)) weight else 1d
+
+  def isSatisfied(assignment: Map[Int, Int]): Boolean =
+    literals.exists(l => assignment(l.variable) == l.sign)
 
   override def toString: String = "(%s,%g)".format(literals.mkString("v"),weight)
 }

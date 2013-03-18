@@ -14,6 +14,6 @@ case class WeightedKB(variables: Set[Int], clauses: Seq[WeightedClause]){
     }
     val ordering = variables.toArray
     val assignments = new IntDomainCPI(Array.fill(ordering.size)(Array(0,1)))
-    assignments.foldLeft(1d){case (p,ass) => p * eval(ordering.zip(ass).toMap)}
+    assignments.foldLeft(0d){case (p,ass) => p + eval(ordering.zip(ass).toMap)}
   }
 }

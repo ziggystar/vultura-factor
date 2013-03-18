@@ -21,7 +21,7 @@ package object wsat {
       numAssignments = factor.cpi.size;
       localZ = math.pow(factors.partition(factor,RingWithZero.sumProduct.multiplication),1d/(numAssignments-1)); //on each assignment, all but one clauses will be true
       assignment <- factor.cpi
-    ) yield WeightedClause(factor.variables.zip(assignment).map(t => Literal(t._1,t._2)).toSet,factor.evaluate(assignment))
+    ) yield WeightedClause(factor.variables.zip(assignment).map(t => Literal(t._1,if(t._2==0) 1 else 0)).toSet,localZ/factor.evaluate(assignment))
     WeightedKB(p.flatMap(_.variables).toSet,clauses)
   }
 }
