@@ -4,10 +4,10 @@ organization := "de.uni-ulm"
 
 version := "13.2-SNAPSHOT"
 
-scalaVersion := "2.10.0"
+scalaVersion := "2.10.1"
 
 //specs2 dependency
-libraryDependencies += "org.specs2" %% "specs2" % "1.13" % "test"
+libraryDependencies += "org.specs2" % "specs2_2.10" % "1.13" % "test"
 
 //scalaz
 libraryDependencies += "org.scalaz" %% "scalaz-core" % "6.0.4"
