@@ -1,6 +1,8 @@
 package vultura.wsat
 
 import java.io.File
+import vultura.factors.{ProductFactor, TableFactor}
+import vultura.util.RingWithZero
 
 /**
  * Created by IntelliJ IDEA.
@@ -9,8 +11,10 @@ import java.io.File
  */
 object Test {
   def main(args: Array[String]) {
-    val problem = productToClauseWeightedKB(vultura.factors.uai.parseUAIMarkovFromFile(new File(args(0))))
+    val uaiProblem: Seq[TableFactor[Double]] = vultura.factors.uai.parseUAIMarkovFromFile(new File(args(0)))
+    println(math.log(ProductFactor(uaiProblem,RingWithZero.sumProduct.multiplication).jtPartition(RingWithZero.sumProduct.addition)))
+    val problem = productToClauseWeightedKB(uaiProblem)
     println(problem)
-    println(problem.sumProductBrute)
+    println(math.log(problem.sumProductBrute))
   }
 }
