@@ -18,7 +18,7 @@ class PackageTests extends Specification {
   def incTest(reg: Array[Int], doms: Array[Int]): (Int, Seq[Int]) = (incrementCounter(reg,doms),reg.toSeq)
   def sp(vars: Array[Int], doms: Array[Int], fvars: Array[Array[Int]], fvals: Array[Array[Double]]): Array[Double] = {
     val result: Array[Double] = new Array[Double](vars.map(doms).product)
-    sumProduct(vars,doms,fvars,fvals,sumNormalD,prodNormalD,result)
+    sumProduct(vars,doms,fvars,fvals,NormalD,result)
     result
   }
 
@@ -37,15 +37,13 @@ class PackageTests extends Specification {
     p^
     "sumProduct method" ^
       "sumProduct has to throw when trying to marginalize out not-contained variables" !
-        (sumProduct(AI(2),AI(2),AAI(AI(1)),AAD(AD(1.0,1.0)),null,null,null) must throwA("trying to marginalize out non-existent variable")) ^
+        (sumProduct(AI(2),AI(2),AAI(AI(1)),AAD(AD(1.0,1.0)),null,null) must throwA("trying to marginalize out non-existent variable")) ^
       "giving wrongly sized result array should fail" !
-        (sumProduct(AI(0,1),AI(2,3,4),AAI(AI(0)),AAD(AD(1.0,1.0)),null,null,result=new Array[Double](7)) must throwA[AssertionError]) ^
+        (sumProduct(AI(0,1),AI(2,3,4),AAI(AI(0)),AAD(AD(1.0,1.0)),null,result=new Array[Double](7)) must throwA[AssertionError]) ^
       "sum over single factor" !
         (sp(AI(),AI(2),AAI(AI(0)),AAD(AD(1,2))) === AD(3)) ^
       "sum over single factor" !
         (sp(AI(),AI(2,2),AAI(AI(0,1)),AAD(AD(1,2,3,4))) === AD(10)) ^
       "multiply two factors" !
         (sp(AI(0),AI(2),AAI(AI(0),AI(0)),AAD(AD(1,2),AD(3,4))) === AD(3,8))
-
-
 }

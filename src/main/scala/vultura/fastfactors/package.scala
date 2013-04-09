@@ -63,8 +63,7 @@ package object fastfactors {
                                                    domainSizes: Array[Int],
                                                    factorVariables: Array[Array[Int]],
                                                    factorValues: Array[Array[T]],
-                                                   sumOperation: Array[T] => T,
-                                                   productOperation: Array[T] => T,
+                                                   ring: RingZ[T],
                                                    result: Array[T]) {
     val numFactors: Int = factorValues.size
     require(factorVariables.size == numFactors)
@@ -115,15 +114,12 @@ package object fastfactors {
         }
 
         //multiply factor values
-        margTemp(margIdx) = productOperation(prodTemp)
+        margTemp(margIdx) = ring.prodA(prodTemp)
         margIdx += 1
       }
       //now sum over marginalized variables for one assignment to the remaining variables
-      result(remainIdx) = sumOperation(margTemp)
+      result(remainIdx) = ring.sumA(margTemp)
       remainIdx += 1
     }
   }
-
-  def prodNormalD(ds: Array[Double]): Double = ds.product
-  def sumNormalD(ds: Array[Double]): Double = ds.sum
 }
