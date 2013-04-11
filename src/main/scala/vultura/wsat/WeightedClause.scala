@@ -1,15 +1,24 @@
 package vultura.wsat
 
-import vultura.wsat.Literal
-
 /**
  * Created by IntelliJ IDEA.
  * User: Thomas Geier
  * Date: 3/15/13
  */
-case class WeightedClause(literals: Set[Literal], weight: Double){
+case class WeightedClause(literals: Array[Literal], weight: Double){
   def eval(assignment: Map[Int,Int]): Double = if (isSatisfied(assignment)) weight else 1d
+  def eval(assignment: Array[Int]): Double = if(isSatisfied(assignment)) weight else 1d
 
+  def isSatisfied(assignment: Array[Int]): Boolean = {
+    var liti = 0
+    while(liti < literals.size){
+      val lit: Literal = literals(liti)
+      if(assignment(lit.variable) == lit.sign)
+        return true
+      liti += 1
+    }
+    false
+  }
   def isSatisfied(assignment: Map[Int, Int]): Boolean =
     literals.exists(l => assignment(l.variable) == l.sign)
 
@@ -23,6 +32,7 @@ final class Literal(val data: Int) extends AnyVal {
   @inline def variable: Int = data >> 1
   override def toString: String = (if (isPositive) "" else "-") + variable
 }
+
 object Literal{
   def apply(variable: Int, sign: Boolean) = new Literal((variable << 1) + (if(sign) 1 else 0))
 
