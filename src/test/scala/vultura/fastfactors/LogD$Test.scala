@@ -13,6 +13,8 @@ class LogD$Test extends Specification {
 
   def is: Fragments =
     "simple sum" ! (LogD.sum(log(3),log(4)) must beCloseTo(log(7),0.01)) ^
+    "sum with -Inf" ! (LogD.sum(Double.NegativeInfinity, 5) must beCloseTo(5,0.01)) ^
+    "sum with -Inf (2)" ! (LogD.sum(-5, Double.NegativeInfinity) must beCloseTo(-5,0.01)) ^
     "simple sum (swap)" ! (LogD.sum(log(4),log(3)) must beCloseTo(log(7),0.01)) ^
     "simple prod" ! (LogD.prod(log(4),log(3)) must beCloseTo(log(12),0.01)) ^
     "array sum" ! (LogD.sumA(Array(log(1),log(2),log(0.5))) must beCloseTo(log(3.5),0.01)) ^

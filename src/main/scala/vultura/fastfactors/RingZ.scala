@@ -41,10 +41,15 @@ object LogD extends RingZ[Double] {
   final val zero: Double = Double.NegativeInfinity
   final val one: Double = 0d
 
-  def sum(s1: Double, s2: Double): Double = if(math.abs(s1 - s2) > math.abs(s2-s1))
-    s1 + math.log1p(math.exp(s2 - s1))
-  else
-    s2 + math.log1p(math.exp(s1 - s2))
+  def sum(s1: Double, s2: Double): Double =
+    if(Double.NegativeInfinity == s1)
+      s2
+    else if(s2 == Double.NegativeInfinity)
+      s1
+    else if(math.abs(s1 - s2) > math.abs(s2-s1))
+      s1 + math.log1p(math.exp(s2 - s1))
+    else
+      s2 + math.log1p(math.exp(s1 - s2))
 
   def prod(f1: Double, f2: Double): Double = f1 + f2
 
