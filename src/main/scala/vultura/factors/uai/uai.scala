@@ -2,7 +2,7 @@ package vultura.factors
 
 import vultura.util.{DomainCPI, Measure}
 import collection.mutable.WrappedArray
-import java.io.File
+import java.io._
 
 /**
  * Created by IntelliJ IDEA.
@@ -47,12 +47,15 @@ package object uai {
     preamble + "\n\n" + factorTables
   }
 
-  def parseUAIMarkovFromFile(file: File): Seq[TableFactor[Double]] = {
-    val in = io.Source.fromFile(file)
-    val factors = parseUAIMarkov(in.getLines().mkString("\n"))
-    in.close()
-    factors
-  }
+  def parseUAIMarkovFromFile(file: File): Seq[TableFactor[Double]] = parseUAIMarkov(new FileInputStream(file))
+
+  def parseUAIMarkov(in: InputStream): Seq[TableFactor[Double]] = {
+      val reader = new BufferedReader(new InputStreamReader(in))
+      val allLines = Iterator.continually(reader.readLine()).takeWhile(_ != null).mkString("\n")
+      reader.close()
+      val factors = parseUAIMarkov(allLines)
+      factors
+    }
 
   def parseUAIMarkov(description: String): Seq[TableFactor[Double]] = {
     //split on whitespace
