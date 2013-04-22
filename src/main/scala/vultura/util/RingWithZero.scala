@@ -50,7 +50,7 @@ object RingWithZero{
 
     def multiplication: Monoid[Double] = new Monoid[Double]{
       def append(s1: Double, s2: => Double): Double = s1 + s2
-      val zero: Double = 1d
+      val zero: Double = 0d
     }
   }
 }
