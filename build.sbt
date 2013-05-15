@@ -12,6 +12,9 @@ libraryDependencies += "org.specs2" % "specs2_2.10" % "1.13" % "test"
 //scalaz
 libraryDependencies += "org.scalaz" %% "scalaz-core" % "6.0.4"
 
+//cli parsing
+libraryDependencies += "org.rogach" % "scallop_2.10" % "0.9.1"
+
 publishMavenStyle := true
 
 publishTo <<= (version) { version: String =>
