@@ -36,6 +36,8 @@ class TableFactor[T: ClassManifest](val variables: Array[Int],
       Map.empty
   }
 
+  def denseData: Array[T] = if (independentVariables.isEmpty) data else new IntDomainCPI(domains).map(evaluate)(collection.breakOut)
+
   def constantValue: Option[T] = if(independentVariables.size == variables.size) Some(data(0)) else None
 
   val dependentIndices = {

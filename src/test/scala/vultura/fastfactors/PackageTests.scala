@@ -2,6 +2,7 @@ package vultura.fastfactors
 
 import org.specs2._
 import specification.Fragments
+import FastFactor._
 
 /**
  * Created by IntelliJ IDEA.

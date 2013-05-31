@@ -34,16 +34,22 @@ object uai2cnf {
       descr="file to write cnf to; stdout if not given",
       default=Some(System.out)
     )
+    val task = trailArg[String](
+      name = "task",
+      descr = "select for task [structure|shatter|determinism]",
+      validate = str => Seq("structure", "shatter", "determinism").contains(str.toLowerCase),
+      default = Some("structure")
+    )
     val shatter = opt[Boolean](
      "shatter",
       's',
-      descr="shatter variables and create one variable for each possible assignment for old variables",
+      descr="shatter variables and create one variable for each value per original variable, e.g. the micro structure",
       default = Some(false)
     )
     val fileStat = opt[Boolean](
       "print-stat",
       'p',
-      descr="print statistics of problem and exit"
+      descr="print statistics for problem and exit"
     )
   }
 
@@ -82,51 +88,64 @@ object uai2cnf {
       System.exit(0)
     }
 
-    def shatter(p: Seq[TableFactor[Double]]): Seq[Either[TableFactor[Double],SingleValueFactor]] = {
-      val (vars,doms) = p.flatMap(f => f.variables.zip(f.domains.map(_.toSeq))).distinct.unzip
-      assert(vars.size == vars.distinct.size, "differing domains for same variable")
-      val oldVarDomMap: Map[Int, Array[Int]] = (vars zip doms.map(_.toArray)).toMap
-
-      //map from (variable,value) pairs to new variable indices
-      val newVars: Map[(Int, Int), Int] =
-        (for ((v, d) <- vars zip doms; value <- d) yield (v, value))
-          .zipWithIndex
-          .map{case (k,v) => k -> (v+1)}
-          .toMap
-      def shatterFactor(f: TableFactor[Double]): IndexedSeq[SingleValueFactor] = {
-        val mode = f.data.groupBy(identity).toSeq.sortBy(_._2.size).filter(_._1 != 0d).last._1
-        f.cpi.collect{
-          case assignment if(f.evaluate(assignment) != mode) =>
-            SingleValueFactor(
-              f.variables.zip(assignment).map(newVars),
-              f.variables.map(_ => Array(0,1)),
-              f.variables.map(_ => 1),
-              f.evaluate(assignment),
-              mode
-            )
-        }
-      }
-      def allDiffFactor(v: Int): TableFactor[Double] = TableFactor.fromFunction(
-        oldVarDomMap(v).map(value => v -> value).map(newVars),
-        Array.fill(oldVarDomMap(v).size)(Array(0,1)),
-        assignment => if(assignment.sum == 1) 1d else 0d
-      )
-
-      vars.map(allDiffFactor).map(Left(_)) ++ p.flatMap(shatterFactor).map(Right(_))
+    val outString: String = config.task() match {
+      case "structure" => writeCNF(inProblem)
+      case "shatter" => writeCNF(shatter(inProblem))
+      case "determinism" => writeCNF(inProblem,onlyDeterminism=true)
     }
-
-    def writeCNF[A : ({type L[X] = Factor[X,_]})#L](p: Seq[A]): String = {
-      import vultura.factors._
-      //map variables to their dimacs variable name
-      val varMap: Map[Int, Int] = p.flatMap(variables(_)).distinct.toArray.zipWithIndex.map(t => (t._1,t._2 + 1)).toMap
-      f"c this SAT instance represents the structure of a markov network read from ${config.input()}\n" +
-      f"p cnf ${varMap.size} ${p.size}\n" +
-      p.map(tf => variables(tf).map(varMap).mkString(" ") + " 0").mkString("\n")
-    }
-
-    val outString = (if(config.shatter()) writeCNF(shatter(inProblem)) else writeCNF(inProblem))
 
     //write out
     new PrintStream(config.output()).print(outString)
+  }
+
+  def shatter(p: Seq[TableFactor[Double]]): Seq[Either[TableFactor[Double],SingleValueFactor]] = {
+    val (vars,doms) = p.flatMap(f => f.variables.zip(f.domains.map(_.toSeq))).distinct.unzip
+    assert(vars.size == vars.distinct.size, "differing domains for same variable")
+    val oldVarDomMap: Map[Int, Array[Int]] = (vars zip doms.map(_.toArray)).toMap
+
+    //map from (variable,value) pairs to new variable indices
+    val newVars: Map[(Int, Int), Int] =
+      (for ((v, d) <- vars zip doms; value <- d) yield (v, value))
+        .zipWithIndex
+        .map{case (k,v) => k -> (v+1)}
+        .toMap
+    def shatterFactor(f: TableFactor[Double]): IndexedSeq[SingleValueFactor] = {
+      val mode = f.data.groupBy(identity).toSeq.sortBy(_._2.size).filter(_._1 != 0d).last._1
+      f.cpi.collect{
+        case assignment if(f.evaluate(assignment) != mode) =>
+          SingleValueFactor(
+            f.variables.zip(assignment).map(newVars),
+            f.variables.map(_ => Array(0,1)),
+            f.variables.map(_ => 1),
+            f.evaluate(assignment),
+            mode
+          )
+      }
+    }
+    def allDiffFactor(v: Int): TableFactor[Double] = TableFactor.fromFunction(
+      oldVarDomMap(v).map(value => v -> value).map(newVars),
+      Array.fill(oldVarDomMap(v).size)(Array(0,1)),
+      assignment => if(assignment.sum == 1) 1d else 0d
+    )
+
+    vars.map(allDiffFactor).map(Left(_)) ++ p.flatMap(shatterFactor).map(Right(_))
+  }
+
+  def writeCNF[A : ({type L[X] = Factor[X,_]})#L](p: Seq[A],onlyDeterminism: Boolean = false): String = {
+    import vultura.factors._
+    assert(onlyDeterminism == false, "not implemented yet")
+    //map variables to their dimacs variable name
+    val varMap: Map[Int, Int] = p.flatMap(variables(_)).distinct.toArray.zipWithIndex.map(t => (t._1,t._2 + 1)).toMap
+    f"c this SAT instance represents the structure of a markov network\n" +
+    f"p cnf ${varMap.size} ${p.size}\n" +
+    p.map(tf => variables(tf).map(varMap).mkString(" ") + " 0").mkString("\n")
+  }
+
+  def writeCNF(clauses: Set[Map[Int,Boolean]]): String = {
+    val nameVars: Map[Int, Int] =
+      clauses.flatMap(_.keys).toSeq.distinct.sorted.zipWithIndex.map{case (vold,vnew) => vold -> (vnew + 1)}.toMap
+    f"c this SAT instance represents the structure of a markov network\n" +
+    f"p cnf ${nameVars.size} ${clauses.size}\n" +
+    clauses.map(_.map{case (v,sign) => (if(!sign) "-" else "") + nameVars(v)}.mkString(" ") + " 0").mkString("\n")
   }
 }
