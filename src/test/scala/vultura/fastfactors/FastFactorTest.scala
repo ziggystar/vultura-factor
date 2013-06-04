@@ -54,13 +54,13 @@ class FastFactorTest extends Specification {
     p^
     "conditioning factors" ^
       "condition 2x2 factor" ^
-      (conditionFactor(FF(VARS(0,1),VALS(1,2,3,4)),Map(0 -> 0),DOMS(2,2)) === FF(VARS(1),VALS(1,3))) ^
-      (conditionFactor(FF(VARS(0,1),VALS(1,2,3,4)),Map(0 -> 1),DOMS(2,2)) === FF(VARS(1),VALS(2,4))) ^
-      (conditionFactor(FF(VARS(0,1),VALS(1,2,3,4)),Map(1 -> 0),DOMS(2,2)) === FF(VARS(0),VALS(1,2))) ^
-      (conditionFactor(FF(VARS(0,1),VALS(1,2,3,4)),Map(1 -> 1),DOMS(2,2)) === FF(VARS(0),VALS(3,4))) ^
+      (FF(VARS(0,1),VALS(1,2,3,4)).condition(Map(0 -> 0),DOMS(2,2)) === FF(VARS(1),VALS(1,3))) ^
+      (FF(VARS(0,1),VALS(1,2,3,4)).condition(Map(0 -> 1),DOMS(2,2)) === FF(VARS(1),VALS(2,4))) ^
+      (FF(VARS(0,1),VALS(1,2,3,4)).condition(Map(1 -> 0),DOMS(2,2)) === FF(VARS(0),VALS(1,2))) ^
+      (FF(VARS(0,1),VALS(1,2,3,4)).condition(Map(1 -> 1),DOMS(2,2)) === FF(VARS(0),VALS(3,4))) ^
      p^
      "condition 3x3 factor" ^
-      (conditionFactor(FF(VARS(0,1),VALS(1,2,3,4,5,6,7,8,9)),Map(0 -> 0),DOMS(3,3)) === FF(VARS(1),VALS(1,4,7))) ^
-      (conditionFactor(FF(VARS(0,1),VALS(1,2,3,4,5,6,7,8,9)),Map(0 -> 1),DOMS(3,3)) === FF(VARS(1),VALS(2,5,8))) ^
-      (conditionFactor(FF(VARS(0,1),VALS(1,2,3,4,5,6,7,8,9)),Map(1 -> 1),DOMS(3,3)) === FF(VARS(0),VALS(4,5,6)))
+      (FF(VARS(0,1),VALS(1,2,3,4,5,6,7,8,9)).condition(Map(0 -> 0),DOMS(3,3)) === FF(VARS(1),VALS(1,4,7))) ^
+      (FF(VARS(0,1),VALS(1,2,3,4,5,6,7,8,9)).condition(Map(0 -> 1),DOMS(3,3)) === FF(VARS(1),VALS(2,5,8))) ^
+      (FF(VARS(0,1),VALS(1,2,3,4,5,6,7,8,9)).condition(Map(1 -> 1),DOMS(3,3)) === FF(VARS(0),VALS(4,5,6)))
 }

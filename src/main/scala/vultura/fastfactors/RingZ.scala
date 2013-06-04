@@ -72,6 +72,7 @@ object LogD extends RingZ[Double] {
     var max = ss(0)
     var maxi = 0
     var i = 0
+
     while(i < ss.size){
       if(ss(i) > max){
         max = ss(i)
@@ -79,6 +80,10 @@ object LogD extends RingZ[Double] {
       }
       i += 1
     }
+
+    //we cannot substract -Inf from -Inf below
+    if(max.isNegInfinity)
+      return Double.NegativeInfinity
 
     i = 0
     var sum = 0d

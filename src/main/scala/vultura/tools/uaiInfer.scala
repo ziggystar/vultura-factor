@@ -73,22 +73,25 @@ object uaiInfer {
   }
 
   def conditionProblem(problem: Seq[FastFactor], domains: Array[Int], condition: Map[Int,Int]): (IndexedSeq[FastFactor], Array[Int]) = {
-    val condProblem: IndexedSeq[FastFactor] = problem.map(FastFactor.conditionFactor(_,condition,domains))(collection.breakOut)
+    val condProblem: IndexedSeq[FastFactor] = problem.map(_.condition(condition,domains))(collection.breakOut)
     val newDomains = domains.zipWithIndex.map{case (d,v) => if(condition.contains(v)) 1 else d}
-    (condProblem,newDomains)
+    val simplifiedProblem = condProblem.map(_.simplify(newDomains))
+    (simplifiedProblem,newDomains)
   }
 
   def variableElimination(problem: IndexedSeq[FastFactor], ring: RingZ[Double], domains: Array[Int]): Double = {
     val graph: IndexedSeq[Set[Int]] = problem.map(_.variables.toSet)
-    val (ordering: List[Int], potentialSize) = TreeWidth.vertexOrdering(TreeWidth.weightedMinDegree(domains))(graph)
+//    val (ordering: List[Int], potentialSize) = TreeWidth.vertexOrdering(TreeWidth.weightedMinDegree(domains))(graph)
+    val (ordering: List[Int], potentialSize) = TreeWidth.minDegreeOrderingAndWidth(graph)
     println("found ordering of max exp-width of " + potentialSize)
 
-    val constants: Array[Double] = ordering.foldLeft(problem.toList) {
+    val eliminationResult: List[FastFactor] = ordering.foldLeft(problem.toList) {
       case (factors, elimVar) =>
-        val (eliminatedFactors, remainingFactors) = factors.partition(_.variables.contains(elimVar))
+        val (eliminatedFactors, remainingFactors) = factors.partition(_.variables.exists(_ == elimVar))
         val product = FastFactor.multiplyMarginalize(ring)(domains)(eliminatedFactors, Array(elimVar))
         product :: remainingFactors
-    }.map(_.values.head)(collection.breakOut)
+    }
+    val constants: Array[Double] = eliminationResult.map(_.values.head)(collection.breakOut)
     ring.prodA(constants)
   }
 }

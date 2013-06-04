@@ -10,6 +10,53 @@ import scala.reflect.ClassTag
 case class FastFactor(variables: Array[Int], values: Array[Double]){
   require(FastFactor.isStrictlyIncreasing(variables), "variables are not ordered increasingly")
 
+  /** Check whether this factor is independent of some variable. (with no tolerance!) */
+  def simplify(domains: Array[Int]): FastFactor = {
+    def isIndependentIn(factor: FastFactor, variable: Int): Boolean =
+      (0 until domains(variable)).view
+        .map(value => factor.condition(Map(variable -> value),domains))
+        .sliding(2).map(t => t(0) == t(1))
+        .reduce(_ && _)
+    this.variables.foldLeft(this){case (factor, variable) =>
+      if(isIndependentIn(factor,variable)) {
+        //println("removing var " + variable + " in factor " + factor)
+        factor.condition(Map(variable -> 0),domains)
+      } else
+        factor
+    }
+  }
+
+  def condition(condition: Map[Int,Int], domains: Array[Int]) = {
+    val (hitVars,remVars) = this.variables.partition(condition.contains)
+    val remDomains = remVars.map(domains)
+    val strides: Array[Int] = this.variables.map(domains).scanLeft(1)(_ * _)
+
+    //maps variables to their stride
+    val strideLookup: Map[Int, Int] = this.variables.zip(strides.init).toMap
+    //we'll use the overflow position of the counter to index into this array
+    val lookup: Array[Int] = FastFactor.buildLookup(remVars,domains,this.variables)
+    var pos: Int = hitVars.map(v => strideLookup(v) * condition(v)).sum
+
+    //this holds result
+    val condVals: Array[Double] = new Array[Double](remVars.map(domains).product)
+
+    //loop state
+    val countReg: Array[Int] = Array.fill(remVars.size)(0)
+    var i = 0
+
+    //work begins here
+    condVals(i) = this.values(pos)
+    while(i  < condVals.size - 1){
+      i += 1
+      //side-effecting call
+      val overflow = FastFactor.incrementCounter(countReg,remDomains)
+      pos += lookup(overflow)
+      condVals(i) = this.values(pos)
+    }
+
+    FastFactor(remVars,condVals)
+  }
+
   override def equals(obj: Any): Boolean = obj.isInstanceOf[FastFactor] && {
     val ff = obj.asInstanceOf[FastFactor]
     variables.deep == ff.variables.deep && values.deep == ff.values.deep
@@ -56,34 +103,11 @@ object FastFactor{
     FastFactor(variables,values)
   }
 
-  def conditionFactor(factor: FastFactor, condition: Map[Int,Int], domains: Array[Int]) = {
-    val (hitVars,remVars) = factor.variables.partition(condition.contains)
-    val remDomains = remVars.map(domains)
-    val countReg: Array[Int] = Array.fill(remVars.size)(0)
-
-    val strides: Array[Int] = factor.variables.map(domains).scanLeft(1)(_ * _)
-    //maps variables to their stride
-    val strideLookup: Map[Int, Int] = factor.variables.zip(strides.init).toMap
-    //we'll use the overflow position of the counter to index into this array
-    val lookup: Array[Int] = buildLookup(remVars,domains,factor.variables)
-    var pos: Int = hitVars.map(v => strideLookup(v) * condition(v)).sum
-    val condVals: Array[Double] = new Array[Double](remVars.map(domains).product)
-    var i = 0
-    condVals(i) = factor.values(pos)
-    while(i  < condVals.size - 1){
-      i += 1
-      val overflow = FastFactor.incrementCounter(countReg,remDomains)
-      pos += lookup(overflow)
-      condVals(i) = factor.values(pos)
-    }
-    FastFactor(remVars,condVals)
-  }
-
   /**
    *
    * @param varOrdering Variable ordering used for counting in column-major ordering.
-   * @param domainSizes
-   * @param factorVariables
+   * @param domainSizes domainSizes[i] is domain size of variable x_i.
+   * @param factorVariables These are the variables of the factor, in the according order.
    * @return An array `r`, holding the index-increment into the factors data array, when the
    *         counter over the variables in `varOrdering` overflows at position `i`. The pointer `p` into
    *         the factor array has to be adjusted by `p = p + r(i)`.
