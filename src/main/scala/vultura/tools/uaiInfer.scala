@@ -7,7 +7,7 @@ import scala.Some
 import vultura.factors.{ProductFactor, uai, TableFactor}
 import vultura.fastfactors.{FastFactor, RingZ, LogD}
 import scala.collection.immutable.IndexedSeq
-import vultura.util.{RingWithZero, Benchmark}
+import vultura.util.{IntDomainCPI, TreeWidth, RingWithZero, Benchmark}
 
 /**
  * Created by IntelliJ IDEA.
@@ -59,32 +59,36 @@ object uaiInfer {
     //map to logdomain
     val (problem: IndexedSeq[FastFactor],ring: RingZ[Double]) = (inProblem.map(_.map(math.log)).map(f => FastFactor.orderIfNecessary(f.variables,f.denseData,domains)).toIndexedSeq,LogD)
 
-    val resultFactor = variableElimination(problem, ring, domains)
+    val conditioningVariables: Seq[Int] = config.condition.get.map(_.split(",").toSeq.map(_.toInt)).getOrElse(Seq[Int]())
+    val cpi = new IntDomainCPI(conditioningVariables.map(domains).map(x => (0 until x).toArray).toArray)
 
-    println(
-      Seq.fill(100)(Benchmark.benchmarkCPUTime(variableElimination(problem, ring, domains)))
-        .map{case(r,time) => "t: " + time.toDouble * 1e-9 + " v: " + r.head.values(0)}
-        .last
-    )
-    println("old code")
-    val pf = ProductFactor(inProblem,RingWithZero.logSumProd.multiplication)
-    println(
-      Seq.fill(100)(Benchmark.benchmarkCPUTime(pf.jtPartition(RingWithZero.logSumProd.addition)))
-        .map{case(r,time) => "t: " + time.toDouble * 1e-9 + " v: " + r}
-        .last
-      )
+    val conditionedZs = cpi.map{ assignment =>
+      val cond = conditioningVariables.zip(assignment).toMap
+      val (conditionedProblem,conditionedDomain) = conditionProblem(problem,domains,cond)
+      variableElimination(conditionedProblem,ring,conditionedDomain)
+    }
 
-    println(resultFactor.head.values(0))
+    println(conditionedZs)
+    println("total: " + ring.sumA(conditionedZs.toArray))
   }
 
-  def variableElimination(problem: IndexedSeq[FastFactor], ring: RingZ[Double], domains: Array[Int]): List[FastFactor] = {
-    val ordering: List[Int] = vultura.util.TreeWidth.minDegreeOrdering(problem.map(_.variables.toSet))
+  def conditionProblem(problem: Seq[FastFactor], domains: Array[Int], condition: Map[Int,Int]): (IndexedSeq[FastFactor], Array[Int]) = {
+    val condProblem: IndexedSeq[FastFactor] = problem.map(FastFactor.conditionFactor(_,condition,domains))(collection.breakOut)
+    val newDomains = domains.zipWithIndex.map{case (d,v) => if(condition.contains(v)) 1 else d}
+    (condProblem,newDomains)
+  }
 
-    ordering.foldLeft(problem.toList) {
+  def variableElimination(problem: IndexedSeq[FastFactor], ring: RingZ[Double], domains: Array[Int]): Double = {
+    val graph: IndexedSeq[Set[Int]] = problem.map(_.variables.toSet)
+    val (ordering: List[Int], potentialSize) = TreeWidth.vertexOrdering(TreeWidth.weightedMinDegree(domains))(graph)
+    println("found ordering of max exp-width of " + potentialSize)
+
+    val constants: Array[Double] = ordering.foldLeft(problem.toList) {
       case (factors, elimVar) =>
         val (eliminatedFactors, remainingFactors) = factors.partition(_.variables.contains(elimVar))
         val product = FastFactor.multiplyMarginalize(ring)(domains)(eliminatedFactors, Array(elimVar))
         product :: remainingFactors
-    }
+    }.map(_.values.head)(collection.breakOut)
+    ring.prodA(constants)
   }
 }
