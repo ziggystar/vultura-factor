@@ -6,6 +6,7 @@ import scalaz._
 import Scalaz._
 import xml.{NodeSeq, Elem}
 import annotation.tailrec
+import scala.util.Random
 
 /**
  * @author Thomas Geier
@@ -66,6 +67,24 @@ object TreeWidth {
   }
 
 
+  def weightedMinDegree(domainSizes: Int => Int): Seq[Set[Int]] => Int => Int = {cliques: Seq[Set[Int]] => v: Int =>
+    val neighbours = cliques.foldLeft(Set.empty[Int]){case (acc, edge) => if(edge(v)) acc ++ edge else acc}
+    neighbours.foldLeft(1){case (acc, v) => acc * domainSizes(v)}
+  }
+
+  @tailrec
+  def vertexOrdering(selectVariable: Seq[Set[Int]] => Int => Int)(cliques: Seq[Set[Int]], acc: List[Int] = Nil, maxWeight: Int = 0, random: Random = new Random): (List[Int],Int) = {
+    val vertices = cliques.flatten.distinct
+    if (vertices.isEmpty) {
+      (acc.reverse, maxWeight)
+    } else {
+      val selectedVertex = maxByMultiple(vertices)(v => -selectVariable(cliques)(v)).pickRandom(random)
+      val (elimRest,cliqueSize) = eliminateVertex(cliques, selectedVertex)
+      vertexOrdering(selectVariable)(elimRest, selectedVertex :: acc, (maxWeight max selectVariable(cliques)(selectedVertex)))
+    }
+  }
+
+
   def bs2Iterator(bs: BitSet): Iterator[Int] = Iterator.iterate(0)(n => bs.nextSetBit(n) + 1).drop(1).map(_ - 1).takeWhile(_ >= 0)
 
   /** This is a rather efficient method to compute a mindegree ordering. */
@@ -109,11 +128,12 @@ object TreeWidth {
           }
         }
         //recurse
+        //elimClique cardinality corresponds to current treewidth because eliminated vertex is already removed
         mdo(newCliques, newVwithN, (elimV :: acc._1, acc._2 max elimClique.cardinality))
       }
     }
 
-    mdo(cliques,vertices zip neighbours) :-> ((_:Int) - 1)
+    mdo(cliques,vertices zip neighbours)
   }
 
   def minDegreeJunctionTrees[A](_cliques: IndexedSeq[(Set[Int],A)]): (Seq[Tree[(Set[Int],Seq[A])]],Int) = {
