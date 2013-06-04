@@ -9,6 +9,13 @@ import scala.reflect.ClassTag
  */
 case class FastFactor(variables: Array[Int], values: Array[Double]){
   require(FastFactor.isStrictlyIncreasing(variables), "variables are not ordered increasingly")
+
+  override def equals(obj: Any): Boolean = obj.isInstanceOf[FastFactor] && {
+    val ff = obj.asInstanceOf[FastFactor]
+    variables.deep == ff.variables.deep && values.deep == ff.values.deep
+  }
+
+  override def toString: String = f"FastFactor(VARS: ${variables.mkString(",")},VALUES: ${values.mkString(",")}})"
 }
 
 object FastFactor{
@@ -42,12 +49,36 @@ object FastFactor{
   }
 
   def multiplyMarginalize(ring: RingZ[Double])(domains: Array[Int])(factors: Seq[FastFactor], marginalize: Array[Int]): FastFactor = {
-      val variables = merge(factors.map(_.variables),exclude=marginalize)
-      val numValues = variables.map(domains).foldLeft(1)(_ * _)
-      val values = new Array[Double](numValues)
-      sumProduct(variables,domains,factors.map(_.variables)(collection.breakOut),factors.map(_.values)(collection.breakOut),ring,values)
-      FastFactor(variables,values)
+    val variables = merge(factors.map(_.variables),exclude=marginalize)
+    val numValues = variables.map(domains).foldLeft(1)(_ * _)
+    val values = new Array[Double](numValues)
+    sumProduct(variables,domains,factors.map(_.variables)(collection.breakOut),factors.map(_.values)(collection.breakOut),ring,values)
+    FastFactor(variables,values)
+  }
+
+  def conditionFactor(factor: FastFactor, condition: Map[Int,Int], domains: Array[Int]) = {
+    val (hitVars,remVars) = factor.variables.partition(condition.contains)
+    val remDomains = remVars.map(domains)
+    val countReg: Array[Int] = Array.fill(remVars.size)(0)
+
+    val strides: Array[Int] = factor.variables.map(domains).scanLeft(1)(_ * _)
+    //maps variables to their stride
+    val strideLookup: Map[Int, Int] = factor.variables.zip(strides.init).toMap
+    //we'll use the overflow position of the counter to index into this array
+    val lookup: Array[Int] = buildLookup(remVars,domains,factor.variables)
+    var pos: Int = hitVars.map(v => strideLookup(v) * condition(v)).sum
+    val condVals: Array[Double] = new Array[Double](remVars.map(domains).product)
+    var i = 0
+    condVals(i) = factor.values(pos)
+    while(i  < condVals.size - 1){
+      i += 1
+      val overflow = FastFactor.incrementCounter(countReg,remDomains)
+      pos += lookup(overflow)
+      condVals(i) = factor.values(pos)
     }
+    FastFactor(remVars,condVals)
+  }
+
   /**
    *
    * @param varOrdering Variable ordering used for counting in column-major ordering.
@@ -65,7 +96,7 @@ object FastFactor{
     //mod will only hold the negative overflow values
     var mod = 0
     var i = 0
-    var result = new Array[Int](varOrdering.size + 1)
+    val result = new Array[Int](varOrdering.size + 1)
     while(i < varOrdering.size){
       val v = varOrdering(i)
       val factorIndex = factorVariables.indexOf(v)
