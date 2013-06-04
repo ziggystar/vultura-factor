@@ -62,13 +62,30 @@ object uaiInfer {
     val conditioningVariables: Seq[Int] = config.condition.get.map(_.split(",").toSeq.map(_.toInt)).getOrElse(Seq[Int]())
     val cpi = new IntDomainCPI(conditioningVariables.map(domains).map(x => (0 until x).toArray).toArray)
 
-    val conditionedZs = cpi.map{ assignment =>
+    def calcCondZs = cpi.map{ assignment =>
       val cond = conditioningVariables.zip(assignment).toMap
       val (conditionedProblem,conditionedDomain) = conditionProblem(problem,domains,cond)
       variableElimination(conditionedProblem,ring,conditionedDomain)
     }
+    val benchmark = true
+    if(benchmark){
+      //warmup
+      val wut = System.nanoTime
+      while(System.nanoTime - wut < 5e9){
+        calcCondZs
+      }
+      val startTime = System.nanoTime
+      var i = 0
+      while(System.nanoTime - startTime < 20e9){
+        calcCondZs
+        i += 1
+      }
+      val time = System.nanoTime - startTime
+      println("average over " + i + " runs: " + time.toDouble*1e-9/i)
+    }
 
-    println(conditionedZs)
+    val conditionedZs = calcCondZs
+
     println("total: " + ring.sumA(conditionedZs.toArray))
   }
 

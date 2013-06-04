@@ -41,10 +41,6 @@ class FastFactorTest extends Specification {
       incTest(AI(1, 1, 1), AI(2, 2, 2)) === (3, SI(0, 0, 0)) ^
     p^
     "sumProduct method" ^
-      "sumProduct has to throw when trying to marginalize out not-contained variables" !
-        (sumProduct(AI(2),AI(2),AAI(AI(1)),AAD(AD(1.0,1.0)),null,null) must throwA("trying to marginalize out non-existent variable")) ^
-      "giving wrongly sized result array should fail" !
-        (sumProduct(AI(0,1),AI(2,3,4),AAI(AI(0)),AAD(AD(1.0,1.0)),null,result=new Array[Double](7)) must throwA[AssertionError]) ^
       "sum over single factor" !
         (sp(AI(),AI(2),AAI(AI(0)),AAD(AD(1,2))) === AD(3)) ^
       "sum over single factor" !

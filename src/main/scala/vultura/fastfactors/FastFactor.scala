@@ -91,7 +91,7 @@ object FastFactor{
     val variables = merge(factors.map(_.variables))
     val numValues = variables.map(domains).foldLeft(1)(_ * _)
     val values = new Array[Double](numValues)
-    sumProduct(variables,domains,factors.map(_.variables),factors.map(_.values),ring,values)
+    sumProduct(variables,domains,factors.map(_.variables)(collection.breakOut),factors.map(_.values)(collection.breakOut): Array[Array[Double]],ring,values)
     FastFactor(variables,values)
   }
 
@@ -99,7 +99,7 @@ object FastFactor{
     val variables = merge(factors.map(_.variables),exclude=marginalize)
     val numValues = variables.map(domains).foldLeft(1)(_ * _)
     val values = new Array[Double](numValues)
-    sumProduct(variables,domains,factors.map(_.variables)(collection.breakOut),factors.map(_.values)(collection.breakOut),ring,values)
+    sumProduct(variables,domains,factors.map(_.variables)(collection.breakOut),factors.map(_.values)(collection.breakOut): Array[Array[Double]],ring,values)
     FastFactor(variables,values)
   }
 
@@ -140,42 +140,46 @@ object FastFactor{
 
   /** Exception occurs when counter overflows.
     * @return The figure after which the overflow occurred. 0 means no overflow. */
+
+  @inline
   def incrementCounter(reg: Array[Int], domains: Array[Int]): Int = {
     reg(0) += 1
     if(reg(0) != domains(0))
       return 0
     var overflow = 0
+    val size: Int = reg.length
     do {
       reg(overflow) = 0
       overflow += 1
-      if(overflow < reg.size)
+      if(overflow < size)
         reg(overflow) += 1
-    } while(overflow < reg.size && reg(overflow) == domains(overflow))
+    } while(overflow < size && reg(overflow) == domains(overflow))
     overflow
   }
 
   def sumProduct[@specialized(Double) T: ClassTag](remainingVars: Array[Int],
                                                    domainSizes: Array[Int],
-                                                   factorVariables: IndexedSeq[Array[Int]],
-                                                   factorValues: IndexedSeq[Array[T]],
+                                                   factorVariables: Array[Array[Int]],
+                                                   factorValues: Array[Array[T]],
                                                    ring: RingZ[T],
                                                    result: Array[T]) {
+    Thread.sleep(1)
     val numFactors: Int = factorValues.size
     require(factorVariables.size == numFactors)
+    val remainSize: Int = remainingVars.foldLeft(1)(_ * domainSizes(_))
+    require(result.size == remainSize, "result array must fit exactly")
 
     //collect all variables
-    val cliqueOrdering = {
-      val allVars = factorVariables.flatten.toSet.toArray
-      assert(remainingVars.forall(allVars.contains), "trying to marginalize out non-existent variable")
+    val (cliqueOrdering,margVars) = {
+      val allVars: Array[Int] = factorVariables.flatten.toSet.toArray
       //reorder, so that all margVars are at beginning
-      allVars.filterNot(remainingVars.contains) ++ remainingVars
+      val mv: Array[Int] = allVars.filterNot(remainingVars.contains)
+      (mv ++ remainingVars,mv)
     }
-    assert(result.size == remainingVars.map(domainSizes).product, "result array must fit exactly")
 
     val lookups: Array[Array[Int]] = factorVariables.map(buildLookup(cliqueOrdering,domainSizes,_))(collection.breakOut)
 
-    val remainSize: Int = remainingVars.map(domainSizes).product
-    val margSize: Int = cliqueOrdering.drop(remainingVars.size).map(domainSizes).product
+    val margSize: Int = margVars.foldLeft(1)(_ * domainSizes(_))
 
     //will hold intermediate results, which will get summed over
     val margTemp: Array[T] = new Array[T](margSize)

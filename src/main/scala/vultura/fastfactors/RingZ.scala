@@ -55,20 +55,23 @@ object LogD extends RingZ[Double] {
   final val zero: Double = Double.NegativeInfinity
   final val one: Double = 0d
 
+  @inline
   def sum(s1: Double, s2: Double): Double =
     if(s1.isNegInfinity)
       s2
     else if(s2.isNegInfinity)
       s1
-    else if(math.abs(s1 - s2) > math.abs(s2-s1))
+    else if(s1 > s2)
       s1 + math.log1p(math.exp(s2 - s1))
     else
       s2 + math.log1p(math.exp(s1 - s2))
 
   def prod(f1: Double, f2: Double): Double = f1 + f2
 
-
   override def sumA(ss: Array[Double]): Double = {
+    if(ss.length == 2)
+      return this.sum(ss(0), ss(1))
+
     var max = ss(0)
     var maxi = 0
     var i = 0
