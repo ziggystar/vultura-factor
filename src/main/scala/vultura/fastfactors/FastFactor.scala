@@ -12,11 +12,12 @@ case class FastFactor(variables: Array[Int], values: Array[Double]){
 
   /** Check whether this factor is independent of some variable. (with no tolerance!) */
   def simplify(domains: Array[Int]): FastFactor = {
-    def isIndependentIn(factor: FastFactor, variable: Int): Boolean =
-      (0 until domains(variable)).view
-        .map(value => factor.condition(Map(variable -> value),domains))
-        .sliding(2).map(t => t(0) == t(1))
-        .reduce(_ && _)
+    def isIndependentIn(factor: FastFactor, variable: Int): Boolean = {
+      val remVars: Array[Int] = factor.variables.filterNot(_ == variable)
+      val resultArray = new Array[Double](remVars.foldLeft(1)(_ * domains(_)))
+      FastFactor.sumProduct(remVars,domains,Array(factor.variables),Array(factor.values),FastFactor.AdditionIsEquality,resultArray)
+      resultArray.forall(d => !d.isNaN)
+    }
     this.variables.foldLeft(this){case (factor, variable) =>
       if(isIndependentIn(factor,variable)) {
         //println("removing var " + variable + " in factor " + factor)
@@ -66,6 +67,32 @@ case class FastFactor(variables: Array[Int], values: Array[Double]){
 }
 
 object FastFactor{
+  object AdditionIsEquality extends RingZ[Double]{
+    def zero: Double = ???
+
+    def one: Double = ???
+
+    def sum(s1: Double, s2: Double): Double = if(s1 == s2) s1 else Double.NaN
+
+    def prod(f1: Double, f2: Double): Double = ???
+
+    override def sumA(ss: Array[Double]): Double = {
+      val x = ss(0)
+      var i = 1
+      while(i < ss.length){
+        if(ss(i) != x)
+          return Double.NaN
+        i += 1
+      }
+      x
+    }
+
+    override def prodA(fs: Array[Double]): Double = {
+      require(fs.length == 1)
+      fs(0)
+    }
+  }
+
   def orderIfNecessary(variables: Array[Int], values: Array[Double], domains: Array[Int]) = {
     val ordered = variables.sorted
     val newValues = new Array[Double](values.size)
@@ -163,7 +190,6 @@ object FastFactor{
                                                    factorValues: Array[Array[T]],
                                                    ring: RingZ[T],
                                                    result: Array[T]) {
-    Thread.sleep(1)
     val numFactors: Int = factorValues.size
     require(factorVariables.size == numFactors)
     val remainSize: Int = remainingVars.foldLeft(1)(_ * domainSizes(_))
