@@ -1,12 +1,12 @@
 package vultura.util
 
-import java.util.BitSet
 import vultura.graph.{Graph, GraphOps}
 import scalaz._
 import Scalaz._
 import xml.{NodeSeq, Elem}
 import annotation.tailrec
 import scala.util.Random
+import java.util
 
 /**
  * @author Thomas Geier
@@ -32,21 +32,21 @@ object TreeWidth {
 
   def simplicialEdges[A](cliques: Seq[Set[A]], allVariables: Option[Set[A]] = None): Set[A] = {
       allVariables.getOrElse(cliques.flatten.toSet).filter{v =>
-      cliques.filter(_.contains(v)).size == 1
+      cliques.count(_.contains(v)) == 1
     }
   }
 
   def eliminateSimplicials[A](cliques: Seq[Set[A]],allVariables: Option[Set[A]] = None): (Seq[Set[A]],List[A]) = {
     val simplicialIter: Iterator[(Seq[Set[A]], Seq[A])] =
-      Iterator.iterate((cliques,simplicialEdges((cliques)).toSeq)){case (cliqs, simplicials) =>
+      Iterator.iterate((cliques,simplicialEdges(cliques).toSeq)){case (cliqs, simplicials) =>
         val elminationResult = simplicials.foldLeft(cliqs)(eliminateVertex(_,_)._1)
         (elminationResult,simplicialEdges(elminationResult).toSeq)
       }.takeWhile(_._2 != Nil)
     simplicialIter.foldLeft((cliques,List.empty[A])){case ((_,elims),(rem,newElim)) => (rem,elims ++ newElim)}
   }
 
-  def intSet2BS(is: Iterable[Int]): BitSet = {
-    val result = new BitSet
+  def intSet2BS(is: Iterable[Int]): util.BitSet = {
+    val result = new util.BitSet
     is.foreach(result.set)
     result
   }
@@ -62,7 +62,7 @@ object TreeWidth {
       }.size - 1
       val minDegreeVertex = vertices.minBy(degree)
       val (elimRest,cliqueSize) = eliminateVertex(cliques, minDegreeVertex)
-      minDegreeOrderingAndWidthSlow(elimRest, minDegreeVertex :: acc, (maxSize max cliqueSize))
+      minDegreeOrderingAndWidthSlow(elimRest, minDegreeVertex :: acc, maxSize max cliqueSize)
     }
   }
 
@@ -80,39 +80,39 @@ object TreeWidth {
     } else {
       val selectedVertex = maxByMultiple(vertices)(v => -selectVariable(cliques)(v)).pickRandom(random)
       val (elimRest,cliqueSize) = eliminateVertex(cliques, selectedVertex)
-      vertexOrdering(selectVariable)(elimRest, selectedVertex :: acc, (maxWeight max selectVariable(cliques)(selectedVertex)))
+      vertexOrdering(selectVariable)(elimRest, selectedVertex :: acc, maxWeight max selectVariable(cliques)(selectedVertex))
     }
   }
 
 
-  def bs2Iterator(bs: BitSet): Iterator[Int] = Iterator.iterate(0)(n => bs.nextSetBit(n) + 1).drop(1).map(_ - 1).takeWhile(_ >= 0)
+  def bs2Iterator(bs: util.BitSet): Iterator[Int] = Iterator.iterate(0)(n => bs.nextSetBit(n) + 1).drop(1).map(_ - 1).takeWhile(_ >= 0)
 
   /** This is a rather efficient method to compute a mindegree ordering. */
   def minDegreeOrderingAndWidth(_cliques: IndexedSeq[Set[Int]]): (List[Int],Int) = {
     val cliques = _cliques map intSet2BS
 
     val vertices: IndexedSeq[Int] = {
-      val bs = new BitSet
+      val bs = new util.BitSet
       cliques foreach (bs or _)
       bs2Iterator(bs).toIndexedSeq
     }
 
-    val neighbours: IndexedSeq[BitSet] = vertices map {v =>
-      val bs = new BitSet
+    val neighbours: IndexedSeq[util.BitSet] = vertices map {v =>
+      val bs = new util.BitSet
       cliques filter (_ get v) foreach (bs or _)
       bs
     }
 
     //warning: mutability is used in here
     @tailrec
-    def mdo(cliques: Seq[BitSet], vertsWithN: Seq[(Int,BitSet)], acc: (List[Int],Int) = (Nil,0)): (List[Int],Int) = {
+    def mdo(cliques: Seq[util.BitSet], vertsWithN: Seq[(Int,util.BitSet)], acc: (List[Int],Int) = (Nil,0)): (List[Int],Int) = {
       if(vertsWithN.isEmpty)
         (acc._1.reverse, acc._2)
       else {
         val (elimV,elimN) = vertsWithN minBy (_._2.cardinality)
         val (collectedCliques, remainingCliques) = cliques partition (_ get elimV)
         val elimClique = {
-          val bs = new BitSet
+          val bs = new util.BitSet
           collectedCliques foreach (bs or _)
           bs.clear(elimV)
           bs
@@ -167,17 +167,17 @@ object TreeWidth {
 
     //this will be the initial trees; those bitsets are not supposed to be mutated
     //the second tuple entry is the singleton seq of "factors" (As)
-    val leafs: IndexedSeq[Tree[(BitSet, Seq[A])]] =
-      cliques.map(_.clone.asInstanceOf[BitSet]).zip(_cliques.map(c => Seq(c._2))).map(leaf(_))
+    val leafs: IndexedSeq[Tree[(util.BitSet, Seq[A])]] =
+      cliques.map(_.clone.asInstanceOf[util.BitSet]).zip(_cliques.map(c => Seq(c._2))).map(leaf(_))
 
     val vertices: IndexedSeq[Int] = {
-      val bs = new BitSet
+      val bs = new util.BitSet
       cliques foreach (bs or _)
       bs2Iterator(bs).toIndexedSeq
     }
 
-    val neighbours: IndexedSeq[BitSet] = vertices map {v =>
-      val bs = new BitSet
+    val neighbours: IndexedSeq[util.BitSet] = vertices map {v =>
+      val bs = new util.BitSet
       cliques filter (_ get v) foreach (bs or _)
       bs
     }
@@ -193,25 +193,25 @@ object TreeWidth {
     the constructed tree has all cliques only at the leafs and empty inner nodes.
      */
     @tailrec
-    def mdo(cliques: IndexedSeq[(BitSet,Tree[(BitSet,Seq[A])])], vertsWithN: Seq[(Int,BitSet)]): Seq[Tree[(BitSet,Seq[A])]] = {
+    def mdo(cliques: IndexedSeq[(util.BitSet,Tree[(util.BitSet,Seq[A])])], vertsWithN: Seq[(Int,util.BitSet)]): Seq[Tree[(util.BitSet,Seq[A])]] = {
       if(vertsWithN.isEmpty){
         //all cliques should be empty now; number of final cliques equals number of components of graph
         assert(cliques.forall(_._1.isEmpty))
         cliques.map(_._2)
       }
       else {
-        val (elimV: Int,elimNeighbours: BitSet) = vertsWithN minBy (_._2.cardinality)
+        val (elimV: Int,elimNeighbours: util.BitSet) = vertsWithN minBy (_._2.cardinality)
         val (collectedCliques, remainingCliques) = cliques partition (_._1 get elimV)
         //combine the bitset and the trees; for the tree simply take the new elimination clique as root and the trees of
         //all eliminated cliques as children
         val elimTuple@(elimClique, _) = {
-          val bs = new BitSet
+          val bs = new util.BitSet
           collectedCliques foreach (bs or _._1)
-          val bsForTree = new BitSet
+          val bsForTree = new util.BitSet
           bsForTree.or(bs)
           //remove the eliminated vertex after making the copy of the clique for the junciton tree
           bs.clear(elimV)
-          val newTree: Tree[(BitSet,Seq[A])] =
+          val newTree: Tree[(util.BitSet,Seq[A])] =
             node((bsForTree,Seq()), collectedCliques.map(_._2).toStream)
           (bs,newTree)
         }
@@ -240,17 +240,17 @@ object TreeWidth {
     val cliques = _cliques.map(c => intSet2BS(c._1))
     //this will be the initial trees; those bitsets are not supposed to be mutated
     //the second tuple entry is the singleton seq of "factors" (As)
-    val leafs: IndexedSeq[Tree[(BitSet, Seq[A])]] =
-      cliques.map(_.clone.asInstanceOf[BitSet]).zip(_cliques.map(c => Seq(c._2))).map(leaf(_))
+    val leafs: IndexedSeq[Tree[(util.BitSet, Seq[A])]] =
+      cliques.map(_.clone.asInstanceOf[util.BitSet]).zip(_cliques.map(c => Seq(c._2))).map(leaf(_))
 
     val vertices: IndexedSeq[Int] = {
-      val bs = new BitSet
+      val bs = new util.BitSet
       cliques foreach (bs or _)
       bs2Iterator(bs).toIndexedSeq
     }
 
-    val neighbours: IndexedSeq[BitSet] = vertices map {v =>
-      val bs = new BitSet
+    val neighbours: IndexedSeq[util.BitSet] = vertices map {v =>
+      val bs = new util.BitSet
       cliques filter (_ get v) foreach (bs or _)
       bs
     }
@@ -266,27 +266,27 @@ object TreeWidth {
     the constructed tree has all cliques only at the leafs and empty inner nodes.
      */
     @tailrec
-    def mdo(cliques: IndexedSeq[(BitSet,Tree[(BitSet,Seq[A])])],
-            vertsWithN: Seq[(Int,BitSet)],
-            tw: Int = 0): (Seq[Tree[(BitSet,Seq[A])]],Int) = {
+    def mdo(cliques: IndexedSeq[(util.BitSet,Tree[(util.BitSet,Seq[A])])],
+            vertsWithN: Seq[(Int,util.BitSet)],
+            tw: Int = 0): (Seq[Tree[(util.BitSet,Seq[A])]],Int) = {
       if(vertsWithN.isEmpty){
         //all cliques should be empty now; number of final cliques equals number of components of graph
         assert(cliques.forall(_._1.isEmpty))
         (cliques.map(_._2),tw)
       }
       else {
-        val (elimV: Int,elimNeighbours: BitSet) = vertsWithN minBy (_._2.cardinality)
+        val (elimV: Int,elimNeighbours: util.BitSet) = vertsWithN minBy (_._2.cardinality)
         val (collectedCliques, remainingCliques) = cliques partition (_._1 get elimV)
         //combine the bitset and the trees; for the tree simply take the new elimination clique as root and the trees of
         //all eliminated cliques as children
         val elimTuple@(elimClique, _) = {
-          val bs = new BitSet
+          val bs = new util.BitSet
           collectedCliques foreach (bs or _._1)
-          val bsForTree = new BitSet
+          val bsForTree = new util.BitSet
           bsForTree.or(bs)
           //remove the eliminated vertex after making the copy of the clique for the junciton tree
           bs.clear(elimV)
-          val newTree: Tree[(BitSet,Seq[A])] =
+          val newTree: Tree[(util.BitSet,Seq[A])] =
             node((bsForTree,Seq()), collectedCliques.map(_._2).toStream)
           (bs,newTree)
         }
@@ -310,9 +310,9 @@ object TreeWidth {
     //the tree we obtain has all cliques (the `A`s) at the leafs
     val (uncompressedJTs,tw) = mdo(cliques zip leafs,vertices zip neighbours) :-> ((_:Int) - 1)
 
-    /** Whether one BitSet is a superset of another one. */
-    def subsumes(b1: BitSet, b2: BitSet): Boolean = {
-      val clone = b2.clone.asInstanceOf[BitSet]
+    /** Whether one BitSet is a super set of another one. */
+    def subsumes(b1: util.BitSet, b2: util.BitSet): Boolean = {
+      val clone = b2.clone.asInstanceOf[util.BitSet]
       clone.andNot(b1)
       clone.isEmpty
     }
@@ -326,38 +326,38 @@ object TreeWidth {
 
     //we apply two optimizations to the tree
     //first, we pull a child up, if its scope is a subset of its parents scope
-    def pullUp(tree: Tree[(BitSet,Seq[A])]): Tree[(BitSet,Seq[A])] = {
+    def pullUp(tree: Tree[(util.BitSet,Seq[A])]): Tree[(util.BitSet,Seq[A])] = {
       //if we pull up a processed child, we can be sure that we cannot pull the child's children up, because:
       //if a childchild is a subset of the child, it would have been pulled up
       //if a childchild is not a subset of the child, it has to contain a variable that's not in the child; this variable
       // cannot be in the parent because of the running intersection property and thus we
       // cannot pull the childchild into the parent. qed
-      scanUp[(BitSet,Seq[A]),(BitSet,Seq[A])](tree){ case ((bs,as),processedChildren) =>
+      scanUp[(util.BitSet,Seq[A]),(util.BitSet,Seq[A])](tree){ case ((bs,as),processedChildren) =>
         val (toPull,toLeave) = processedChildren.partition(child => subsumes(bs,child.rootLabel._1))
         node((bs,as ++ toPull.map(_.rootLabel._2).flatten),toLeave ++ toPull.flatMap(_.subForest))
       }
     }
-    val pulledUpJTs: Seq[Tree[(BitSet,Seq[A])]] = uncompressedJTs.map(pullUp)
+    val pulledUpJTs: Seq[Tree[(util.BitSet,Seq[A])]] = uncompressedJTs.map(pullUp)
 
-    implicit val bitSetMonoid: Monoid[BitSet] = new Monoid[BitSet]{
-      def append(s1: BitSet, s2: => BitSet): BitSet = {
-        val result = new BitSet
+    implicit val bitSetMonoid: Monoid[util.BitSet] = new Monoid[util.BitSet]{
+      def append(s1: util.BitSet, s2: => util.BitSet): util.BitSet = {
+        val result = new util.BitSet
         result.or(s1)
         result.or(s2)
         result
       }
-      val zero: BitSet = new BitSet
+      val zero: util.BitSet = new util.BitSet
     }
 
     //second, we push parents down into their child if they only have one child.
     //In this constellation, the parent's scope is a subset of the child's scope.
-    def pushDown(tree: Tree[(BitSet,Seq[A])]): Tree[(BitSet,Seq[A])] =
+    def pushDown(tree: Tree[(util.BitSet,Seq[A])]): Tree[(util.BitSet,Seq[A])] =
       if(tree.subForest.size == 1 && subsumes(tree.subForest.head.rootLabel._1,tree.rootLabel._1))
         pushDown(node(tree.subForest.head.rootLabel |+| tree.rootLabel, tree.subForest.head.subForest))
       else
         node(tree.rootLabel, tree.subForest.map(pushDown))
 
-    val pushedDownJTs: Seq[Tree[(BitSet,Seq[A])]] = pulledUpJTs.map(pushDown)
+    val pushedDownJTs: Seq[Tree[(util.BitSet,Seq[A])]] = pulledUpJTs.map(pushDown)
 
 //    println(uncompressedJTs.map(_.map(_._1.toString).drawTree).mkString("\n"))
 //    assert(pushedDownJTs == pushedDownJTs.map(pullUp), "not idempotent with pull up:\n" + pushedDownJTs.map(_.map(_._1.toString).drawTree).mkString("\n"))
@@ -391,7 +391,7 @@ object TreeWidth {
           "ref - tree: " + (countsFromReference -- countsFromTree.keys) + "\n" +
           "tree - ref: " + (countsFromTree -- countsFromReference.keys))
 
-    val diffFactors = (countsFromReference.keySet -- countsFromTree.keySet)
+    val diffFactors = countsFromReference.keySet -- countsFromTree.keySet
     val nonemptyDiff = diffFactors.map(domMap).filterNot(_.size == 0)
 
     //check the running intersection property
@@ -421,20 +421,20 @@ object TreeWidth {
   def minDegreeOrdering(cliques: Seq[Set[Int]]): List[Int] = minDegreeOrderingAndWidth(cliques.toIndexedSeq)._1
 
   def libtw(_cliques: Seq[Set[Int]]): Int = {
-    val cls: Seq[BitSet] = _cliques map intSet2BS
-    implicit val cls2graph = new Graph[Seq[BitSet],Int] {
-      def nodes(g: Seq[BitSet]): Set[Int] = {
-        val bs = new BitSet
+    val cls: Seq[util.BitSet] = _cliques map intSet2BS
+    implicit val cls2graph = new Graph[Seq[util.BitSet],Int] {
+      def nodes(g: Seq[util.BitSet]): Set[Int] = {
+        val bs = new util.BitSet
         g foreach (bs or _)
         bs2Iterator(bs).toSet
       }
 
-      def adjacent(g: Seq[BitSet], n1: Int, n2: Int): Boolean = g.exists(c => c.get(n1) && c.get(n2))
+      def adjacent(g: Seq[util.BitSet], n1: Int, n2: Int): Boolean = g.exists(c => c.get(n1) && c.get(n2))
     }
     GraphOps.treeWidth(cls)
   }
 
-  def treeAsGraphML[A](tree: Tree[A])(elemContent: A => NodeSeq = ((_:A) => NodeSeq.Empty)): Elem = {
+  def treeAsGraphML[A](tree: Tree[A])(elemContent: A => NodeSeq = (_: A) => NodeSeq.Empty): Elem = {
     val index = tree.flatten.zipWithIndex.toMap.mapValues("n" + _)
 
     def toNode(a: A): Elem = <node id={index(a).toString}>{elemContent(a)}</node>
