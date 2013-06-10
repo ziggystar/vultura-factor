@@ -4,11 +4,10 @@ import org.rogach.scallop.{ValueConverter, ScallopConf}
 import java.io._
 import org.rogach.scallop
 import scala.Some
-import vultura.factors.{ProductFactor, uai, TableFactor}
+import vultura.factors.{uai, TableFactor}
 import vultura.fastfactors.{FastFactor, RingZ, LogD}
 import scala.collection.immutable.IndexedSeq
-import vultura.util.{IntDomainCPI, TreeWidth, RingWithZero, Benchmark}
-import scalaz.Tree
+import vultura.util.{IntDomainCPI, TreeWidth}
 
 /**
  * Created by IntelliJ IDEA.
@@ -119,7 +118,7 @@ object uaiInfer {
   def variableElimination(problem: IndexedSeq[FastFactor], ring: RingZ[Double], domains: Array[Int]): Double = {
     val graph: IndexedSeq[Set[Int]] = problem.map(_.variables.toSet)
 //    val (ordering: List[Int], potentialSize) = TreeWidth.vertexOrdering(TreeWidth.weightedMinDegree(domains))(graph)
-    val (ordering: List[Int], potentialSize) = TreeWidth.minDegreeOrderingAndWidth(graph)
+    val (ordering: List[Int], _) = TreeWidth.minDegreeOrderingAndWidth(graph)
 
     val eliminationResult: List[FastFactor] = ordering.foldLeft(problem.toList) {
       case (factors, elimVar) =>

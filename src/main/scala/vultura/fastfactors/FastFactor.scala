@@ -68,13 +68,13 @@ case class FastFactor(variables: Array[Int], values: Array[Double]){
 
 object FastFactor{
   object AdditionIsEquality extends RingZ[Double]{
-    def zero: Double = ???
+    def zero: Double = sys.error("operation not supported")
 
-    def one: Double = ???
+    def one: Double = sys.error("operation not supported")
 
     def sum(s1: Double, s2: Double): Double = if(s1 == s2) s1 else Double.NaN
 
-    def prod(f1: Double, f2: Double): Double = ???
+    def prod(f1: Double, f2: Double): Double = sys.error("operation not supported")
 
     override def sumA(ss: Array[Double]): Double = {
       val x = ss(0)

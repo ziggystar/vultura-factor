@@ -47,7 +47,7 @@ object TreeWidth {
 
   def intSet2BS(is: Iterable[Int]): util.BitSet = {
     val result = new util.BitSet
-    is.foreach(result.set)
+    is.foreach(result.set(_))
     result
   }
 
@@ -69,7 +69,7 @@ object TreeWidth {
 
   def weightedMinDegree(domainSizes: Int => Int): Seq[Set[Int]] => Int => Int = {cliques: Seq[Set[Int]] => v: Int =>
     val neighbours = cliques.foldLeft(Set.empty[Int]){case (acc, edge) => if(edge(v)) acc ++ edge else acc}
-    neighbours.foldLeft(1){case (acc, v) => acc * domainSizes(v)}
+    neighbours.foldLeft(1){case (acc, nextVar) => acc * domainSizes(nextVar)}
   }
 
   @tailrec
@@ -79,7 +79,7 @@ object TreeWidth {
       (acc.reverse, maxWeight)
     } else {
       val selectedVertex = maxByMultiple(vertices)(v => -selectVariable(cliques)(v)).pickRandom(random)
-      val (elimRest,cliqueSize) = eliminateVertex(cliques, selectedVertex)
+      val (elimRest,_) = eliminateVertex(cliques, selectedVertex)
       vertexOrdering(selectVariable)(elimRest, selectedVertex :: acc, maxWeight max selectVariable(cliques)(selectedVertex))
     }
   }
@@ -140,8 +140,8 @@ object TreeWidth {
   def contractEdges[A](t: Tree[A])(join: (A,A) => Option[A]): Tree[A] = {
     def compactR(t: Tree[A]): Tree[A] = t match {
       case leaf@Node(a, sf) if sf.isEmpty => leaf
-      case Node(a,subforest) => {
-        val (newA, newChildren, changed) = subforest.foldLeft((a,List[Tree[A]](),false)){ case ((accA,accChildren,accChange),child@Node(childLabel,childChildren)) =>
+      case Node(a,subForest) => {
+        val (newA, newChildren, changed) = subForest.foldLeft((a,List[Tree[A]](),false)){ case ((accA,accChildren,accChange),child@Node(childLabel,childChildren)) =>
           join(accA,childLabel).map(joinedA => (joinedA,childChildren ++: accChildren,true)).getOrElse((accA,child :: accChildren,accChange))
         }
         if(changed)
@@ -204,12 +204,12 @@ object TreeWidth {
         val (collectedCliques, remainingCliques) = cliques partition (_._1 get elimV)
         //combine the bitset and the trees; for the tree simply take the new elimination clique as root and the trees of
         //all eliminated cliques as children
-        val elimTuple@(elimClique, _) = {
+        val elimTuple = {
           val bs = new util.BitSet
           collectedCliques foreach (bs or _._1)
           val bsForTree = new util.BitSet
           bsForTree.or(bs)
-          //remove the eliminated vertex after making the copy of the clique for the junciton tree
+          //remove the eliminated vertex after making the copy of the clique for the junction tree
           bs.clear(elimV)
           val newTree: Tree[(util.BitSet,Seq[A])] =
             node((bsForTree,Seq()), collectedCliques.map(_._2).toStream)
@@ -391,9 +391,6 @@ object TreeWidth {
           "ref - tree: " + (countsFromReference -- countsFromTree.keys) + "\n" +
           "tree - ref: " + (countsFromTree -- countsFromReference.keys))
 
-    val diffFactors = countsFromReference.keySet -- countsFromTree.keySet
-    val nonemptyDiff = diffFactors.map(domMap).filterNot(_.size == 0)
-
     //check the running intersection property
     //the variables in active may still appear, the variables in spent may not appear again
     def checkTree(t: Tree[Set[Int]], active: Set[Int] = Set()): Map[Int,Int] = {
@@ -409,7 +406,7 @@ object TreeWidth {
     //check that no variable is contained in two trees
     val allVars = cliques.map(_._1).flatten.distinct
     val containingTrees = allVars.map(v => v -> trees.filter(_.flatten.exists(_._1.contains(v))))
-    val violatedVars = containingTrees.find(_._2.size != 1).map(t => "variable appears in more or less than one tree: " + (t :-> (printJTs)))
+    val violatedVars = containingTrees.find(_._2.size != 1).map(t => "variable appears in more or less than one tree: " + (t :-> printJTs))
 
     val result = domainViolation orElse partitionViolation orElse runningIntersectionViolation orElse violatedVars
 
@@ -437,8 +434,8 @@ object TreeWidth {
   def treeAsGraphML[A](tree: Tree[A])(elemContent: A => NodeSeq = (_: A) => NodeSeq.Empty): Elem = {
     val index = tree.flatten.zipWithIndex.toMap.mapValues("n" + _)
 
-    def toNode(a: A): Elem = <node id={index(a).toString}>{elemContent(a)}</node>
-    def toEdge(src: A, dst: A): Elem = <edge source={index(src).toString} target={index(dst).toString} />
+    def toNode(a: A): Elem = <node id={index(a)}>{elemContent(a)}</node>
+    def toEdge(src: A, dst: A): Elem = <edge source={index(src)} target={index(dst)} />
 
     //assumes the root is already there
     def treeToXml(t: Tree[A]): NodeSeq = t.subForest.map{ subTree =>
