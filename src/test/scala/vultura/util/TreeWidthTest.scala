@@ -32,7 +32,7 @@ class TreeWidthTest extends Specification {
 
   def checkJunctionTree[F](fs: Seq[F])(implicit evF: Factor[F,_]): Option[String] = {
     val cliques: IndexedSeq[(Set[Int], F)] = cliqueSeq(fs).toIndexedSeq
-    val jt: Seq[Tree[(Set[Int], Seq[F])]] = minDegreeJunctionTrees[F](cliques)._1
+    val jt: Seq[Tree[(Set[Int], Seq[F])]] = minDegreeJunctionTreesCompressed[F](cliques)._1
     isJunctionTree[F](cliques, jt)
   }
 }

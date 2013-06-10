@@ -18,5 +18,6 @@ class LogD$Test extends Specification {
     "simple sum (swap)" ! (LogD.sum(log(4),log(3)) must beCloseTo(log(7),0.01)) ^
     "simple prod" ! (LogD.prod(log(4),log(3)) must beCloseTo(log(12),0.01)) ^
     "array sum" ! (LogD.sumA(Array(log(1),log(2),log(0.5))) must beCloseTo(log(3.5),0.01)) ^
+    "array sum with -Inf" ! (LogD.sumA(Array.fill(3)(Double.NegativeInfinity)) === Double.NegativeInfinity) ^
     "array prod" ! (LogD.prodA(Array(log(1),log(2),log(0.5))) must beCloseTo(log(1),0.01))
 }

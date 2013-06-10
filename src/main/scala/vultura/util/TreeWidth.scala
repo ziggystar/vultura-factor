@@ -6,6 +6,7 @@ import scalaz._
 import Scalaz._
 import xml.{NodeSeq, Elem}
 import annotation.tailrec
+import scala.util.Random
 
 /**
  * @author Thomas Geier
@@ -66,6 +67,24 @@ object TreeWidth {
   }
 
 
+  def weightedMinDegree(domainSizes: Int => Int): Seq[Set[Int]] => Int => Int = {cliques: Seq[Set[Int]] => v: Int =>
+    val neighbours = cliques.foldLeft(Set.empty[Int]){case (acc, edge) => if(edge(v)) acc ++ edge else acc}
+    neighbours.foldLeft(1){case (acc, v) => acc * domainSizes(v)}
+  }
+
+  @tailrec
+  def vertexOrdering(selectVariable: Seq[Set[Int]] => Int => Int)(cliques: Seq[Set[Int]], acc: List[Int] = Nil, maxWeight: Int = 0, random: Random = new Random): (List[Int],Int) = {
+    val vertices = cliques.flatten.distinct
+    if (vertices.isEmpty) {
+      (acc.reverse, maxWeight)
+    } else {
+      val selectedVertex = maxByMultiple(vertices)(v => -selectVariable(cliques)(v)).pickRandom(random)
+      val (elimRest,cliqueSize) = eliminateVertex(cliques, selectedVertex)
+      vertexOrdering(selectVariable)(elimRest, selectedVertex :: acc, (maxWeight max selectVariable(cliques)(selectedVertex)))
+    }
+  }
+
+
   def bs2Iterator(bs: BitSet): Iterator[Int] = Iterator.iterate(0)(n => bs.nextSetBit(n) + 1).drop(1).map(_ - 1).takeWhile(_ >= 0)
 
   /** This is a rather efficient method to compute a mindegree ordering. */
@@ -109,14 +128,114 @@ object TreeWidth {
           }
         }
         //recurse
+        //elimClique cardinality corresponds to current treewidth because eliminated vertex is already removed
         mdo(newCliques, newVwithN, (elimV :: acc._1, acc._2 max elimClique.cardinality))
       }
     }
 
-    mdo(cliques,vertices zip neighbours) :-> ((_:Int) - 1)
+    mdo(cliques,vertices zip neighbours)
   }
 
-  def minDegreeJunctionTrees[A](_cliques: IndexedSeq[(Set[Int],A)]): (Seq[Tree[(Set[Int],Seq[A])]],Int) = {
+  /** Contract edges of a tree using the `join` function. */
+  def contractEdges[A](t: Tree[A])(join: (A,A) => Option[A]): Tree[A] = {
+    def compactR(t: Tree[A]): Tree[A] = t match {
+      case leaf@Node(a, sf) if sf.isEmpty => leaf
+      case Node(a,subforest) => {
+        val (newA, newChildren, changed) = subforest.foldLeft((a,List[Tree[A]](),false)){ case ((accA,accChildren,accChange),child@Node(childLabel,childChildren)) =>
+          join(accA,childLabel).map(joinedA => (joinedA,childChildren ++: accChildren,true)).getOrElse((accA,child :: accChildren,accChange))
+        }
+        if(changed)
+          compactR(Node(newA,newChildren.toStream))
+        else
+          Node(newA,newChildren.map(compactR).toStream)
+      }
+    }
+    compactR(t)
+  }
+
+  def compactJTrees[A](trees: Seq[Tree[(Set[Int],Seq[A])]]): Seq[Tree[(Set[Int],Seq[A])]] = {
+    trees.map(t => contractEdges(t){
+      case ((vs1,fs1),(vs2,fs2)) if vs1 subsetOf vs2 => Some((vs2,fs1 ++ fs2))
+      case ((vs1,fs1),(vs2,fs2)) if vs2 subsetOf vs1 => Some((vs1,fs1 ++ fs2))
+      case _ => None
+    })
+  }
+
+  def minDegreeJTs[A](_cliques: IndexedSeq[(Set[Int],A)]): Seq[Tree[(Set[Int],Seq[A])]] = {
+    //convert the scala sets to BitSets
+    val cliques = _cliques.map(c => intSet2BS(c._1))
+
+    //this will be the initial trees; those bitsets are not supposed to be mutated
+    //the second tuple entry is the singleton seq of "factors" (As)
+    val leafs: IndexedSeq[Tree[(BitSet, Seq[A])]] =
+      cliques.map(_.clone.asInstanceOf[BitSet]).zip(_cliques.map(c => Seq(c._2))).map(leaf(_))
+
+    val vertices: IndexedSeq[Int] = {
+      val bs = new BitSet
+      cliques foreach (bs or _)
+      bs2Iterator(bs).toIndexedSeq
+    }
+
+    val neighbours: IndexedSeq[BitSet] = vertices map {v =>
+      val bs = new BitSet
+      cliques filter (_ get v) foreach (bs or _)
+      bs
+    }
+
+    /*
+    - warning: mutability is used in here
+    - the produced tree still needs to be compressed
+
+    (*) The algorithm keeps track of the neighbours of every edge using the second parameter. These bitsets are mutated
+    after each elimination step (remove the eliminated vertex and add new neighbours if the node was
+    part of the elimination clique).
+
+    the constructed tree has all cliques only at the leafs and empty inner nodes.
+     */
+    @tailrec
+    def mdo(cliques: IndexedSeq[(BitSet,Tree[(BitSet,Seq[A])])], vertsWithN: Seq[(Int,BitSet)]): Seq[Tree[(BitSet,Seq[A])]] = {
+      if(vertsWithN.isEmpty){
+        //all cliques should be empty now; number of final cliques equals number of components of graph
+        assert(cliques.forall(_._1.isEmpty))
+        cliques.map(_._2)
+      }
+      else {
+        val (elimV: Int,elimNeighbours: BitSet) = vertsWithN minBy (_._2.cardinality)
+        val (collectedCliques, remainingCliques) = cliques partition (_._1 get elimV)
+        //combine the bitset and the trees; for the tree simply take the new elimination clique as root and the trees of
+        //all eliminated cliques as children
+        val elimTuple@(elimClique, _) = {
+          val bs = new BitSet
+          collectedCliques foreach (bs or _._1)
+          val bsForTree = new BitSet
+          bsForTree.or(bs)
+          //remove the eliminated vertex after making the copy of the clique for the junciton tree
+          bs.clear(elimV)
+          val newTree: Tree[(BitSet,Seq[A])] =
+            node((bsForTree,Seq()), collectedCliques.map(_._2).toStream)
+          (bs,newTree)
+        }
+
+        val newCliques = remainingCliques :+ elimTuple
+
+        //update the neighbour lookup
+        val newVwithN = vertsWithN filterNot (_._1 == elimV)
+        //update the bitsets (see (*) in comment
+        newVwithN.foreach{ case (v,ns) =>
+          if (ns.get(elimV)){
+            ns.or(elimNeighbours)
+            ns.clear(elimV)
+          }
+        }
+        //recurse
+        mdo(newCliques, newVwithN)
+      }
+    }
+
+    mdo(cliques zip leafs,vertices zip neighbours).map(_.map{case (vars,as) => (bs2Iterator(vars).toSet,as)})
+  }
+
+  def minDegreeJunctionTreesCompressed[A](_cliques: IndexedSeq[(Set[Int],A)]): (Seq[Tree[(Set[Int],Seq[A])]],Int) = {
     //convert the scala sets to BitSets
     val cliques = _cliques.map(c => intSet2BS(c._1))
     //this will be the initial trees; those bitsets are not supposed to be mutated
