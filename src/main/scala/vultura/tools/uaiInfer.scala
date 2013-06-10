@@ -8,6 +8,7 @@ import vultura.factors.{ProductFactor, uai, TableFactor}
 import vultura.fastfactors.{FastFactor, RingZ, LogD}
 import scala.collection.immutable.IndexedSeq
 import vultura.util.{IntDomainCPI, TreeWidth, RingWithZero, Benchmark}
+import scalaz.Tree
 
 /**
  * Created by IntelliJ IDEA.
@@ -20,8 +21,7 @@ object uaiInfer {
     implicit val inStream = scallop.singleArgConverter[InputStream](new FileInputStream(_))
     implicit val outStream = scallop.singleArgConverter[OutputStream](new FileOutputStream(_))
 
-    banner("Perform actions on markov networks in `uai` format to structurally equivalent SAT instances in `cnf` format.")
-    footer("this is the footer")
+    banner("Perform actions on markov networks in `uai` format.")
     version("uai2uai 1.0")
 
     val input = opt[InputStream](
@@ -32,7 +32,7 @@ object uaiInfer {
     )
     val task = trailArg[String](
       name = "task",
-      descr = "select for task [MAR|PR]",
+      descr = "select for task [PR]",
       validate = str => Seq("mar","pr").contains(str.toLowerCase),
       default = Some("PR")
     )
@@ -65,6 +65,7 @@ object uaiInfer {
     def calcCondZs = cpi.map{ assignment =>
       val cond = conditioningVariables.zip(assignment).toMap
       val (conditionedProblem,conditionedDomain) = conditionProblem(problem,domains,cond)
+//      veJunctionTree(conditionedProblem,ring,conditionedDomain)
       variableElimination(conditionedProblem,ring,conditionedDomain)
     }
     val benchmark = true
@@ -74,6 +75,7 @@ object uaiInfer {
       while(System.nanoTime - wut < 5e9){
         calcCondZs
       }
+      //measure
       val startTime = System.nanoTime
       var i = 0
       while(System.nanoTime - startTime < 20e9){
@@ -86,7 +88,8 @@ object uaiInfer {
 
     val conditionedZs = calcCondZs
 
-    println("total: " + ring.sumA(conditionedZs.toArray))
+    println("ln(Z) = " + ring.sumA(conditionedZs.toArray))
+
   }
 
   def conditionProblem(problem: Seq[FastFactor], domains: Array[Int], condition: Map[Int,Int]): (IndexedSeq[FastFactor], Array[Int]) = {
@@ -96,11 +99,27 @@ object uaiInfer {
     (simplifiedProblem,newDomains)
   }
 
+  def veJunctionTree(problem: IndexedSeq[FastFactor], ring: RingZ[Double], domains: Array[Int]): Double = {
+    import TreeWidth._
+    import scalaz._
+    import Scalaz._
+    val trees: Seq[Tree[(Set[Int], Seq[FastFactor])]] = compactJTrees(minDegreeJTs(problem.map(f => f.variables.toSet -> f)))
+    def veR(tree: Tree[(Set[Int], Seq[FastFactor])]): (Set[Int], Seq[FastFactor]) = tree match {
+      case Node((vars,factors), sf) if !sf.isEmpty =>
+        (vars,factors ++ sf.map(veR(_)).map(fs => FastFactor.multiplyMarginalize(ring)(domains)(fs._2,(fs._1 -- vars).toArray)))
+      case Node(root, _) => root
+    }
+    ring.prodA(
+      trees
+        .map(veR)
+        .map{case (vars,factors) => FastFactor.multiplyMarginalize(ring)(domains)(factors,vars.toArray).values(0)}(collection.breakOut)
+    )
+  }
+
   def variableElimination(problem: IndexedSeq[FastFactor], ring: RingZ[Double], domains: Array[Int]): Double = {
     val graph: IndexedSeq[Set[Int]] = problem.map(_.variables.toSet)
 //    val (ordering: List[Int], potentialSize) = TreeWidth.vertexOrdering(TreeWidth.weightedMinDegree(domains))(graph)
     val (ordering: List[Int], potentialSize) = TreeWidth.minDegreeOrderingAndWidth(graph)
-    println("found ordering of max exp-width of " + potentialSize)
 
     val eliminationResult: List[FastFactor] = ordering.foldLeft(problem.toList) {
       case (factors, elimVar) =>

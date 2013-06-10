@@ -122,6 +122,14 @@ object FastFactor{
     FastFactor(variables,values)
   }
 
+  /**
+   *
+   * @param ring
+   * @param domains
+   * @param factors
+   * @param marginalize These variables will be summed out.
+   * @return
+   */
   def multiplyMarginalize(ring: RingZ[Double])(domains: Array[Int])(factors: Seq[FastFactor], marginalize: Array[Int]): FastFactor = {
     val variables = merge(factors.map(_.variables),exclude=marginalize)
     val numValues = variables.map(domains).foldLeft(1)(_ * _)
@@ -184,6 +192,33 @@ object FastFactor{
     overflow
   }
 
+  /** Does same as `incrementCounter`, but works for empty `reg` arrays. Is a bit slower.
+    * @see incrementCounter
+    */
+  def incrementCounter2(reg: Array[Int], domains: Array[Int]): Int = {
+    var overflow = 0
+    val size: Int = reg.length
+    while(overflow < size){
+      reg(overflow) += 1
+      if(reg(overflow) == domains(overflow)){
+        reg(overflow) = 0
+        overflow += 1
+      } else {
+        return overflow
+      }
+    }
+    overflow
+  }
+
+  /**
+   *
+   * @param remainingVars The resulting factor will range over these variables in the given order.
+   * @param domainSizes
+   * @param factorVariables
+   * @param factorValues
+   * @param ring
+   * @param result
+   */
   def sumProduct[@specialized(Double) T: ClassTag](remainingVars: Array[Int],
                                                    domainSizes: Array[Int],
                                                    factorVariables: Array[Array[Int]],

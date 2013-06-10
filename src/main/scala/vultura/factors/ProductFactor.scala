@@ -141,7 +141,7 @@ class ProductFactor[T,R](_factors: Seq[T],
   }
 
   lazy val junctionTrees: Seq[Tree[(Set[Int], Seq[T])]] =
-    TreeWidth.minDegreeJunctionTrees(this.factors.map(f => (vf.variables(f).toSet, f)))._1
+    TreeWidth.minDegreeJunctionTreesCompressed(this.factors.map(f => (vf.variables(f).toSet, f)))._1
 
   def minDegreeTreewidth: Int = TreeWidth.minDegreeOrderingAndWidth(this.factors.map(vf.variables(_).toSet))._2
 
