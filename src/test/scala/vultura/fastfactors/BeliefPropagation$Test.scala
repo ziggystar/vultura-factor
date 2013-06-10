@@ -15,13 +15,13 @@ class BeliefPropagation$Test extends Specification {
   "constructing bethe graph" ^
     "from one factor over single variable" ^
       "must have correct clusters" !
-        (createBetheClusterGraph(IS(FF(AI(0),AD(1,2)))).clusters.deep === AAI(AI(0),AI(0)).deep) ^
+        (createBetheClusterGraph(IS(FF(AI(0),AD(1,2))),AI(2)).clusters.deep === AAI(AI(0),AI(0)).deep) ^
       "must have correct neighbours" !
-        (createBetheClusterGraph(IS(FF(AI(0),AD(1,2)))).neighbours.deep === AAI(AI(1),AI(0)).deep) ^
+        (createBetheClusterGraph(IS(FF(AI(0),AD(1,2))),AI(2)).neighbours.deep === AAI(AI(1),AI(0)).deep) ^
       "must have correct neighbours" !
-        (createBetheClusterGraph(IS(FF(AI(0),AD(1,2)))).neighbours.deep === AAI(AI(1),AI(0)).deep) ^
+        (createBetheClusterGraph(IS(FF(AI(0),AD(1,2))),AI(2)).neighbours.deep === AAI(AI(1),AI(0)).deep) ^
       "must have correct sepsets" !
-        (createBetheClusterGraph(IS(FF(AI(0),AD(1,2)))).sepsets.mapValues(_.toSeq) === Map((0,1) -> Seq(0),(1,0) -> Seq(0))) ^
+        (createBetheClusterGraph(IS(FF(AI(0),AD(1,2))),AI(2)).sepsets.mapValues(_.toSeq) === Map((0,1) -> Seq(0),(1,0) -> Seq(0))) ^
       p^
   p^
   "tests of BP" ^
