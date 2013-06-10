@@ -2,6 +2,7 @@ package vultura.fastfactors
 
 import org.specs2._
 import org.specs2.specification.Fragments
+import Utils._
 
 /**
  * Created by IntelliJ IDEA.
@@ -19,5 +20,8 @@ class LogD$Test extends Specification {
     "simple prod" ! (LogD.prod(log(4),log(3)) must beCloseTo(log(12),0.01)) ^
     "array sum" ! (LogD.sumA(Array(log(1),log(2),log(0.5))) must beCloseTo(log(3.5),0.01)) ^
     "array sum with -Inf" ! (LogD.sumA(Array.fill(3)(Double.NegativeInfinity)) === Double.NegativeInfinity) ^
-    "array prod" ! (LogD.prodA(Array(log(1),log(2),log(0.5))) must beCloseTo(log(1),0.01))
+    "array prod" ! (LogD.prodA(Array(log(1),log(2),log(0.5))) must beCloseTo(log(1),0.01)) ^
+    "max norm" ! (LogD.maxNorm(AD(log(1),log(2)),AD(log(5),log(3))) must beCloseTo(4,1e-5)) ^
+    "normalization" ! (LogD.normalize(AD(log(1),log(2),log(3))).map(exp).sum must be closeTo(1d,1e-5))
+
 }

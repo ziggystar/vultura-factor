@@ -76,6 +76,8 @@ object FastFactor{
 
     def prod(f1: Double, f2: Double): Double = sys.error("operation not supported")
 
+    def maxNorm(a: Array[Double], b: Array[Double]): Double = sys.error("operation not supported")
+
     override def sumA(ss: Array[Double]): Double = {
       val x = ss(0)
       var i = 1
@@ -136,6 +138,13 @@ object FastFactor{
     val values = new Array[Double](numValues)
     sumProduct(variables,domains,factors.map(_.variables)(collection.breakOut),factors.map(_.values)(collection.breakOut): Array[Array[Double]],ring,values)
     FastFactor(variables,values)
+  }
+
+  def multiplyRetain(ring: RingZ[Double])(domains: Array[Int])(factors: Seq[FastFactor], retain: Array[Int]): FastFactor = {
+    val numValues = retain.map(domains).foldLeft(1)(_ * _)
+    val values = new Array[Double](numValues)
+    sumProduct(retain,domains,factors.map(_.variables)(collection.breakOut),factors.map(_.values)(collection.breakOut): Array[Array[Double]],ring,values)
+    FastFactor(retain,values)
   }
 
   /**

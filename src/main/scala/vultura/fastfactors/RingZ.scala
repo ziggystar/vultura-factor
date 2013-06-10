@@ -10,6 +10,8 @@ trait RingZ[@specialized(Double) T]{
   def prod(f1: T, f2: T): T
   def sumA(ss: Array[T]): T = ss.foldLeft(zero)(sum)
   def prodA(fs: Array[T]): T = fs.foldLeft(one)(prod)
+  def maxNorm(a: Array[T], b: Array[T]): Double
+  def normalize(a: Array[T]): Array[T] = ???
 }
 
 /** This ring only accepts the array invocations with a single element and returns this singe element.
@@ -24,6 +26,7 @@ object SafeD extends RingZ[Double]{
     if(ss.size == 1) ss(0) else sys.error("safe ring accepts only unit arrays")
   override def prodA(fs: Array[Double]): Double =
     if(fs.size == 1) fs(0) else sys.error("safe ring accepts only unit arrays")
+  def maxNorm(a: Array[Double], b: Array[Double]): Double = sys.error("safe ring accepts only unit arrays")
 }
 
 object NormalD extends RingZ[Double]{
@@ -48,6 +51,18 @@ object NormalD extends RingZ[Double]{
       i += 1
     }
     result
+  }
+
+  def maxNorm(a: Array[Double], b: Array[Double]): Double = {
+    var i = 0
+    var maxDiff = 0d
+    while(i < a.length){
+      val diff = math.abs(a(i) - b(i))
+      if(diff > maxDiff)
+        maxDiff = diff
+      i += 1
+    }
+    maxDiff
   }
 }
 
@@ -109,4 +124,6 @@ object LogD extends RingZ[Double] {
     }
     result
   }
+
+  def maxNorm(a: Array[Double], b: Array[Double]): Double = ???
 }
