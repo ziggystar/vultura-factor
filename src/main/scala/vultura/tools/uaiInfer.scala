@@ -129,4 +129,27 @@ object uaiInfer {
     val constants: Array[Double] = eliminationResult.map(_.values.head)(collection.breakOut)
     ring.prodA(constants)
   }
+
+  def loopyBeliefPropagation(problem: IndexedSeq[FastFactor], ring: RingZ[Double], domains: Array[Int]): Double = {
+
+  }
+
+  case class ClusterGraph(clusters: Array[Array[Int]],
+                          clusterFactors: IndexedSeq[Option[FastFactor]],
+                          neighbours: Array[Array[Int]],
+                          sepsets: Map[(Int,Int),IndexedSeq[Int]])
+
+  def createBetheClusterGraph(factors: IndexedSeq[FastFactor]): ClusterGraph  = {
+    //we append a cluster for each variable after the factor clusters
+    val variables = factors.flatMap(_.variables).toSet.toArray
+    //variables here are not shifted
+    val vars2factors: Map[Int,Seq[Int]] = factors.zipWithIndex.flatMap{case (f,fi) => f.variables.map(v => v -> fi)}.groupBy(_._1).map{case (v,pairings) => v -> pairings.map(_._2)}
+    val numVariables = variables.size
+    ClusterGraph(
+      (factors.map(_.variables)(collection.breakOut): Array[Array[Int]]) ++ variables.map(Array[Int](_)),
+      factors.map(Some) ++ Seq.fill(numVariables)(None),
+      (factors.map(_.variables.map(_ + factors.size))(collection.breakOut): Array[Array[Int]]) ++ ,
+      ???
+    )
+  }
 }
