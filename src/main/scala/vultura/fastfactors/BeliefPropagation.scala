@@ -9,6 +9,8 @@ import scala.util.Random
  * Date: 6/10/13
  */
 class BeliefPropagation(factors: IndexedSeq[FastFactor], domains: Array[Int], ring: RingZ[Double]) {
+  implicit val (logger, formatter, appender) = BeliefPropagation.allLog
+
   private val cg = BeliefPropagation.createBetheClusterGraph(factors,domains,ring)
 
   //the messages are always guaranteed to be normalized
@@ -16,6 +18,7 @@ class BeliefPropagation(factors: IndexedSeq[FastFactor], domains: Array[Int], ri
   private var randomOrder: IndexedSeq[(Int, Int)] = makeRandomOrder
   private var totalIterations = 0
   private var lastTol = Double.PositiveInfinity
+  private var didConverge = false
 
   init()
 
@@ -23,9 +26,8 @@ class BeliefPropagation(factors: IndexedSeq[FastFactor], domains: Array[Int], ri
   private def initializeMessages(): Unit = cg.sepsets.foreach {
     case (edge, vars) => messages(edge) = FastFactor.maxEntropy(vars, domains, ring)
   }
-  protected def makeRandomOrder: IndexedSeq[(Int, Int)] = {
-    Random.shuffle(messages.keys.toIndexedSeq)
-  }
+  protected def makeRandomOrder: IndexedSeq[(Int, Int)] = Random.shuffle(cg.sepsets.keys.toIndexedSeq)
+
   def init() {
     initializeMessages()
     randomOrder = makeRandomOrder
@@ -34,6 +36,9 @@ class BeliefPropagation(factors: IndexedSeq[FastFactor], domains: Array[Int], ri
   }
   //----------- initialisation stuff ends here ---------
 
+  def iterations = totalIterations
+  def lastDelta = lastTol
+  def converged = didConverge
 
   /** Computes the standard update:
     * $$\delta'_{i-j} \propto \Sum_{C_i - S_{i,j}} \Psi_i \cdot \Prod_{k\in(N_i - \{i\}} \delta_{k - j}$$.
@@ -41,7 +46,7 @@ class BeliefPropagation(factors: IndexedSeq[FastFactor], domains: Array[Int], ri
     * @return The delta in normal domain of the update. */
   private def updateMessage(edge: (Int,Int)): Double = {
     val (from,to) = edge
-    //multiply all incoming messages to `from` without that from `to` with `from`'s factor
+    //multiply all incoming messages for `from` without that coming from `to`; also multiply 'from's factor
     val newFactor = FastFactor.multiplyRetain(ring)(domains)(
       factors = cg.neighbours(from)
         .filterNot(_ == to)
@@ -61,7 +66,7 @@ class BeliefPropagation(factors: IndexedSeq[FastFactor], domains: Array[Int], ri
       }
       max
     }
-    val delta = computeDelta(ring.decode(messages(edge).values),ring.decode(newFactor.values))
+    val delta = computeDelta(messages(edge).values,newFactor.values)
     messages(edge) = newFactor
     delta
   }
@@ -71,8 +76,10 @@ class BeliefPropagation(factors: IndexedSeq[FastFactor], domains: Array[Int], ri
     var maxresidual = Double.PositiveInfinity
     while(iterations <= maxiter && maxresidual > tol){
       maxresidual = randomOrder.map(updateMessage).max
+      logger.finer(f"BP residual of last iteration: $maxresidual")
       iterations += 1
     }
+    didConverge = maxresidual <= tol
     lastTol = maxresidual
     totalIterations += iterations
   }
@@ -83,8 +90,8 @@ class BeliefPropagation(factors: IndexedSeq[FastFactor], domains: Array[Int], ri
 
 
   def logZ: Double = {
-    def expectation(p: Array[Double], f: Array[Double]) = p.zip(f).map(t => t._1 * t._2).sum
-    def entropy(ps: Array[Double]) = -(for (p <- ps) yield p * math.log(p)).sum
+    def expectation(p: Array[Double], f: Array[Double]) = p.zip(f).map(t => if(t._1 == 0) 0 else t._1 * t._2).sum
+    def entropy(ps: Array[Double]) = -(for (p <- ps) yield (if(p == 0) 0 else p * math.log(p))).sum
 
     val clusterExpectation = cg.clusterFactors.zipWithIndex
       .map{case (f, cI) => expectation(ring.decode(clusterBelief(cI).values),ring.decode(f.values).map(math.log))}
@@ -102,20 +109,23 @@ class BeliefPropagation(factors: IndexedSeq[FastFactor], domains: Array[Int], ri
 
 
 object BeliefPropagation{
+  implicit val allLog@(logger, formatter, appender) = ZeroLoggerFactory.newLogger(this)
+
   def createBetheClusterGraph(factors: IndexedSeq[FastFactor],domains: Array[Int], ring: RingZ[Double]): ClusterGraph  = {
     //we append a cluster for each variable after the factor clusters
     val variables = factors.flatMap(_.variables).toSet.toArray
+    val variableShift: Int = factors.size //shift a variable by this number to get its cluster index
+    val clusterOfVariable: Map[Int,Int] = variables.zipWithIndex.map{case (v,ci) => v -> (ci + variableShift)}(collection.breakOut)
     //variables here are not shifted
     val vars2factors: Map[Int,Array[Int]] = factors.zipWithIndex
       .flatMap{case (f,fi) => f.variables.map(v => v -> fi)}
       .groupBy(_._1)
       .map{case (v,pairings) => v -> (pairings.map(_._2)(collection.breakOut): Array[Int])}
 
-    val variableShift: Int = factors.size //shift a variable by this number to get its cluster index
     ClusterGraph(
       clusterFactors = factors ++ variables.map(v => FastFactor(Array[Int](v),Array.fill(domains(v))(ring.one))),
-      neighbours = (factors.map(_.variables.map(_ + variableShift))(collection.breakOut): Array[Array[Int]]) ++ variables.map(vars2factors),
-      sepsets = vars2factors.flatMap{case (v,fs) => fs.map(f => (v + variableShift,f) -> Array(v)) ++ fs.map(f => (f,v + variableShift) -> Array(v))}
+      neighbours = (factors.map(_.variables.map(clusterOfVariable))(collection.breakOut): Array[Array[Int]]) ++ variables.map(vars2factors),
+      sepsets = vars2factors.flatMap{case (v,fs) => fs.map(f => (clusterOfVariable(v),f) -> Array(v)) ++ fs.map(f => (f,clusterOfVariable(v)) -> Array(v))}
     )
   }
 }
@@ -130,5 +140,6 @@ object BeliefPropagation{
 case class ClusterGraph(clusterFactors: IndexedSeq[FastFactor],
                         neighbours: Array[Array[Int]],
                         sepsets: Map[(Int,Int),Array[Int]]){
+  //assert(sepsets.keySet == neighbours.zipWithIndex.map{case (n,i) => n.map(i -> _)}(collection.breakOut))
   def edges: Iterable[(Int,Int)] = for((sinks,srcI) <- neighbours.zipWithIndex; sinkI <- sinks) yield (srcI,sinkI)
 }

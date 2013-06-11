@@ -15,7 +15,7 @@ case class FastFactor(variables: Array[Int], values: Array[Double]){
     def isIndependentIn(factor: FastFactor, variable: Int): Boolean = {
       val remVars: Array[Int] = factor.variables.filterNot(_ == variable)
       val resultArray = new Array[Double](remVars.foldLeft(1)(_ * domains(_)))
-      FastFactor.sumProduct(remVars,domains,Array(factor.variables),Array(factor.values),FastFactor.AdditionIsEquality,resultArray)
+      FastFactor.sumProduct(remVars,domains,Array(factor.variables),Array(factor.values): Array[Array[Double]],FastFactor.AdditionIsEquality,resultArray)
       resultArray.forall(d => !d.isNaN)
     }
     this.variables.foldLeft(this){case (factor, variable) =>
@@ -99,10 +99,10 @@ object FastFactor{
   def maxEntropy(variables: Array[Int], domains: Array[Int], ring: RingZ[Double]): FastFactor =
     FastFactor(variables, ring.normalize(Array.fill(variables.foldLeft(1)(_ * domains(_)))(ring.one))).normalize(ring)
 
-  def orderIfNecessary(variables: Array[Int], values: Array[Double], domains: Array[Int]) = {
+  def orderIfNecessary(variables: Array[Int], values: Array[Double], domains: Array[Int]): FastFactor = {
     val ordered = variables.sorted
     val newValues = new Array[Double](values.size)
-    sumProduct(ordered,domains,Array(variables),Array(values),SafeD,newValues)
+    sumProduct(ordered,domains,Array(variables),Array(values): Array[Array[Double]],SafeD,newValues)
     FastFactor(ordered,newValues)
   }
 
@@ -277,7 +277,7 @@ object FastFactor{
       while(margIdx < margSize){
 
         //increment counter
-        val overflow = incrementCounter(counter,cliqueDomains)
+        val overflow = incrementCounter2(counter,cliqueDomains)
 
         //calculate the factor contributions
         //NOTE: we collect the factor values for the counter state before its update in this loop!

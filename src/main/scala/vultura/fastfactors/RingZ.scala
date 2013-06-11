@@ -70,6 +70,8 @@ object NormalD extends RingZ[Double]{
   }
 
   override def decode(p: Array[Double]): Array[Double] = p
+
+  override def encode(p: Array[Double]): Array[Double] = p
 }
 
 object LogD extends RingZ[Double] {
