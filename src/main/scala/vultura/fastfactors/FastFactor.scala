@@ -58,6 +58,8 @@ case class FastFactor(variables: Array[Int], values: Array[Double]){
     FastFactor(remVars,condVals)
   }
 
+  def normalize(ring: RingZ[Double]) = FastFactor(variables,ring.normalize(values))
+
   override def equals(obj: Any): Boolean = obj.isInstanceOf[FastFactor] && {
     val ff = obj.asInstanceOf[FastFactor]
     variables.deep == ff.variables.deep && values.deep == ff.values.deep
@@ -76,8 +78,6 @@ object FastFactor{
 
     def prod(f1: Double, f2: Double): Double = sys.error("operation not supported")
 
-    def maxNorm(a: Array[Double], b: Array[Double]): Double = sys.error("operation not supported")
-
     override def sumA(ss: Array[Double]): Double = {
       val x = ss(0)
       var i = 1
@@ -95,12 +95,17 @@ object FastFactor{
     }
   }
 
+  /** @return a `FastFactor` with a uniform distribution over the goven variables. */
+  def uniform(variables: Array[Int], domains: Array[Int], ring: RingZ[Double]): FastFactor =
+    FastFactor(variables, ring.normalize(Array.fill(variables.foldLeft(1)(_ * domains(_)))(ring.one)))
+
   def orderIfNecessary(variables: Array[Int], values: Array[Double], domains: Array[Int]) = {
     val ordered = variables.sorted
     val newValues = new Array[Double](values.size)
     sumProduct(ordered,domains,Array(variables),Array(values),SafeD,newValues)
     FastFactor(ordered,newValues)
   }
+
   def isStrictlyIncreasing(xs: Array[Int]): Boolean = {
     var last = Integer.MIN_VALUE
     var i = 0
@@ -111,6 +116,7 @@ object FastFactor{
     }
     true
   }
+
   /** Merge some sorted sequences of integers into a new array. */
   def merge(xxs: Seq[Array[Int]], exclude: Array[Int] = Array()): Array[Int] = {
     xxs.flatten.distinct.sorted.filterNot(exclude.contains).toArray

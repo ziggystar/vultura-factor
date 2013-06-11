@@ -10,8 +10,18 @@ trait RingZ[@specialized(Double) T]{
   def prod(f1: T, f2: T): T
   def sumA(ss: Array[T]): T = ss.foldLeft(zero)(sum)
   def prodA(fs: Array[T]): T = fs.foldLeft(one)(prod)
-  def maxNorm(a: Array[T], b: Array[T]): Double
   def normalize(a: Array[T]): Array[T] = ???
+  //for the the following methods it's not so clear how to generalize to rings
+  //in particular, the result type is currently fixed to be Double in normal representation.
+  /** @return In normal representation (not log). */
+  def maxNorm(a: Array[T], b: Array[T]): Double = ???
+  /** @return In normal representation (not log). */
+  def entropy(a: Array[T]): Double = ???
+  /** @return In normal representation (not log). */
+  def expectation(p: Array[T], f: Array[T]): Double = ???
+  def logExpectation(p: Array[T], f: Array[T]): Double = ???
+  def normalizedMeasure(p: Array[T]): Array[Double] = ???
+  def normalRepresentation(p: Array[T]): Array[Double] = ???
 }
 
 /** This ring only accepts the array invocations with a single element and returns this singe element.
@@ -26,7 +36,6 @@ object SafeD extends RingZ[Double]{
     if(ss.size == 1) ss(0) else sys.error("safe ring accepts only unit arrays")
   override def prodA(fs: Array[Double]): Double =
     if(fs.size == 1) fs(0) else sys.error("safe ring accepts only unit arrays")
-  def maxNorm(a: Array[Double], b: Array[Double]): Double = sys.error("safe ring accepts only unit arrays")
 }
 
 object NormalD extends RingZ[Double]{
@@ -53,17 +62,14 @@ object NormalD extends RingZ[Double]{
     result
   }
 
-  def maxNorm(a: Array[Double], b: Array[Double]): Double = {
-    var i = 0
-    var maxDiff = 0d
-    while(i < a.length){
-      val diff = math.abs(a(i) - b(i))
-      if(diff > maxDiff)
-        maxDiff = diff
-      i += 1
-    }
-    maxDiff
+  override def maxNorm(a: Array[Double], b: Array[Double]): Double = a.zip(b).map(t => math.abs(t._1 - t._2)).max
+
+  override def normalize(a: Array[Double]): Array[Double] = {
+    val sum = sumA(a)
+    a.map(_ / sum)
   }
+
+  override def normalRepresentation(p: Array[Double]): Array[Double] = p
 }
 
 object LogD extends RingZ[Double] {
@@ -125,5 +131,24 @@ object LogD extends RingZ[Double] {
     result
   }
 
-  def maxNorm(a: Array[Double], b: Array[Double]): Double = ???
+  override def normalize(a: Array[Double]): Array[Double] = {
+    val z = sumA(a)
+    a.map(_ - z)
+  }
+
+  /** @return In normal representation (not log). */
+  override def entropy(a: Array[Double]): Double = {
+    val normalized = normalize(a)
+    normalized.foldLeft(0d){case (h, lnp) => h + math.exp(lnp) * lnp}
+  }
+
+  /** @return In normal representation (not log). */
+  override def expectation(p: Array[Double], f: Array[Double]): Double = {
+    val normalized = normalize(p)
+    normalized.zip(f).foldLeft(0d){case (e,(lnp,f)) => e + math.exp(lnp) * f}
+  }
+
+  override def normalizedMeasure(p: Array[Double]): Array[Double] = normalize(p).map(math.exp)
+
+  override def normalRepresentation(p: Array[Double]): Array[Double] = p.map(math.exp)
 }

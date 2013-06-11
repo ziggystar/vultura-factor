@@ -4,17 +4,21 @@ import scala.collection.mutable
 import scala.util.Random
 
 /**
- * Belief Propagation on loopy graphs using ``FastFactor` operations.
+ * Belief Propagation on loopy graphs using `FastFactor` operations.
  * User: Thomas Geier
  * Date: 6/10/13
  */
 object BeliefPropagation {
 
   def loopyBeliefPropagation(factors: IndexedSeq[FastFactor], ring: RingZ[Double], domains: Array[Int], maxiter: Int = 1000, tol: Double = 1e-5): Double = {
-    val cg = createBetheClusterGraph(factors,domains)
-    val messages: mutable.HashMap[(Int,Int),FastFactor] = ???
+    val cg = createBetheClusterGraph(factors,domains,ring)
+    val messages: mutable.HashMap[(Int,Int),FastFactor] =
+      cg.sepsets.map{ case (edge,vars) => edge -> FastFactor.uniform(vars,domains,ring)}(collection.breakOut)
 
-    /** @return The residual of the update. */
+    /** Computes the standard update:
+      * $$\delta'_{i-j} \propto \Sum_{C_i - S_{i,j}} \Psi_i \cdot \Prod_{k\in(N_i - \{i\}} \delta_{k - j}$$.
+      *
+      * @return The residual of the update. */
     def updateMessage(edge: (Int,Int)): Double = {
       val (from,to) = edge
       //multiply all incoming messages to `from` without that from `to` with `from`'s factor
@@ -26,8 +30,9 @@ object BeliefPropagation {
       )
       //mutate message
       //TODO use sumProduct message directly and write to existing array?
-      messages(edge) = newFactor
-      ring.maxNorm(messages(edge).values,newFactor.values)
+      val residual = ring.maxNorm(messages(edge).values,newFactor.values)
+      messages(edge) = newFactor.normalize(ring)
+      residual
     }
 
     val randomOrder: IndexedSeq[(Int, Int)] = Random.shuffle(messages.keys.toIndexedSeq)
@@ -38,11 +43,27 @@ object BeliefPropagation {
       iterations += 1
     }
 
-    ???
+    def clusterBelief(ci: Int): FastFactor = FastFactor.multiplyRetain(ring)(domains)(
+      factors = cg.neighbours(ci).map(from => messages((from,ci))) :+ cg.clusterFactors(ci),
+      cg.clusterFactors(ci).variables).normalize(ring)
+
+    def expectation(p: Array[Double], f: Array[Double]) = p.zip(f).map(t => t._1 * t._2).sum
+    def entropy(ps: Array[Double]) = -(for (p <- ps) yield p * math.log(p)).sum
+    val clusterExpectation = cg.clusterFactors.zipWithIndex
+      .map{case (f, cI) => expectation(ring.normalRepresentation(clusterBelief(cI).values),ring.normalRepresentation(f.values).map(math.log))}
+
+    val clusterEntropies = cg.clusterFactors.zipWithIndex
+      .map{case (f, cI) => entropy(ring.normalRepresentation(clusterBelief(cI).values))}
+
+    val variableClusterIndices: Range = factors.size until cg.clusterFactors.size
+    val variableEntropies = variableClusterIndices
+      .map{vci => cg.neighbours(vci).size * entropy(ring.normalRepresentation(clusterBelief(vci).values)) }
+
+    clusterExpectation.sum + clusterEntropies.sum - variableEntropies.sum
   }
 
 
-  def createBetheClusterGraph(factors: IndexedSeq[FastFactor],domains: Array[Int]): ClusterGraph  = {
+  def createBetheClusterGraph(factors: IndexedSeq[FastFactor],domains: Array[Int], ring: RingZ[Double]): ClusterGraph  = {
     //we append a cluster for each variable after the factor clusters
     val variables = factors.flatMap(_.variables).toSet.toArray
     //variables here are not shifted
@@ -51,11 +72,9 @@ object BeliefPropagation {
       .groupBy(_._1)
       .map{case (v,pairings) => v -> (pairings.map(_._2)(collection.breakOut): Array[Int])}
 
-    val numVariables = variables.size
     val variableShift: Int = factors.size //shift a variable by this number to get its cluster index
     ClusterGraph(
-      clusters = (factors.map(_.variables)(collection.breakOut): Array[Array[Int]]) ++ variables.map(Array[Int](_)),
-      clusterFactors = factors ++ variables.map(v => FastFactor(Array[Int](v),???)),
+      clusterFactors = factors ++ variables.map(v => FastFactor(Array[Int](v),Array.fill(domains(v))(ring.one))),
       neighbours = (factors.map(_.variables.map(_ + variableShift))(collection.breakOut): Array[Array[Int]]) ++ variables.map(vars2factors),
       sepsets = vars2factors.flatMap{case (v,fs) => fs.map(f => (v + variableShift,f) -> Array(v)) ++ fs.map(f => (f,v + variableShift) -> Array(v))}
     )
@@ -69,8 +88,9 @@ object BeliefPropagation {
    * @param sepsets `sepsets((i,j))` contains all variables, that are shared over edge `(i,j)`, for some connected
    *               clusters `i` and `j`.
    */
-  case class ClusterGraph(clusters: Array[Array[Int]],
-                          clusterFactors: IndexedSeq[FastFactor],
+  case class ClusterGraph(clusterFactors: IndexedSeq[FastFactor],
                           neighbours: Array[Array[Int]],
-                          sepsets: Map[(Int,Int),Array[Int]])
+                          sepsets: Map[(Int,Int),Array[Int]]){
+    def edges: Iterable[(Int,Int)] = for((sinks,srcI) <- neighbours.zipWithIndex; sinkI <- sinks) yield (srcI,sinkI)
+  }
 }
