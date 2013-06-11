@@ -10,9 +10,9 @@ trait RingZ[@specialized(Double) T]{
   def prod(f1: T, f2: T): T
   def sumA(ss: Array[T]): T = ss.foldLeft(zero)(sum)
   def prodA(fs: Array[T]): T = fs.foldLeft(one)(prod)
-  def normalize(a: Array[T]): Array[T] = ???
   //for the the following methods it's not so clear how to generalize to rings
   //in particular, the result type is currently fixed to be Double in normal representation.
+  def normalize(a: Array[T]): Array[T] = ???
   /** @return In normal representation (not log). */
   def maxNorm(a: Array[T], b: Array[T]): Double = ???
   /** @return In normal representation (not log). */
@@ -20,8 +20,8 @@ trait RingZ[@specialized(Double) T]{
   /** @return In normal representation (not log). */
   def expectation(p: Array[T], f: Array[T]): Double = ???
   def logExpectation(p: Array[T], f: Array[T]): Double = ???
-  def normalizedMeasure(p: Array[T]): Array[Double] = ???
-  def normalRepresentation(p: Array[T]): Array[Double] = ???
+  def decode(p: Array[T]): Array[Double] = ???
+  def encode(p: Array[Double]): Array[T] = ???
 }
 
 /** This ring only accepts the array invocations with a single element and returns this singe element.
@@ -69,7 +69,7 @@ object NormalD extends RingZ[Double]{
     a.map(_ / sum)
   }
 
-  override def normalRepresentation(p: Array[Double]): Array[Double] = p
+  override def decode(p: Array[Double]): Array[Double] = p
 }
 
 object LogD extends RingZ[Double] {
@@ -148,7 +148,9 @@ object LogD extends RingZ[Double] {
     normalized.zip(f).foldLeft(0d){case (e,(lnp,f)) => e + math.exp(lnp) * f}
   }
 
-  override def normalizedMeasure(p: Array[Double]): Array[Double] = normalize(p).map(math.exp)
+  override def decode(p: Array[Double]): Array[Double] = p.map(math.exp)
+  override def encode(p: Array[Double]): Array[Double] = p.map(math.log)
 
-  override def normalRepresentation(p: Array[Double]): Array[Double] = p.map(math.exp)
+  /** @return In normal representation (not log). */
+  override def maxNorm(a: Array[Double], b: Array[Double]): Double = super.maxNorm(a, b)
 }

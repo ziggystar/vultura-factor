@@ -95,9 +95,9 @@ object FastFactor{
     }
   }
 
-  /** @return a `FastFactor` with a uniform distribution over the goven variables. */
-  def uniform(variables: Array[Int], domains: Array[Int], ring: RingZ[Double]): FastFactor =
-    FastFactor(variables, ring.normalize(Array.fill(variables.foldLeft(1)(_ * domains(_)))(ring.one)))
+  /** @return a `FastFactor` with a max entropy distribution over the given variables. */
+  def maxEntropy(variables: Array[Int], domains: Array[Int], ring: RingZ[Double]): FastFactor =
+    FastFactor(variables, ring.normalize(Array.fill(variables.foldLeft(1)(_ * domains(_)))(ring.one))).normalize(ring)
 
   def orderIfNecessary(variables: Array[Int], values: Array[Double], domains: Array[Int]) = {
     val ordered = variables.sorted
