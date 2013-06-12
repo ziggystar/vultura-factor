@@ -92,12 +92,12 @@ object uaiInfer {
     val infer: (IndexedSeq[FastFactor], RingZ[Double], Array[Int]) => Double = config.algorithm() match {
       case "BP" => { (factors, ring, domains) =>
         val bp = new BeliefPropagation(factors,domains,ring)
-        val maxiter: Int = 10000
+        val maxiter: Int = 1000
         bp.run(maxiter,1e-7)
         if(!bp.converged)
-          logger.warning(f"BP did not converge after $maxiter iterations; remaining message delta of ${bp.lastDelta}")
+          logger.warning(f"BP did not converge after $maxiter iterations with ${bp.getMessageUpdates} message updates; remaining message delta of ${bp.maxDelta}")
         else
-          logger.info(f"BP converged after ${bp.iterations} iterations; remaining message delta of ${bp.lastDelta}")
+          logger.fine(f"BP converged after ${bp.iterations} iterations with ${bp.getMessageUpdates} message updates; remaining message delta of ${bp.maxDelta}")
         if(config.useLog()) bp.logZ else math.exp(bp.logZ)
       }
       case "JTREE" => veJunctionTree(_,_,_)
@@ -107,7 +107,7 @@ object uaiInfer {
     def calcCondZs = cpi.map{ assignment =>
       val cond = conditioningVariables.zip(assignment).toMap
       val (conditionedProblem,conditionedDomain) = conditionProblem(problem,domains,cond)
-      logger.fine(f"conditioning on assignment: $assignment")
+      logger.fine(f"conditioning on assignment: ${assignment.mkString(":")}")
       infer(conditionedProblem,ring,conditionedDomain)
     }
 

@@ -8,90 +8,107 @@ import scala.util.Random
  * User: Thomas Geier
  * Date: 6/10/13
  */
-class BeliefPropagation(factors: IndexedSeq[FastFactor], domains: Array[Int], ring: RingZ[Double]) {
+class BeliefPropagation(factors: IndexedSeq[FastFactor], domains: Array[Int], ring: RingZ[Double], random: Random = new Random) {
   implicit val (logger, formatter, appender) = BeliefPropagation.allLog
 
   private val cg = BeliefPropagation.createBetheClusterGraph(factors,domains,ring)
+  logger.fine(f"bethe factor graph has ${cg.clusterFactors.size} clusters and ${cg.sepsets.size} edges")
+  lazy val singleVariableClusters: Map[Int,Int] = cg.clusterFactors.zipWithIndex
+    .collect{case (f,fi) if f.variables.size == 1 => f.variables.head -> fi}(collection.breakOut)
 
   //the messages are always guaranteed to be normalized
-  private val messages: mutable.HashMap[(Int,Int),FastFactor] = new mutable.HashMap
-  private var randomOrder: IndexedSeq[(Int, Int)] = makeRandomOrder
+  case class Message(factor: FastFactor, lastUpdate: Long = -1)
+  private val messages: mutable.HashMap[(Int,Int),Message] = new mutable.HashMap
+  private var randomOrder: IndexedSeq[(Int, Int)] = null
   private var totalIterations = 0
-  private var lastTol = Double.PositiveInfinity
+  private var messageUpdates = 0L
+  private var lastMaxDelta = Double.PositiveInfinity
   private var didConverge = false
 
   init()
 
   // ---------- initialisation stuff -------------------
   private def initializeMessages(): Unit = cg.sepsets.foreach {
-    case (edge, vars) => messages(edge) = FastFactor.maxEntropy(vars, domains, ring)
+    case (edge, vars) => messages(edge) = Message(FastFactor.maxEntropy(vars, domains, ring))
   }
-  protected def makeRandomOrder: IndexedSeq[(Int, Int)] = Random.shuffle(cg.sepsets.keys.toIndexedSeq)
+  protected def makeRandomOrder(): IndexedSeq[(Int, Int)] = random.shuffle(cg.sepsets.keys.toIndexedSeq)
 
   def init() {
     initializeMessages()
-    randomOrder = makeRandomOrder
+    randomOrder = makeRandomOrder()
     totalIterations = 0
-    lastTol = Double.PositiveInfinity
+    messageUpdates = 0L
+    lastMaxDelta = Double.PositiveInfinity
   }
   //----------- initialisation stuff ends here ---------
 
   def iterations = totalIterations
-  def lastDelta = lastTol
+  def getMessageUpdates = messageUpdates
+  def maxDelta = lastMaxDelta
   def converged = didConverge
 
   /** Computes the standard update:
     * $$\delta'_{i-j} \propto \Sum_{C_i - S_{i,j}} \Psi_i \cdot \Prod_{k\in(N_i - \{i\}} \delta_{k - j}$$.
     *
     * @return The delta in normal domain of the update. */
-  private def updateMessage(edge: (Int,Int)): Double = {
+  private def updateMessage(edge: (Int,Int), tol: Double): Boolean = {
     val (from,to) = edge
     //multiply all incoming messages for `from` without that coming from `to`; also multiply 'from's factor
     val newFactor = FastFactor.multiplyRetain(ring)(domains)(
       factors = cg.neighbours(from)
         .filterNot(_ == to)
-        .map(fromNeighbour => messages((fromNeighbour,from))) :+ cg.clusterFactors(from),
+        .map(fromNeighbour => messages((fromNeighbour,from)).factor) :+ cg.clusterFactors(from),
       cg.sepsets(edge)
     ).normalize(ring)
-    //mutate message
+
     //TODO use sumProduct message directly and write to existing array?
-    def computeDelta(as: Array[Double], bs: Array[Double]): Double = {
-      var i = 0
-      var max = Double.NegativeInfinity
-      while(i < as.length){
-        val newDelta: Double = math.abs(as(i) - bs(i))
-        if(newDelta > max)
-          max = newDelta
-        i += 1
-      }
-      max
+    val oldMessage: Message = messages(edge)
+    val delta = maxDiff(oldMessage.factor.values,newFactor.values)
+    if(delta > tol){
+      messageUpdates += 1
+      val message: Message = Message(newFactor, messageUpdates)
+      //update message
+      messages(edge) = message
+      true
     }
-    val delta = computeDelta(messages(edge).values,newFactor.values)
-    messages(edge) = newFactor
-    delta
+    else
+      false
   }
 
   def run(maxiter: Int = 1000, tol: Double = 1e-10) {
     var iterations = 0
-    var maxresidual = Double.PositiveInfinity
-    while(iterations <= maxiter && maxresidual > tol){
-      maxresidual = randomOrder.map(updateMessage).max
-      logger.finer(f"BP residual of last iteration: $maxresidual")
+    var converged = false
+    while(iterations <= maxiter && !converged){
+      converged = !randomOrder.map{ case e@(i,j) =>
+        val msg = messages(e)
+        val needsUpdate =
+          (for (influence <- cg.neighbours(i) if influence != j)
+          yield messages((influence, i)).lastUpdate >= msg.lastUpdate).exists(identity)
+
+        if( needsUpdate ){
+          val r = updateMessage(e,tol)
+          logger.finer("update: " + (i,j) + " : " + r)
+          r
+        }
+        else
+          false
+      }.exists(identity)
       iterations += 1
     }
-    didConverge = maxresidual <= tol
-    lastTol = maxresidual
+//    assert(randomOrder.map(updateMessage(_)))
+    didConverge = converged
     totalIterations += iterations
   }
 
   def clusterBelief(ci: Int): FastFactor = FastFactor.multiplyRetain(ring)(domains)(
-    factors = cg.neighbours(ci).map(from => messages((from,ci))) :+ cg.clusterFactors(ci),
+    factors = cg.neighbours(ci).map(from => messages((from,ci)).factor) :+ cg.clusterFactors(ci),
     cg.clusterFactors(ci).variables).normalize(ring)
 
+  def variableBelief(vi: Int): FastFactor = clusterBelief(singleVariableClusters(vi))
 
   def logZ: Double = {
     def expectation(p: Array[Double], f: Array[Double]) = p.zip(f).map(t => if(t._1 == 0) 0 else t._1 * t._2).sum
-    def entropy(ps: Array[Double]) = -(for (p <- ps) yield (if(p == 0) 0 else p * math.log(p))).sum
+    def entropy(ps: Array[Double]) = -(for (p <- ps) yield if (p == 0) 0 else p * math.log(p)).sum
 
     val clusterExpectation = cg.clusterFactors.zipWithIndex
       .map{case (f, cI) => expectation(ring.decode(clusterBelief(cI).values),ring.decode(f.values).map(math.log))}
@@ -104,6 +121,18 @@ class BeliefPropagation(factors: IndexedSeq[FastFactor], domains: Array[Int], ri
       .map{vci => cg.neighbours(vci).size * entropy(ring.decode(clusterBelief(vci).values)) }
 
     clusterExpectation.sum + clusterEntropies.sum - variableEntropies.sum
+  }
+
+  def maxDiff(as: Array[Double], bs: Array[Double]): Double = {
+    var i = 0
+    var max = Double.NegativeInfinity
+    while(i < as.length){
+      val newDelta: Double = math.abs(as(i) - bs(i))
+      if(newDelta > max)
+        max = newDelta
+      i += 1
+    }
+    max
   }
 }
 
