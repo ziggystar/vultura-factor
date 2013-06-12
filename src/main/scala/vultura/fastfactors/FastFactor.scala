@@ -15,7 +15,7 @@ case class FastFactor(variables: Array[Int], values: Array[Double]){
     def isIndependentIn(factor: FastFactor, variable: Int): Boolean = {
       val remVars: Array[Int] = factor.variables.filterNot(_ == variable)
       val resultArray = new Array[Double](remVars.foldLeft(1)(_ * domains(_)))
-      FastFactor.sumProduct(remVars,domains,Array(factor.variables),Array(factor.values),FastFactor.AdditionIsEquality,resultArray)
+      FastFactor.sumProduct(remVars,domains,Array(factor.variables),Array(factor.values): Array[Array[Double]],FastFactor.AdditionIsEquality,resultArray)
       resultArray.forall(d => !d.isNaN)
     }
     this.variables.foldLeft(this){case (factor, variable) =>
@@ -58,6 +58,8 @@ case class FastFactor(variables: Array[Int], values: Array[Double]){
     FastFactor(remVars,condVals)
   }
 
+  def normalize(ring: RingZ[Double]) = FastFactor(variables,ring.normalize(values))
+
   override def equals(obj: Any): Boolean = obj.isInstanceOf[FastFactor] && {
     val ff = obj.asInstanceOf[FastFactor]
     variables.deep == ff.variables.deep && values.deep == ff.values.deep
@@ -93,12 +95,17 @@ object FastFactor{
     }
   }
 
-  def orderIfNecessary(variables: Array[Int], values: Array[Double], domains: Array[Int]) = {
+  /** @return a `FastFactor` with a max entropy distribution over the given variables. */
+  def maxEntropy(variables: Array[Int], domains: Array[Int], ring: RingZ[Double]): FastFactor =
+    FastFactor(variables, ring.normalize(Array.fill(variables.foldLeft(1)(_ * domains(_)))(ring.one))).normalize(ring)
+
+  def orderIfNecessary(variables: Array[Int], values: Array[Double], domains: Array[Int]): FastFactor = {
     val ordered = variables.sorted
     val newValues = new Array[Double](values.size)
-    sumProduct(ordered,domains,Array(variables),Array(values),SafeD,newValues)
+    sumProduct(ordered,domains,Array(variables),Array(values): Array[Array[Double]],SafeD,newValues)
     FastFactor(ordered,newValues)
   }
+
   def isStrictlyIncreasing(xs: Array[Int]): Boolean = {
     var last = Integer.MIN_VALUE
     var i = 0
@@ -109,6 +116,7 @@ object FastFactor{
     }
     true
   }
+
   /** Merge some sorted sequences of integers into a new array. */
   def merge(xxs: Seq[Array[Int]], exclude: Array[Int] = Array()): Array[Int] = {
     xxs.flatten.distinct.sorted.filterNot(exclude.contains).toArray
@@ -136,6 +144,13 @@ object FastFactor{
     val values = new Array[Double](numValues)
     sumProduct(variables,domains,factors.map(_.variables)(collection.breakOut),factors.map(_.values)(collection.breakOut): Array[Array[Double]],ring,values)
     FastFactor(variables,values)
+  }
+
+  def multiplyRetain(ring: RingZ[Double])(domains: Array[Int])(factors: Seq[FastFactor], retain: Array[Int]): FastFactor = {
+    val numValues = retain.map(domains).foldLeft(1)(_ * _)
+    val values = new Array[Double](numValues)
+    sumProduct(retain,domains,factors.map(_.variables)(collection.breakOut),factors.map(_.values)(collection.breakOut): Array[Array[Double]],ring,values)
+    FastFactor(retain,values)
   }
 
   /**
@@ -262,7 +277,7 @@ object FastFactor{
       while(margIdx < margSize){
 
         //increment counter
-        val overflow = incrementCounter(counter,cliqueDomains)
+        val overflow = incrementCounter2(counter,cliqueDomains)
 
         //calculate the factor contributions
         //NOTE: we collect the factor values for the counter state before its update in this loop!

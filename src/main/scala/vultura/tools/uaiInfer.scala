@@ -3,11 +3,12 @@ package vultura.tools
 import org.rogach.scallop.{ValueConverter, ScallopConf}
 import java.io._
 import org.rogach.scallop
-import scala.Some
 import vultura.factors.{uai, TableFactor}
-import vultura.fastfactors.{FastFactor, RingZ, LogD}
+import vultura.fastfactors._
 import scala.collection.immutable.IndexedSeq
-import vultura.util.{IntDomainCPI, TreeWidth}
+import vultura.util.TreeWidth
+import scala.Some
+import vultura.util.IntDomainCPI
 
 /**
  * Created by IntelliJ IDEA.
@@ -15,6 +16,8 @@ import vultura.util.{IntDomainCPI, TreeWidth}
  * Date: 5/31/13
  */
 object uaiInfer {
+  implicit val (logger, formatter, appender) = ZeroLoggerFactory.newLogger(this)
+
   class Config(args: Seq[String]) extends ScallopConf(args) {
     implicit val fileConverter: ValueConverter[File] = scallop.singleArgConverter(new File(_))
     implicit val inStream = scallop.singleArgConverter[InputStream](new FileInputStream(_))
@@ -31,7 +34,7 @@ object uaiInfer {
     )
     val task = trailArg[String](
       name = "task",
-      descr = "select for task [PR]",
+      descr = "select for task [PR|MAR]",
       validate = str => Seq("mar","pr").contains(str.toLowerCase),
       default = Some("PR")
     )
@@ -39,6 +42,20 @@ object uaiInfer {
       name = "condition-on",
       descr = "condition on variables, given as comma or space separated list before starting inference",
       default = None
+    )
+    val algorithm = opt[String](
+      name = "algorithm",
+      short = 'a',
+      default = Some("BP")
+    )
+    val useLog = opt[Boolean](
+      name = "uselog",
+      descr = "perform computations in log-domain",
+      default = Some(false)
+    )
+    val benchmark= opt[Boolean](
+      name = "benchmark",
+      default = Some(false)
     )
   }
 
@@ -55,40 +72,67 @@ object uaiInfer {
       (0 to maxvar map varDomainMap.toMap.withDefaultValue(0))(collection.breakOut)
     }
 
-    //map to logdomain
-    val (problem: IndexedSeq[FastFactor],ring: RingZ[Double]) = (inProblem.map(_.map(math.log)).map(f => FastFactor.orderIfNecessary(f.variables,f.denseData,domains)).toIndexedSeq,LogD)
+    val ring = if(config.useLog()) LogD else NormalD
+
+    logger.info(f"Loaded problem with ${inProblem.size} factors and ${inProblem.flatMap(_.variables).toSet.size} variables")
+
+    val problem: IndexedSeq[FastFactor] = {
+      val preProblem = inProblem
+        .toIndexedSeq
+        .map(f => FastFactor.orderIfNecessary(f.variables,f.denseData,domains))
+        .map{ case FastFactor(vars, values) => FastFactor(vars, ring.encode(values))}
+      val simplified = simplifyFactorSet(preProblem,ring,domains)
+      logger.info(f"simplified ${preProblem.size} factors to ${simplified.size}")
+      simplified
+    }
 
     val conditioningVariables: Seq[Int] = config.condition.get.map(_.split(",").toSeq.map(_.toInt)).getOrElse(Seq[Int]())
     val cpi = new IntDomainCPI(conditioningVariables.map(domains).map(x => (0 until x).toArray).toArray)
 
+    val infer: (IndexedSeq[FastFactor], RingZ[Double], Array[Int]) => Double = config.algorithm() match {
+      case "BP" => { (factors, ring, domains) =>
+        val bp = new BeliefPropagation(factors,domains,ring)
+        val maxiter: Int = 1000
+        bp.run(maxiter,1e-7)
+        if(!bp.converged)
+          logger.warning(f"BP did not converge after $maxiter iterations with ${bp.getMessageUpdates} message updates; remaining message delta of ${bp.maxDelta}")
+        else
+          logger.fine(f"BP converged after ${bp.iterations} iterations with ${bp.getMessageUpdates} message updates; remaining message delta of ${bp.maxDelta}")
+        if(config.useLog()) bp.logZ else math.exp(bp.logZ)
+      }
+      case "JTREE" => veJunctionTree(_,_,_)
+      case "VE" => variableElimination(_,_,_)
+    }
+
     def calcCondZs = cpi.map{ assignment =>
       val cond = conditioningVariables.zip(assignment).toMap
       val (conditionedProblem,conditionedDomain) = conditionProblem(problem,domains,cond)
-//      veJunctionTree(conditionedProblem,ring,conditionedDomain)
-      variableElimination(conditionedProblem,ring,conditionedDomain)
+      logger.fine(f"conditioning on assignment: ${assignment.mkString(":")}")
+      infer(conditionedProblem,ring,conditionedDomain)
     }
-    val benchmark = true
-    if(benchmark){
+
+    if(config.benchmark()){
+      logger.info("running warmup for at least 5s")
       //warmup
       val wut = System.nanoTime
       while(System.nanoTime - wut < 5e9){
         calcCondZs
       }
+      logger.info("running benchmark for at least 30s")
       //measure
       val startTime = System.nanoTime
       var i = 0
-      while(System.nanoTime - startTime < 20e9){
+      while(System.nanoTime - startTime < 30e9){
         calcCondZs
         i += 1
       }
       val time = System.nanoTime - startTime
       println("average over " + i + " runs: " + time.toDouble*1e-9/i)
+    } else {
+      val conditionedZs = calcCondZs
+      val Z: Double = ring.sumA(conditionedZs.toArray)
+      println("ln(Z) = " + (if(config.useLog()) Z else math.log(Z)))
     }
-
-    val conditionedZs = calcCondZs
-
-    println("ln(Z) = " + ring.sumA(conditionedZs.toArray))
-
   }
 
   def conditionProblem(problem: Seq[FastFactor], domains: Array[Int], condition: Map[Int,Int]): (IndexedSeq[FastFactor], Array[Int]) = {
@@ -129,4 +173,36 @@ object uaiInfer {
     val constants: Array[Double] = eliminationResult.map(_.values.head)(collection.breakOut)
     ring.prodA(constants)
   }
+
+  def partialFoldGraph[A](graph: Map[A,Set[A]])(contract: PartialFunction[(A,A),A]): Map[A,Set[A]] = {
+    def foldR(g: Map[A,Set[A]])(unvisited: List[(A,A)]): Map[A,Set[A]] = unvisited match {
+      case Nil => g
+      case (e@(a,b)) :: rest if a != b && g.contains(a) && g.contains(b) && contract.isDefinedAt(e) => {
+        val contractionResult@(newNode, affectedNeighbours) = contract(e) -> (g(a) ++ g(b)).filterNot(v => v == a || v == b)
+        val newGraph = g --
+          Seq(a,b) + //remove nodes a,b
+          contractionResult ++ //add newNode
+          affectedNeighbours.map(n => n -> (g(n) -- Seq(a,b) + newNode)) //update all affectedNeighbours to point to newNode instead of a or b
+        val newEdgeList = affectedNeighbours.map(newNode -> _) ++: rest
+        foldR(newGraph)(newEdgeList)
+      }
+      case _ :: rest => foldR(g)(rest)
+    }
+    foldR(graph)(graph.flatMap{case (src, sinks) => sinks.map(src -> _)}(collection.breakOut))
+  }
+
+  def simplifyFactorSet(problem: IndexedSeq[FastFactor], ring: RingZ[Double], domains: Array[Int]): IndexedSeq[FastFactor] = {
+    val factorsOfvar: Map[Int,Set[FastFactor]] = dualBipartiteGraph(problem.map(f => f -> f.variables.toSet)(collection.breakOut))
+    val primalGraph: Map[FastFactor,Set[FastFactor]] = problem.map(f => f -> f.variables.flatMap(factorsOfvar).toSet)(collection.breakOut)
+    val factorContraction: PartialFunction[(FastFactor,FastFactor),FastFactor] = {
+      case (fa,fb) if fa.variables.toSet.subsetOf(fb.variables.toSet) || fb.variables.toSet.subsetOf(fa.variables.toSet) =>
+        FastFactor.multiply(ring)(domains)(IndexedSeq(fa,fb))
+    }
+    val contractedGraph: Map[FastFactor, Set[FastFactor]] = partialFoldGraph(primalGraph)(factorContraction)
+    contractedGraph.keysIterator.toIndexedSeq
+  }
+
+  def dualBipartiteGraph[A,B](g: Map[A,Iterable[B]]): Map[B,Set[A]] =
+    (g.flatMap{case (a, bs) => bs.map(b => b -> a)}(collection.breakOut): IndexedSeq[(B,A)])
+      .groupBy(_._1).map{case (b, bas) => b -> bas.map(_._2).toSet}
 }

@@ -10,6 +10,18 @@ trait RingZ[@specialized(Double) T]{
   def prod(f1: T, f2: T): T
   def sumA(ss: Array[T]): T = ss.foldLeft(zero)(sum)
   def prodA(fs: Array[T]): T = fs.foldLeft(one)(prod)
+  //for the the following methods it's not so clear how to generalize to rings
+  //in particular, the result type is currently fixed to be Double in normal representation.
+  def normalize(a: Array[T]): Array[T] = ???
+  /** @return In normal representation (not log). */
+  def maxNorm(a: Array[T], b: Array[T]): Double = ???
+  /** @return In normal representation (not log). */
+  def entropy(a: Array[T]): Double = ???
+  /** @return In normal representation (not log). */
+  def expectation(p: Array[T], f: Array[T]): Double = ???
+  def logExpectation(p: Array[T], f: Array[T]): Double = ???
+  def decode(p: Array[T]): Array[Double] = ???
+  def encode(p: Array[Double]): Array[T] = ???
 }
 
 /** This ring only accepts the array invocations with a single element and returns this singe element.
@@ -49,6 +61,17 @@ object NormalD extends RingZ[Double]{
     }
     result
   }
+
+  override def maxNorm(a: Array[Double], b: Array[Double]): Double = a.zip(b).map(t => math.abs(t._1 - t._2)).max
+
+  override def normalize(a: Array[Double]): Array[Double] = {
+    val sum = sumA(a)
+    a.map(_ / sum)
+  }
+
+  override def decode(p: Array[Double]): Array[Double] = p
+
+  override def encode(p: Array[Double]): Array[Double] = p
 }
 
 object LogD extends RingZ[Double] {
@@ -69,7 +92,9 @@ object LogD extends RingZ[Double] {
   def prod(f1: Double, f2: Double): Double = f1 + f2
 
   override def sumA(ss: Array[Double]): Double = {
-    if(ss.length == 2)
+    if(ss.length == 1)
+      return ss(0)
+    else if(ss.length == 2)
       return this.sum(ss(0), ss(1))
 
     var max = ss(0)
@@ -109,4 +134,27 @@ object LogD extends RingZ[Double] {
     }
     result
   }
+
+  override def normalize(a: Array[Double]): Array[Double] = {
+    val z = sumA(a)
+    a.map(_ - z)
+  }
+
+  /** @return In normal representation (not log). */
+  override def entropy(a: Array[Double]): Double = {
+    val normalized = normalize(a)
+    normalized.foldLeft(0d){case (h, lnp) => h + math.exp(lnp) * lnp}
+  }
+
+  /** @return In normal representation (not log). */
+  override def expectation(p: Array[Double], f: Array[Double]): Double = {
+    val normalized = normalize(p)
+    normalized.zip(f).foldLeft(0d){case (e,(lnp,f)) => e + math.exp(lnp) * f}
+  }
+
+  override def decode(p: Array[Double]): Array[Double] = p.map(math.exp)
+  override def encode(p: Array[Double]): Array[Double] = p.map(math.log)
+
+  /** @return In normal representation (not log). */
+  override def maxNorm(a: Array[Double], b: Array[Double]): Double = super.maxNorm(a, b)
 }

@@ -15,6 +15,9 @@ libraryDependencies += "org.scalaz" %% "scalaz-core" % "6.0.4"
 //cli parsing
 libraryDependencies += "org.rogach" % "scallop_2.10" % "0.9.1"
 
+//logging
+libraryDependencies += "com.dongxiguo" % "zero-log_2.10" % "0.3.3"
+
 publishMavenStyle := true
 
 publishTo <<= (version) { version: String =>

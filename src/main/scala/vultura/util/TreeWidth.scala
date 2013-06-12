@@ -137,29 +137,26 @@ object TreeWidth {
   }
 
   /** Contract edges of a tree using the `join` function. */
-  def contractEdges[A](t: Tree[A])(join: (A,A) => Option[A]): Tree[A] = {
-    def compactR(t: Tree[A]): Tree[A] = t match {
-      case leaf@Node(a, sf) if sf.isEmpty => leaf
-      case Node(a,subForest) => {
-        val (newA, newChildren, changed) = subForest.foldLeft((a,List[Tree[A]](),false)){ case ((accA,accChildren,accChange),child@Node(childLabel,childChildren)) =>
-          join(accA,childLabel).map(joinedA => (joinedA,childChildren ++: accChildren,true)).getOrElse((accA,child :: accChildren,accChange))
-        }
-        if(changed)
-          compactR(Node(newA,newChildren.toStream))
-        else
-          Node(newA,newChildren.map(compactR).toStream)
+  def partialFoldTree[A](t: Tree[A])(join: (A,A) => Option[A]): Tree[A] = t match {
+    case leaf@Node(a, sf) if sf.isEmpty => leaf
+    case Node(a,subForest) => {
+      val (newA, newChildren, changed) = subForest.foldLeft((a,List[Tree[A]](),false)){ case ((accA,accChildren,accChange),child@Node(childLabel,childChildren)) =>
+        join(accA,childLabel).map(joinedA => (joinedA,childChildren ++: accChildren,true)).getOrElse((accA,child :: accChildren,accChange))
       }
+      //do we have to pocess the same node again, because we pulled up some children?
+      if(changed)
+        partialFoldTree(Node(newA,newChildren.toStream))(join)
+      else
+        Node(newA,newChildren.map(partialFoldTree(_)(join)).toStream)
     }
-    compactR(t)
   }
 
-  def compactJTrees[A](trees: Seq[Tree[(Set[Int],Seq[A])]]): Seq[Tree[(Set[Int],Seq[A])]] = {
-    trees.map(t => contractEdges(t){
+  def compactJTrees[A](trees: Seq[Tree[(Set[Int],Seq[A])]]): Seq[Tree[(Set[Int],Seq[A])]] =
+    trees.map(t => partialFoldTree(t){
       case ((vs1,fs1),(vs2,fs2)) if vs1 subsetOf vs2 => Some((vs2,fs1 ++ fs2))
       case ((vs1,fs1),(vs2,fs2)) if vs2 subsetOf vs1 => Some((vs1,fs1 ++ fs2))
       case _ => None
     })
-  }
 
   def minDegreeJTs[A](_cliques: IndexedSeq[(Set[Int],A)]): Seq[Tree[(Set[Int],Seq[A])]] = {
     //convert the scala sets to BitSets
