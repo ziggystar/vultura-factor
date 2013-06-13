@@ -69,6 +69,11 @@ case class FastFactor(variables: Array[Int], values: Array[Double]){
 }
 
 object FastFactor{
+  implicit class RichRing(val ring: RingZ[Double]) extends AnyVal {
+    def encode(f: FastFactor): FastFactor = f.copy(values=ring.encode(f.values))
+    def decode(f: FastFactor): FastFactor = f.copy(values=ring.decode(f.values))
+  }
+
   object AdditionIsEquality extends RingZ[Double]{
     def zero: Double = sys.error("operation not supported")
 

@@ -1,7 +1,7 @@
 import com.dongxiguo.zeroLog.appenders.ConsoleAppender
 import com.dongxiguo.zeroLog.Filter
 import com.dongxiguo.zeroLog.formatters.SimpleFormatter
-import vultura.fastfactors.BeliefPropagation
+import vultura.fastfactors.algorithms.BeliefPropagation
 
 /**
  * Created by IntelliJ IDEA.

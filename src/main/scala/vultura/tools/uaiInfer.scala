@@ -9,6 +9,7 @@ import scala.collection.immutable.IndexedSeq
 import vultura.util.TreeWidth
 import scala.Some
 import vultura.util.IntDomainCPI
+import vultura.fastfactors.algorithms.{Problem, BeliefPropagation}
 
 /**
  * Created by IntelliJ IDEA.
@@ -91,7 +92,7 @@ object uaiInfer {
 
     val infer: (IndexedSeq[FastFactor], RingZ[Double], Array[Int]) => Double = config.algorithm() match {
       case "BP" => { (factors, ring, domains) =>
-        val bp = new BeliefPropagation(factors,domains,ring)
+        val bp = new BeliefPropagation(Problem(factors,domains,ring))
         val maxiter: Int = 1000
         bp.run(maxiter,1e-7)
         if(!bp.converged)

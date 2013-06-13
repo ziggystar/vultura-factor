@@ -3,6 +3,7 @@ package vultura.fastfactors
 import org.specs2.Specification
 import org.specs2.specification.Fragments
 import Utils._
+import vultura.fastfactors.algorithms.{Problem, BeliefPropagation}
 
 /**
  * Created by IntelliJ IDEA.
@@ -11,7 +12,7 @@ import Utils._
  */
 class BeliefPropagation$Test extends Specification {
   def BpLogZ(factors: IndexedSeq[FastFactor], ring: RingZ[Double], domains: Array[Int]): Double = {
-    val bp = new BeliefPropagation(factors,domains,ring)
+    val bp = new BeliefPropagation(Problem(factors,domains,ring))
     bp.run(10000,1e-10)
     bp.logZ
   }

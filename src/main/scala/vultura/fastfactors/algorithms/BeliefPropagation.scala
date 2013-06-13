@@ -1,14 +1,21 @@
-package vultura.fastfactors
+package vultura.fastfactors.algorithms
 
 import scala.collection.mutable
 import scala.util.Random
+import vultura.fastfactors.{LogD, RingZ, FastFactor}
 
 /**
  * Belief Propagation on loopy graphs using `FastFactor` operations.
  * User: Thomas Geier
  * Date: 6/10/13
  */
-class BeliefPropagation(factors: IndexedSeq[FastFactor], domains: Array[Int], ring: RingZ[Double], random: Random = new Random) {
+class BeliefPropagation(val problem: Problem, random: Random = new Random)
+extends InfAlg {
+
+  val Problem(factors: IndexedSeq[FastFactor], domains: Array[Int], ring: RingZ[Double]) = problem
+
+  def getProblem: Problem = problem
+
   implicit val (logger, formatter, appender) = BeliefPropagation.allLog
 
   private val cg = BeliefPropagation.createBetheClusterGraph(factors,domains,ring)
@@ -105,6 +112,9 @@ class BeliefPropagation(factors: IndexedSeq[FastFactor], domains: Array[Int], ri
     cg.clusterFactors(ci).variables).normalize(ring)
 
   def variableBelief(vi: Int): FastFactor = clusterBelief(singleVariableClusters(vi))
+  /** @return marginal distribution of variable in log encoding. */
+  def logVariableBelief(vi: Int): FastFactor =
+    if(ring == LogD) variableBelief(vi) else LogD.encode(ring.decode(variableBelief(vi)))
 
   def logZ: Double = {
     def expectation(p: Array[Double], f: Array[Double]) = p.zip(f).map(t => if(t._1 == 0) 0 else t._1 * t._2).sum
@@ -122,6 +132,9 @@ class BeliefPropagation(factors: IndexedSeq[FastFactor], domains: Array[Int], ri
 
     clusterExpectation.sum + clusterEntropies.sum - variableEntropies.sum
   }
+
+  /** @return Partition function in encoding specified by `ring`. */
+  def Z: Double = if(ring == LogD) logZ else ring.encode(Array(math.exp(logZ)))(0)
 
   def maxDiff(as: Array[Double], bs: Array[Double]): Double = {
     var i = 0
@@ -159,16 +172,4 @@ object BeliefPropagation{
   }
 }
 
-/**
- *
- * @param clusterFactors Contains a factor for each cluster, or `None`, if the neutral factor shall be assumed.
- * @param neighbours `neighbours(i)` contains the indices of all neighbouring clusters.
- * @param sepsets `sepsets((i,j))` contains all variables, that are shared over edge `(i,j)`, for some connected
- *               clusters `i` and `j`.
- */
-case class ClusterGraph(clusterFactors: IndexedSeq[FastFactor],
-                        neighbours: Array[Array[Int]],
-                        sepsets: Map[(Int,Int),Array[Int]]){
-  //assert(sepsets.keySet == neighbours.zipWithIndex.map{case (n,i) => n.map(i -> _)}(collection.breakOut))
-  def edges: Iterable[(Int,Int)] = for((sinks,srcI) <- neighbours.zipWithIndex; sinkI <- sinks) yield (srcI,sinkI)
-}
+
