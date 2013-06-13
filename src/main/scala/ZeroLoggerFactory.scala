@@ -1,7 +1,7 @@
 import com.dongxiguo.zeroLog.appenders.ConsoleAppender
 import com.dongxiguo.zeroLog.Filter
 import com.dongxiguo.zeroLog.formatters.SimpleFormatter
-import vultura.fastfactors.algorithms.BeliefPropagation
+import vultura.fastfactors.algorithms.{CBP, BeliefPropagation}
 
 /**
  * Created by IntelliJ IDEA.
@@ -16,4 +16,8 @@ object ZeroLoggerFactory {
   // Set Sample's logging level to Finest
   final def newLogger(singleton: BeliefPropagation.type) =
     (Filter.Info, SimpleFormatter, ConsoleAppender)
+
+  // Set Sample's logging level to Finest
+  final def newLogger(singleton: CBP.type) =
+    (Filter.Finer, SimpleFormatter, ConsoleAppender)
 }

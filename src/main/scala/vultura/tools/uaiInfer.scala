@@ -5,11 +5,10 @@ import java.io._
 import org.rogach.scallop
 import vultura.factors.{uai, TableFactor}
 import vultura.fastfactors._
-import scala.collection.immutable.IndexedSeq
 import vultura.util.TreeWidth
-import scala.Some
+import scala.util.Random
 import vultura.util.IntDomainCPI
-import vultura.fastfactors.algorithms.{Problem, BeliefPropagation}
+import vultura.fastfactors.algorithms.{CBP, Problem, BeliefPropagation}
 
 /**
  * Created by IntelliJ IDEA.
@@ -89,10 +88,18 @@ object uaiInfer {
 
     val conditioningVariables: Seq[Int] = config.condition.get.map(_.split(",").toSeq.map(_.toInt)).getOrElse(Seq[Int]())
     val cpi = new IntDomainCPI(conditioningVariables.map(domains).map(x => (0 until x).toArray).toArray)
+    val random = new Random
 
-    val infer: (IndexedSeq[FastFactor], RingZ[Double], Array[Int]) => Double = config.algorithm() match {
-      case "BP" => { (factors, ring, domains) =>
-        val bp = new BeliefPropagation(Problem(factors,domains,ring))
+    logger.info(f"running algorithm ${config.algorithm()}")
+    val infer: Problem => Double = config.algorithm().toUpperCase match {
+      case "CBP" => { problem =>
+        val cbp = new CBP(problem,random,CBP.leafSelectionSlowestSettler,CBP.variableSelectionSlowestSettler,50,1e-5)
+        cbp.run(30)
+        cbp.logZ
+      }
+
+      case "BP" => { problem =>
+        val bp = new BeliefPropagation(problem)
         val maxiter: Int = 1000
         bp.run(maxiter,1e-7)
         if(!bp.converged)
@@ -101,15 +108,15 @@ object uaiInfer {
           logger.fine(f"BP converged after ${bp.iterations} iterations with ${bp.getMessageUpdates} message updates; remaining message delta of ${bp.maxDelta}")
         if(config.useLog()) bp.logZ else math.exp(bp.logZ)
       }
-      case "JTREE" => veJunctionTree(_,_,_)
-      case "VE" => variableElimination(_,_,_)
+      case "JTREE" => p => veJunctionTree(p.factors,p.ring,p.domains)
+      case "VE" => p => variableElimination(p.factors,p.ring,p.domains)
     }
 
     def calcCondZs = cpi.map{ assignment =>
       val cond = conditioningVariables.zip(assignment).toMap
       val (conditionedProblem,conditionedDomain) = conditionProblem(problem,domains,cond)
       logger.fine(f"conditioning on assignment: ${assignment.mkString(":")}")
-      infer(conditionedProblem,ring,conditionedDomain)
+      infer(Problem(conditionedProblem,conditionedDomain,ring))
     }
 
     if(config.benchmark()){

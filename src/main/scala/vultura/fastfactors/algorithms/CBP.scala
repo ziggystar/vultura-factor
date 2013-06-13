@@ -1,51 +1,84 @@
 package vultura.fastfactors.algorithms
 
 import scala.util.Random
-import scala.collection.immutable.TreeSet
-import vultura.fastfactors.{LogD, RingZ, FastFactor}
+import vultura.fastfactors.{LogD, FastFactor}
+import vultura.util.seq2randomSeq
 
 /**
- * Created by IntelliJ IDEA.
- * User: Thomas Geier
- * Date: 6/12/13
+ * Conditioned Belief Propagation.
  */
 class CBP(val problem: Problem,
           random: Random = new Random,
-          leafSelection: BeliefPropagation => Double,
-          variableSelection: BeliefPropagation => Int,
+          leafSelection: (Map[Map[Int,Int],BeliefPropagation], Random) => Map[Int,Int],
+          variableSelection: (BeliefPropagation, Random) => Int,
           bpMaxiter: Int = 1000,
-          bpTol: Double = 1e-7) {
-  val Problem(factors,domains,ring) = problem
+          bpTol: Double = 1e-7) extends InfAlg {
+  implicit val (logger, formatter, appender) = CBP.allLog
 
-  implicit val queueOrdering = new Ordering[(Double,Map[Int,Int],BeliefPropagation)]{
-    def compare(x: (Double, Map[Int, Int], BeliefPropagation), y: (Double, Map[Int, Int], BeliefPropagation)): Int =
-      if(x._1 < y._1) -1 else if(x == y) 0 else +1
-  }
-  var queue: TreeSet[(Double,Map[Int,Int],BeliefPropagation)] = _
+  val Problem(factors,domains,ring) = problem
+  def getProblem: Problem = problem
+
+  var queue: Map[Map[Int,Int],BeliefPropagation] = _
   var iterations: Int = _
 
   init()
 
   def init(){
-    queue = TreeSet(constructBP(Map()))
+    queue = Map(Map[Int,Int]() -> constructBP(Map()))
     iterations = 0
   }
 
-  def run(maxIter: Int, maxH: Double){
-    while(iterations < maxIter && queue.head._1 > maxH){
-      val (_,selectAssignment,selectLeafBP) =  queue.head
-      val selectVar: Int = variableSelection(selectLeafBP)
+  def run(maxIter: Int){
+    while(iterations < maxIter){
+      val selectAssignment =  leafSelection(queue,random)
+      logger.finer(f"CBP refining assignment $selectAssignment")
+      val selectVar: Int = variableSelection(queue(selectAssignment),random)
       val newAssignments: IndexedSeq[Map[Int, Int]] =
         for(x <- 0 until domains(selectVar)) yield selectAssignment + (selectVar -> x)
-      queue = queue.tail ++ newAssignments.map(constructBP)
+      queue = queue - selectAssignment ++ newAssignments.map(a => a -> constructBP(a))
+      iterations += 1
     }
   }
 
-  def constructBP(assignment: Map[Int,Int]): (Double,Map[Int,Int],BeliefPropagation) = {
-    val bp = new BeliefPropagation(problem,random)
+  def constructBP(assignment: Map[Int,Int]): BeliefPropagation = {
+    val bp = new BeliefPropagation(problem.copy(factors=problem.factors.map(_.condition(assignment,domains).simplify(domains))),random)
     bp.run(bpMaxiter,bpTol)
-    (leafSelection(bp),assignment,bp)
+    if(!bp.converged)
+      logger.fine(f"bp run did not converge for assignment $assignment")
+    bp
   }
-  def logZ: Double = LogD.sumA(queue.map(_._3.logZ)(collection.breakOut))
-  def variableBelief(vi: Int): FastFactor = ???
+  def logZ: Double = {
+    val conditionedZs: Array[Double] = queue.map(_._2.logZ)(collection.breakOut)
+    LogD.sumA(conditionedZs)
+  }
+  /** @return Partition function in encoding specified by `ring`. */
+  def Z: Double = ring.sumA(queue.map(_._2.Z)(collection.breakOut))
+
+  def variableBelief(vi: Int): FastFactor = queue.map{ case (assignment,bp) =>
+    //if the variable is conditioned, construct a factor f with f(v) = bp.Z for v == assigned value and 0 else
+    val z = bp.Z
+    val range: Range = 0 until domains(vi)
+    assignment.get(vi).map(xi =>
+        FastFactor(Array(vi), range.map(yi => if (yi == xi) z else ring.zero)(collection.breakOut))
+    )
+      .getOrElse(bp.variableBelief(vi).map(ring.prod(_,z)))
+  }.reduce[FastFactor]{ case (f1,f2) => FastFactor(f1.variables,f1.values.zip(f2.values).map(t => ring.sum(t._1,t._2)))}
+
+
+  /** @return marginal distribution of variable in log encoding. */
+  def logVariableBelief(vi: Int): FastFactor =
+    if(ring == LogD) variableBelief(vi) else LogD.encode(ring.decode(variableBelief(vi)))
+}
+
+object CBP {
+  implicit val allLog@(logger, formatter, appender) = ZeroLoggerFactory.newLogger(this)
+  def leafSelectionRandom(leafs: Map[Map[Int,Int],BeliefPropagation], random: Random): Map[Int,Int] = leafs.keys.pickRandom(random)
+  def leafSelectionOnlyZ(leafs: Map[Map[Int,Int],BeliefPropagation], random: Random): Map[Int,Int] = leafs.maxBy(_._2.logZ)._1
+  def leafSelectionSlowestSettler(leafs: Map[Map[Int,Int],BeliefPropagation], random: Random): Map[Int,Int] =
+    vultura.util.maxByMultiple(leafs.toSeq)(_._2.messages.map(_._2.lastUpdate).max).pickRandom(random)._1
+
+  def variableSelectionRandom(bp: BeliefPropagation, random: Random): Int = bp.problem.variables.pickRandom(random)
+  def variableSelectionSlowestSettler(bp: BeliefPropagation, random: Random): Int = {
+    vultura.util.maxByMultiple(bp.messages.toSeq)(_._2.lastUpdate).flatMap(_._2.factor.variables).pickRandom(random)
+  }
 }

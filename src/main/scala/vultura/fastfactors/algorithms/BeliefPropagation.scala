@@ -25,7 +25,7 @@ extends InfAlg {
 
   //the messages are always guaranteed to be normalized
   case class Message(factor: FastFactor, lastUpdate: Long = -1)
-  private val messages: mutable.HashMap[(Int,Int),Message] = new mutable.HashMap
+  val messages: mutable.HashMap[(Int,Int),Message] = new mutable.HashMap
   private var randomOrder: IndexedSeq[(Int, Int)] = null
   private var totalIterations = 0
   private var messageUpdates = 0L
@@ -82,7 +82,7 @@ extends InfAlg {
       false
   }
 
-  def run(maxiter: Int = 1000, tol: Double = 1e-10) {
+  def run(maxiter: Int = 1000, tol: Double = 1e-7) {
     var iterations = 0
     var converged = false
     while(iterations <= maxiter && !converged){

@@ -19,4 +19,6 @@ trait InfAlg {
   def logVariableBelief(vi: Int): FastFactor
 }
 
-case class Problem(factors: IndexedSeq[FastFactor],domains: Array[Int],ring: RingZ[Double])
+case class Problem(factors: IndexedSeq[FastFactor],domains: Array[Int],ring: RingZ[Double]){
+  lazy val variables: Set[Int] = (for (f <- factors; v <- f.variables) yield v)(collection.breakOut)
+}
