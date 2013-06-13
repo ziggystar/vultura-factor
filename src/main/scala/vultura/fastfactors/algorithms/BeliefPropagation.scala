@@ -145,21 +145,19 @@ extends InfAlg {
         }
 
         if( needsUpdate ){
-          val r = updateMessage(edge,tol)
-          logger.finer("update: " + (i,j) + " : " + r)
-          r
+          val updateConverged: Boolean = updateMessage(edge, tol)
+          logger.finer("update: " + (i,j) + " : update converged: " + updateConverged)
+          converged = converged && !updateConverged
         }
-        else
-          false
-
         edgeIndex += 1
       }
       iterations += 1
     }
-//    assert(randomOrder.map(updateMessage(_)))
+
     didConverge = converged
     totalIterations += iterations
     invalidateCaches()
+    logger.fine(f"BP ran for after $iterations, converged: $didConverge")
   }
 
   def clusterBelief(ci: Int): FastFactor = clusterBeliefCache.getOrElseUpdate(ci,FastFactor.multiplyRetain(ring)(domains)(
