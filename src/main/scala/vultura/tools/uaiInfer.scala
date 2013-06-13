@@ -5,9 +5,8 @@ import java.io._
 import org.rogach.scallop
 import vultura.factors.{uai, TableFactor}
 import vultura.fastfactors._
-import vultura.util.TreeWidth
+import vultura.util.{Benchmark, TreeWidth, IntDomainCPI}
 import scala.util.Random
-import vultura.util.IntDomainCPI
 import vultura.fastfactors.algorithms.{CBP, Problem, BeliefPropagation}
 
 /**
@@ -94,7 +93,7 @@ object uaiInfer {
     val infer: Problem => Double = config.algorithm().toUpperCase match {
       case "CBP" => { problem =>
         val cbp = new CBP(problem,random,CBP.leafSelectionSlowestSettler,CBP.variableSelectionSlowestSettler,50,1e-5)
-        cbp.run(100)
+        cbp.run(30)
         cbp.logZ
       }
 
@@ -130,12 +129,13 @@ object uaiInfer {
       //measure
       val startTime = System.nanoTime
       var i = 0
-      while(System.nanoTime - startTime < 20e9){
-        calcCondZs
-        i += 1
+      val (_,time) = Benchmark.benchmarkCPUTime{
+        while(System.nanoTime - startTime < 20e9){
+          calcCondZs
+          i += 1
+        }
       }
-      val time = System.nanoTime - startTime
-      println("average over " + i + " runs: " + time.toDouble*1e-9/i)
+      println("CPU time average over " + i + " runs: " + time.toDouble*1e-9/i)
     }
 
     val conditionedZs = calcCondZs

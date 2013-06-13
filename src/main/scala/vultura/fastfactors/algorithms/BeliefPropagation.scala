@@ -32,6 +32,12 @@ extends InfAlg {
   private var lastMaxDelta = Double.PositiveInfinity
   private var didConverge = false
 
+  //--------------- caches
+  private val clusterBeliefCache: mutable.HashMap[Int, FastFactor] = new mutable.HashMap[Int,FastFactor]
+  private def invalidateCaches(){
+    clusterBeliefCache.clear()
+  }
+  //--------------- caches end
   init()
 
   // ---------- initialisation stuff -------------------
@@ -125,30 +131,40 @@ extends InfAlg {
     var iterations = 0
     var converged = false
     while(iterations <= maxiter && !converged){
-      converged = !randomOrder.map{ case e@(i,j) =>
-        val msg = messages(e)
-        val needsUpdate =
-          (for (influence <- cg.neighbours(i) if influence != j)
-          yield messages((influence, i)).lastUpdate >= msg.lastUpdate).exists(identity)
+      converged = true
+      var edgeIndex = 0
+      while(edgeIndex < randomOrder.length){
+        val edge@(i,j) = randomOrder(edgeIndex)
+        var needsUpdate = false
+        val incomingNeighbours = cg.neighbours(i)
+        var IneighboursIndex = 0
+        while(!needsUpdate && IneighboursIndex < incomingNeighbours.length){
+          val Ineighbour: Int = incomingNeighbours(IneighboursIndex)
+          needsUpdate = (Ineighbour != j) && messages((Ineighbour, i)).lastUpdate >= messages(edge).lastUpdate
+          IneighboursIndex += 1
+        }
 
         if( needsUpdate ){
-          val r = updateMessage(e,tol)
+          val r = updateMessage(edge,tol)
           logger.finer("update: " + (i,j) + " : " + r)
           r
         }
         else
           false
-      }.exists(identity)
+
+        edgeIndex += 1
+      }
       iterations += 1
     }
 //    assert(randomOrder.map(updateMessage(_)))
     didConverge = converged
     totalIterations += iterations
+    invalidateCaches()
   }
 
-  def clusterBelief(ci: Int): FastFactor = FastFactor.multiplyRetain(ring)(domains)(
+  def clusterBelief(ci: Int): FastFactor = clusterBeliefCache.getOrElseUpdate(ci,FastFactor.multiplyRetain(ring)(domains)(
     factors = cg.neighbours(ci).map(from => messages((from,ci)).factor) :+ cg.clusterFactors(ci),
-    cg.clusterFactors(ci).variables).normalize(ring)
+    cg.clusterFactors(ci).variables).normalize(ring))
 
   def variableBelief(vi: Int): FastFactor = clusterBelief(singleVariableClusters(vi))
   /** @return marginal distribution of variable in log encoding. */
@@ -159,17 +175,17 @@ extends InfAlg {
     def expectation(p: Array[Double], f: Array[Double]) = p.zip(f).map(t => if(t._1 == 0) 0 else t._1 * t._2).sum
     def entropy(ps: Array[Double]) = -(for (p <- ps) yield if (p == 0) 0 else p * math.log(p)).sum
 
-    val clusterExpectation = cg.clusterFactors.zipWithIndex
-      .map{case (f, cI) => expectation(ring.decode(clusterBelief(cI).values),ring.decode(f.values).map(math.log))}
-
-    val clusterEntropies = cg.clusterFactors.zipWithIndex
-      .map{case (f, cI) => entropy(ring.decode(clusterBelief(cI).values))}
+    val clusterExpectationAndEntropy = cg.clusterFactors.zipWithIndex.map {
+      case (f, cI) =>
+        expectation(ring.decode(clusterBelief(cI).values),ring.decode(f.values).map(math.log)) +
+          entropy(ring.decode(clusterBelief(cI).values))
+    }
 
     val variableClusterIndices: Range = factors.size until cg.clusterFactors.size
     val variableEntropies = variableClusterIndices
       .map{vci => cg.neighbours(vci).size * entropy(ring.decode(clusterBelief(vci).values)) }
 
-    clusterExpectation.sum + clusterEntropies.sum - variableEntropies.sum
+    clusterExpectationAndEntropy.sum - variableEntropies.sum
   }
 
   /** @return Partition function in encoding specified by `ring`. */
