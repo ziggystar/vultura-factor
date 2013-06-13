@@ -11,7 +11,7 @@ import vultura.fastfactors.algorithms.{CBP, BeliefPropagation}
 object ZeroLoggerFactory {
   // Set package com.yourDomain.yourProject's default logging level to Info
   final def newLogger(singleton: Singleton) =
-    (Filter.Info, SimpleFormatter, ConsoleAppender)
+    (Filter.Fine, SimpleFormatter, ConsoleAppender)
 
   // Set Sample's logging level to Finest
   final def newLogger(singleton: BeliefPropagation.type) =
