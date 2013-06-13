@@ -58,18 +58,43 @@ extends InfAlg {
     * $$\delta'_{i-j} \propto \Sum_{C_i - S_{i,j}} \Psi_i \cdot \Prod_{k\in(N_i - \{i\}} \delta_{k - j}$$.
     *
     * @return The delta in normal domain of the update. */
-  private def updateMessage(edge: (Int,Int), tol: Double): Boolean = {
+   private def updateMessage(edge: (Int,Int), tol: Double): Boolean = {
     val (from,to) = edge
+    val oldMessage: Message = messages(edge)
+
     //multiply all incoming messages for `from` without that coming from `to`; also multiply 'from's factor
-    val newFactor = FastFactor.multiplyRetain(ring)(domains)(
-      factors = cg.neighbours(from)
-        .filterNot(_ == to)
-        .map(fromNeighbour => messages((fromNeighbour,from)).factor) :+ cg.clusterFactors(from),
-      cg.sepsets(edge)
-    ).normalize(ring)
+    val newFactor =
+      (if(cg.clusterFactors(from).variables.size == 1){
+        //if the source cluster only contains a single variable, we can compute it without marginalization
+        var domainSize = domains(oldMessage.factor.variables(0))
+        val factors: Array[FastFactor] = cg.neighbours(from)
+          .filterNot(_ == to)
+          .map(fromNeighbour => messages((fromNeighbour,from)).factor) :+ cg.clusterFactors(from)
+        val resultArray = new Array[Double](domainSize)
+        val numFactors: Int = factors.size
+        val product = new Array[Double](numFactors)
+        var outer = 0
+        var inner = 0
+        while(outer < domainSize){
+          while(inner < numFactors){
+            product(inner) = factors(inner).values(outer)
+            inner += 1
+          }
+          resultArray(outer) = ring.prodA(product)
+          inner = 0
+          outer += 1
+        }
+        FastFactor(oldMessage.factor.variables,resultArray)
+      } else {
+        FastFactor.multiplyRetain(ring)(domains)(
+          factors = cg.neighbours(from)
+            .filterNot(_ == to)
+            .map(fromNeighbour => messages((fromNeighbour,from)).factor) :+ cg.clusterFactors(from),
+          cg.sepsets(edge)
+        )
+      }).normalize(ring)
 
     //TODO use sumProduct message directly and write to existing array?
-    val oldMessage: Message = messages(edge)
     val delta = maxDiff(oldMessage.factor.values,newFactor.values)
     if(delta > tol){
       messageUpdates += 1

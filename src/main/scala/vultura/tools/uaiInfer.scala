@@ -94,7 +94,7 @@ object uaiInfer {
     val infer: Problem => Double = config.algorithm().toUpperCase match {
       case "CBP" => { problem =>
         val cbp = new CBP(problem,random,CBP.leafSelectionSlowestSettler,CBP.variableSelectionSlowestSettler,50,1e-5)
-        cbp.run(30)
+        cbp.run(100)
         cbp.logZ
       }
 
@@ -112,7 +112,7 @@ object uaiInfer {
       case "VE" => p => variableElimination(p.factors,p.ring,p.domains)
     }
 
-    def calcCondZs = cpi.map{ assignment =>
+    def calcCondZs: IndexedSeq[Double] = cpi.map{ assignment =>
       val cond = conditioningVariables.zip(assignment).toMap
       val (conditionedProblem,conditionedDomain) = conditionProblem(problem,domains,cond)
       logger.fine(f"conditioning on assignment: ${assignment.mkString(":")}")
@@ -126,21 +126,21 @@ object uaiInfer {
       while(System.nanoTime - wut < 5e9){
         calcCondZs
       }
-      logger.info("running benchmark for at least 30s")
+      logger.info("running benchmark for at least 20s")
       //measure
       val startTime = System.nanoTime
       var i = 0
-      while(System.nanoTime - startTime < 30e9){
+      while(System.nanoTime - startTime < 20e9){
         calcCondZs
         i += 1
       }
       val time = System.nanoTime - startTime
       println("average over " + i + " runs: " + time.toDouble*1e-9/i)
-    } else {
-      val conditionedZs = calcCondZs
-      val Z: Double = ring.sumA(conditionedZs.toArray)
-      println("ln(Z) = " + (if(config.useLog()) Z else math.log(Z)))
     }
+
+    val conditionedZs = calcCondZs
+    val Z: Double = ring.sumA(conditionedZs.toArray)
+    println("ln(Z) = " + (if(config.useLog()) Z else math.log(Z)))
   }
 
   def conditionProblem(problem: Seq[FastFactor], domains: Array[Int], condition: Map[Int,Int]): (IndexedSeq[FastFactor], Array[Int]) = {
