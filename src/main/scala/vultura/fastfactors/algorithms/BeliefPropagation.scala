@@ -24,7 +24,7 @@ extends InfAlg {
     .collect{case (f,fi) if f.variables.size == 1 => f.variables.head -> fi}(collection.breakOut)
 
   //the messages are always guaranteed to be normalized
-  case class Message(factor: FastFactor, lastUpdate: Long = -1)
+  class Message(val factor: FastFactor, var lastUpdate: Long = -1)
   val messages: mutable.HashMap[(Int,Int),Message] = new mutable.HashMap
   private var randomOrder: IndexedSeq[(Int, Int)] = null
   private var totalIterations = 0
@@ -36,7 +36,7 @@ extends InfAlg {
 
   // ---------- initialisation stuff -------------------
   private def initializeMessages(): Unit = cg.sepsets.foreach {
-    case (edge, vars) => messages(edge) = Message(FastFactor.maxEntropy(vars, domains, ring))
+    case (edge, vars) => messages(edge) = new Message(FastFactor.maxEntropy(vars, domains, ring))
   }
   protected def makeRandomOrder(): IndexedSeq[(Int, Int)] = random.shuffle(cg.sepsets.keys.toIndexedSeq)
 
@@ -61,22 +61,23 @@ extends InfAlg {
    private def updateMessage(edge: (Int,Int), tol: Double): Boolean = {
     val (from,to) = edge
     val oldMessage: Message = messages(edge)
+    val fromCluster: FastFactor = cg.clusterFactors(from)
 
     //multiply all incoming messages for `from` without that coming from `to`; also multiply 'from's factor
-    val newFactor =
-      (if(cg.clusterFactors(from).variables.size == 1){
+    val newValues: Array[Double] =
+      if (fromCluster.variables.size == 1) {
         //if the source cluster only contains a single variable, we can compute it without marginalization
-        var domainSize = domains(oldMessage.factor.variables(0))
+        val domainSize = domains(oldMessage.factor.variables(0))
         val factors: Array[FastFactor] = cg.neighbours(from)
           .filterNot(_ == to)
-          .map(fromNeighbour => messages((fromNeighbour,from)).factor) :+ cg.clusterFactors(from)
+          .map(fromNeighbour => messages((fromNeighbour, from)).factor) :+ fromCluster
         val resultArray = new Array[Double](domainSize)
         val numFactors: Int = factors.size
         val product = new Array[Double](numFactors)
         var outer = 0
         var inner = 0
-        while(outer < domainSize){
-          while(inner < numFactors){
+        while (outer < domainSize) {
+          while (inner < numFactors) {
             product(inner) = factors(inner).values(outer)
             inner += 1
           }
@@ -84,23 +85,36 @@ extends InfAlg {
           inner = 0
           outer += 1
         }
-        FastFactor(oldMessage.factor.variables,resultArray)
+        resultArray
       } else {
-        FastFactor.multiplyRetain(ring)(domains)(
-          factors = cg.neighbours(from)
-            .filterNot(_ == to)
-            .map(fromNeighbour => messages((fromNeighbour,from)).factor) :+ cg.clusterFactors(from),
-          cg.sepsets(edge)
-        )
-      }).normalize(ring)
+        val neighbours = cg.neighbours(from)
+        //instead of the backward message we need to ignore, we'll put the cluster factor
+        val factorsToMultiply = new Array[FastFactor](neighbours.length)
+        var i = 0
+        while(i < neighbours.length){
+          if(neighbours(i) == to)
+            factorsToMultiply(i) = fromCluster
+          else
+            factorsToMultiply(i) = messages((neighbours(i),from)).factor
+          i += 1
+        }
+        FastFactor.multiplyRetain(ring)(domains)(factorsToMultiply, cg.sepsets(edge)).values
+      }
+
+    ring.normalizeInplace(newValues)
 
     //TODO use sumProduct message directly and write to existing array?
-    val delta = maxDiff(oldMessage.factor.values,newFactor.values)
+    val delta = maxDiff(oldMessage.factor.values,newValues)
     if(delta > tol){
       messageUpdates += 1
-      val message: Message = Message(newFactor, messageUpdates)
-      //update message
-      messages(edge) = message
+      //array copy
+      var i = 0
+      val target: Array[Double] = oldMessage.factor.values
+      while(i < newValues.length){
+        target(i) = newValues(i)
+        i += 1
+      }
+      oldMessage.lastUpdate = messageUpdates
       true
     }
     else

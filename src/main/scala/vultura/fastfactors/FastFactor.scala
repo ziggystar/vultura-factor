@@ -146,7 +146,7 @@ object FastFactor{
    */
   def multiplyMarginalize(ring: RingZ[Double])(domains: Array[Int])(factors: Seq[FastFactor], marginalize: Array[Int]): FastFactor = {
     val variables = merge(factors.map(_.variables),exclude=marginalize)
-    val numValues = variables.map(domains).foldLeft(1)(_ * _)
+    val numValues = mapMultiply(variables,domains)
     val values = new Array[Double](numValues)
     sumProduct(variables,domains,factors.map(_.variables)(collection.breakOut),factors.map(_.values)(collection.breakOut): Array[Array[Double]],ring,values)
     FastFactor(variables,values)
@@ -169,7 +169,17 @@ object FastFactor{
    *         the factor array has to be adjusted by `p = p + r(i)`.
    */
   def buildLookup(varOrdering: Array[Int], domainSizes: Array[Int], factorVariables: Array[Int]): Array[Int] = {
-    val strides = factorVariables.map(domainSizes).scanLeft(1)(_ * _)
+    val strides: Array[Int]=  {
+      val r = new Array[Int](factorVariables.length)
+      var prod = 1
+      var i = 0
+      while(i < r.length){
+        r(i) = prod
+        prod *= domainSizes(factorVariables(i))
+        i += 1
+      }
+      r
+    }
     //now we walk over the counting variables
     //for each earlier variable, we subtract d_i * stride_i (overflow);
     //for the current variable we add stride_i (increment)
@@ -248,7 +258,7 @@ object FastFactor{
                                                    result: Array[T]) {
     val numFactors: Int = factorValues.size
     require(factorVariables.size == numFactors)
-    val remainSize: Int = remainingVars.foldLeft(1)(_ * domainSizes(_))
+    val remainSize: Int = mapMultiply(remainingVars,domainSizes)
     require(result.size == remainSize, "result array must fit exactly")
 
     //collect all variables
@@ -261,7 +271,7 @@ object FastFactor{
 
     val lookups: Array[Array[Int]] = factorVariables.map(buildLookup(cliqueOrdering,domainSizes,_))(collection.breakOut)
 
-    val margSize: Int = margVars.foldLeft(1)(_ * domainSizes(_))
+    val margSize: Int = mapMultiply(margVars,domainSizes)
 
     //will hold intermediate results, which will get summed over
     val margTemp: Array[T] = new Array[T](margSize)
@@ -302,5 +312,20 @@ object FastFactor{
       result(remainIdx) = ring.sumA(margTemp)
       remainIdx += 1
     }
+  }
+
+  /**
+   * @param is Array of indices into `factors`.
+   * @return $\Prod_{i \in is} factors(i)
+   */
+  @inline
+  def mapMultiply(is: Array[Int],factors: Array[Int]): Int = {
+    var product = 1
+    var i = 0
+    while(i < is.length){
+      product *= factors(is(i))
+      i += 1
+    }
+    product
   }
 }

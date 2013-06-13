@@ -13,6 +13,7 @@ trait RingZ[@specialized(Double) T]{
   //for the the following methods it's not so clear how to generalize to rings
   //in particular, the result type is currently fixed to be Double in normal representation.
   def normalize(a: Array[T]): Array[T] = ???
+  def normalizeInplace(a: Array[T]): Unit = ???
   /** @return In normal representation (not log). */
   def maxNorm(a: Array[T], b: Array[T]): Double = ???
   /** @return In normal representation (not log). */
@@ -72,6 +73,15 @@ object NormalD extends RingZ[Double]{
   override def decode(p: Array[Double]): Array[Double] = p
 
   override def encode(p: Array[Double]): Array[Double] = p
+
+  override def normalizeInplace(a: Array[Double]) {
+    val z = sumA(a)
+    var i = 0
+    while(i < a.length){
+      a(i) = a(i) / z
+      i += 1
+    }
+  }
 }
 
 object LogD extends RingZ[Double] {
@@ -138,6 +148,16 @@ object LogD extends RingZ[Double] {
   override def normalize(a: Array[Double]): Array[Double] = {
     val z = sumA(a)
     a.map(_ - z)
+  }
+
+
+  override def normalizeInplace(a: Array[Double]) {
+    val z = sumA(a)
+    var i = 0
+    while(i < a.length){
+      a(i) -= z
+      i += 1
+    }
   }
 
   /** @return In normal representation (not log). */
