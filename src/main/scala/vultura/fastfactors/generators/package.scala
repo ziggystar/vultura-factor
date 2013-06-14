@@ -1,6 +1,7 @@
 package vultura.fastfactors
 
 import scala.util.Random
+import scala.util.parsing.combinator.JavaTokenParsers
 
 /**
  * Created by IntelliJ IDEA.
@@ -62,6 +63,42 @@ package object generators {
       .filter(_.toSet.size == factorSize)
       .next()
     Problem(Array.fill(numFactors)(factorGenerator(genFactorVariables,domains,random)),domains,NormalD)
+  }
+
+  def generateFromString(desc: String): Either[String,Long => Problem] = {
+    import GeneratorParser._
+    (parseAll(problemGen,desc): ParseResult[Long => Problem]) match {
+      case Success(gen,_) => Right(gen)
+      case NoSuccess(msg,_) => Left(msg)
+    }
+  }
+
+  object GeneratorParser extends JavaTokenParsers{
+    def named[A](name: String, p: Parser[A]): Parser[A] = opt(name ~ "=") ~> p
+    def pInt: Parser[Int] = wholeNumber ^^ (_.toInt)
+    def pDecimal: Parser[Double] = decimalNumber ^^ (_.toDouble)
+    def problemGen: Parser[Long => Problem] = pRandomK | pGrid
+    def pRandomK: Parser[Long => Problem] =
+      "randomK(" ~>
+        named("variables",pInt) ~ "," ~
+        named("factors",pInt) ~ "," ~
+        named("k",pInt) ~ "," ~
+        named("domains",pInt) ~ "," ~
+        named("potential",potential) <~ ")" ^^ {
+          case v ~ _ ~ f ~ _ ~ k ~ _ ~ doms ~ _ ~ pot => (seed: Long) => randomK(v,f,k,doms,pot,new Random(seed))
+        }
+    def pGrid: Parser[Long => Problem] =
+      "grid(" ~>
+        named("width",pInt) ~ "," ~
+        named("height",pInt) ~ "," ~
+        named("domains",pInt) ~ "," ~
+        named("potential",potential) <~ ")" ^^ {
+        case w ~ _ ~ h ~ _ ~ d ~ _ ~ pots => (seed: Long) => grid(w,h,d,pots,new Random(seed))
+      }
+    def potential: Parser[FactorGenerator] = pFmaxEnt | pFexpGauss | pFdetClause
+    def pFmaxEnt: Parser[FactorGenerator] = "max-entropy" ^^^ maxEntropy
+    def pFexpGauss: Parser[FactorGenerator] = "expgauss(" ~> named("sigma",pDecimal) <~ ")" ^^ {sigma => expGauss(sigma)}
+    def pFdetClause: Parser[FactorGenerator] = "det-clause" ^^^ deterministicClause
   }
 
 }
