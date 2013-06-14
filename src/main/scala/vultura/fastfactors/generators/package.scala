@@ -64,6 +64,18 @@ package object generators {
       .next()
     Problem(Array.fill(numFactors)(factorGenerator(genFactorVariables,domains,random)),domains,NormalD)
   }
+  def treeK(numFactors: Int,
+            k: Int,
+            domainSize: Int,
+            fgen: FactorGenerator,
+            random: Random): Problem = {
+    val numVars = numFactors * (k-1) + 1
+    val domains = Array.fill(numVars)(domainSize)
+    val factors = Seq.iterate((k,fgen(Seq.range(0,k),domains,random)),numFactors){case (nextVar,_) =>
+      (nextVar + (k-1),fgen(random.nextInt(nextVar) +: Array.range(nextVar, nextVar + (k-1)),domains,random))
+    }
+    Problem(factors.map(_._2)(collection.breakOut),domains,NormalD)
+  }
 
   def generateFromString(desc: String): Either[String,Long => Problem] = {
     import GeneratorParser._
