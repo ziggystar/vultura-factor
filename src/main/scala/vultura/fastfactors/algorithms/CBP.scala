@@ -12,7 +12,7 @@ class CBP(val problem: Problem,
           leafSelection: (Map[Map[Int,Int],BeliefPropagation], Random) => Map[Int,Int],
           variableSelection: (BeliefPropagation, Random) => Int,
           bpMaxiter: Int = 1000,
-          bpTol: Double = 1e-7) extends InfAlg {
+          bpTol: Double = 1e-7) extends InfAlg with ConvergingStepper[Unit] {
   implicit val (logger, formatter, appender) = CBP.allLog
 
   val Problem(factors,domains,ring) = problem
@@ -29,15 +29,27 @@ class CBP(val problem: Problem,
   }
 
   def run(maxIter: Int){
-    while(iterations < maxIter){
+    var steps = 0
+    while(steps < maxIter){
       val selectAssignment =  leafSelection(queue,random)
       logger.finer(f"CBP refining assignment $selectAssignment")
       val selectVar: Int = variableSelection(queue(selectAssignment),random)
       val newAssignments: IndexedSeq[Map[Int, Int]] =
         for(x <- 0 until domains(selectVar)) yield selectAssignment + (selectVar -> x)
       queue = queue - selectAssignment ++ newAssignments.map(a => a -> constructBP(a))
-      iterations += 1
+      steps += 1
     }
+    iterations += steps
+  }
+
+
+  /*
+  * @param a Configuration object.
+  * @return True if the algorithm converged.
+  */
+  def step(a: Unit): Boolean = {
+    run(1)
+    false
   }
 
   def constructBP(assignment: Map[Int,Int]): BeliefPropagation = {

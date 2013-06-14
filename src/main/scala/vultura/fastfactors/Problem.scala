@@ -11,4 +11,15 @@ case class Problem(factors: IndexedSeq[FastFactor],domains: Array[Int],ring: Rin
   lazy val variables: Set[Int] = (for (f <- factors; v <- f.variables) yield v)(collection.breakOut)
   private lazy val degrees: mutable.HashMap[Int,Int] = new mutable.HashMap[Int,Int]
   def degreeOfVariable(v: Int): Int = degrees.getOrElseUpdate(v,factors.count(_.variables.contains(v)))
+  def uaiString: String = {
+    require(variables == Set(0 until variables.size))
+    Seq[Any](
+      " ",
+      variables.size,
+      domains.mkString(" "),
+      factors.size,
+      factors.map(f => f.variables.size + " " + f.variables.mkString(" ")).mkString("\n"),
+      factors.map(f => f.values.size + " " + ring.decode(f.values).mkString(" ")).mkString("\n")
+    ).mkString("\n")
+  }
 }

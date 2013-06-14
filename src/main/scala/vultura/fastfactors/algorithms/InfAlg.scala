@@ -19,4 +19,16 @@ trait InfAlg {
   def logVariableBelief(vi: Int): FastFactor
 }
 
+/**
+ * Can be advanced by one step, giving parameter of type `A` and tells about convergence, usually with respect to `A`.
+ * @tparam A
+ */
+trait ConvergingStepper[A]{
+  /*
+  * @param a Configuration object.
+  * @return True if the algorithm converged.
+  */
+  def step(a: A): Boolean
+}
+
 
