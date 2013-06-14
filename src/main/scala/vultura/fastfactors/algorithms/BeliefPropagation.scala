@@ -130,6 +130,7 @@ extends InfAlg with ConvergingStepper[Unit] {
   def run(maxiter: Int = 1000, tol: Double = 1e-7): Boolean = {
     var iterations = 0
     var converged = false
+    val startMessageUpdates = messageUpdates
     while(iterations <= maxiter && !converged){
       converged = true
       var edgeIndex = 0
@@ -157,7 +158,7 @@ extends InfAlg with ConvergingStepper[Unit] {
     didConverge = converged
     totalIterations += iterations
     invalidateCaches()
-    logger.fine(f"BP ran for after $iterations, converged: $didConverge")
+    logger.fine(f"BP ran for $iterations iterations, updating ${messageUpdates - startMessageUpdates}, converged: $didConverge")
     didConverge
   }
 
@@ -166,7 +167,7 @@ extends InfAlg with ConvergingStepper[Unit] {
   * @param a Configuration object.
   * @return True if the algorithm converged.
   */
-  def step(u: Unit): Boolean = run(1)
+  def step(u: Unit): Boolean = run(1,1e-10)
 
   def clusterBelief(ci: Int): FastFactor = clusterBeliefCache.getOrElseUpdate(ci,FastFactor.multiplyRetain(ring)(domains)(
     factors = cg.neighbours(ci).map(from => messages((from,ci)).factor) :+ cg.clusterFactors(ci),

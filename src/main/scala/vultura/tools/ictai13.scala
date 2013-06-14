@@ -1,4 +1,4 @@
-package vultura.util
+package vultura.tools
 
 import org.rogach.scallop.{ValueConverter, ScallopConf}
 import java.io._
@@ -9,8 +9,7 @@ import vultura.fastfactors.algorithms._
 import java.lang.management.ManagementFactory
 import scala.util.Random
 import vultura.fastfactors.Problem
-import scala.Some
-
+import vultura.util._
 /**
  * Created by IntelliJ IDEA.
  * User: Thomas Geier
@@ -66,7 +65,7 @@ object ictai13 {
 
   /*
   Each output line contains:
-  <problem-cfg> <problem-seed> <PR> <algorithm-cfg> <algorithm-seed> <PR estimate> <MAR KL> <MAR maxdiff> <MAR mean diff> <iteration> <CPU time>
+  <problem-cfg> <problem-seed> <PR> <algorithm-cfg> <algorithm-seed> <PR estimate> <MAR KL> <MAR maxdiff> <MAR mean maxDiff> <iteration> <CPU time>
    */
   def main(args: Array[String]) {
     val config = new Config(args)
@@ -97,13 +96,13 @@ object ictai13 {
   def run(config: String, p: Problem, seed: Long, iterations: Int, reporter: Reporter) {
     val alg = createAlgorithm(config,p,seed)
     reporter.generateHeader
-    Iterator.continually((alg.step(),alg))
-      .takeWhile(!_._1)
-      .take(iterations)
-      .map(_._2).zipWithIndex
-      .foreach{ case (algState,iteration) =>
-        reporter.generateReport(algState,iteration + 1)
-      }
+    var iteration = 1
+    var converged = false
+    do {
+      converged = alg.step()
+      reporter.generateReport(alg,iteration)
+      iteration += 1
+    }while(iterations <= iterations && !converged)
   }
 
   def createAlgorithm(config: String, p: Problem, seed: Long): InfAlg with ConvergingStepper[Unit] =
@@ -160,32 +159,12 @@ object ictai13 {
                          (map: (FastFactor,FastFactor) => A)
                          (reduce: Seq[A] => B): B = reduce(mapVars(problem,v => map(trueMargs(v),estimate(v))))
 
-  def kl(f1: FastFactor, f2: FastFactor): Double = {
-    require(f1.values.length == f2.values.length)
-    var result = 0d
-    var i = 0
-    while(i < f1.values.length){
-      result += f1.values(i) * math.log(f1.values(i) / f2.values(i))
-      i += 1
-    }
-    result
-  }
-  def diff(f1: FastFactor, f2: FastFactor): Double = {
-    require(f1.values.length == f2.values.length)
-    var result = 0d
-    var i = 0
-    while(i < f1.values.length){
-      result = math.max(result,math.abs(f1.values(i) - f2.values(i)))
-      i += 1
-    }
-    result
-  }
   def meanKL(problem: Problem, trueMargs: Int => FastFactor, estimate: Int => FastFactor): Double =
-    margStatistics(problem,trueMargs,estimate)(kl)(_.mean)
+    margStatistics(problem,trueMargs,estimate)(FastFactor.kl)(_.mean)
   def maxDiff(problem: Problem, trueMargs: Int => FastFactor, estimate: Int => FastFactor): Double =
-    margStatistics(problem,trueMargs,estimate)(diff)(_.max)
+    margStatistics(problem,trueMargs,estimate)(FastFactor.maxDiff)(_.max)
   def meanDiff(problem: Problem, trueMargs: Int => FastFactor, estimate: Int => FastFactor): Double =
-    margStatistics(problem,trueMargs,estimate)(diff)(_.mean)
+    margStatistics(problem,trueMargs,estimate)(FastFactor.maxDiff)(_.mean)
   def meanSquareDiff(problem: Problem, trueMargs: Int => FastFactor, estimate: Int => FastFactor): Double =
-    margStatistics(problem,trueMargs,estimate){case (f1,f2) => math.pow(diff(f1,f2),2)}(_.mean)
+    margStatistics(problem,trueMargs,estimate){case (f1,f2) => math.pow(FastFactor.maxDiff(f1,f2),2)}(_.mean)
 }

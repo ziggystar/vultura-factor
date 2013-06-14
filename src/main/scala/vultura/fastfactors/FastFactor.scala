@@ -328,4 +328,27 @@ object FastFactor{
     }
     product
   }
+
+  /** Calculate KL divergence for two factors, given in normal representation. */
+  def kl(f1: FastFactor, f2: FastFactor): Double = {
+    require(f1.values.length == f2.values.length)
+    var result = 0d
+    var i = 0
+    while(i < f1.values.length){
+      result += f1.values(i) * math.log(f1.values(i) / f2.values(i))
+      i += 1
+    }
+    result
+  }
+  /** Max diff for two factors, given in normal representation. */
+  def maxDiff(f1: FastFactor, f2: FastFactor): Double = {
+    require(f1.values.length == f2.values.length)
+    var result = 0d
+    var i = 0
+    while(i < f1.values.length){
+      result = math.max(result,math.abs(f1.values(i) - f2.values(i)))
+      i += 1
+    }
+    result
+  }
 }
