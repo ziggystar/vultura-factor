@@ -47,9 +47,6 @@ class BeliefPropagation$Test extends Specification {
   def bpInfer(problem: Problem): BeliefPropagation = {
     val bp = new BeliefPropagation(problem,new Random(1))
     bp.run(100,1e-10)
-    if()
-    println(bp.getProblem.uaiString)
-    println(bp.getProblem.variables.toSeq.sorted.map(bp.decodedVariableBelief).mkString("\n"))
     bp
   }
   def jtInfer(problem: Problem) = new CalibratedJunctionTree(problem)
