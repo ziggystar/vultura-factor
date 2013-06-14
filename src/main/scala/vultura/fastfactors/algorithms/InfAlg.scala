@@ -1,7 +1,6 @@
 package vultura.fastfactors.algorithms
 
-import vultura.fastfactors.{FastFactor, RingZ}
-import scala.collection.mutable
+import vultura.fastfactors.{Problem, FastFactor}
 
 /**
  * Created by IntelliJ IDEA.
@@ -20,8 +19,4 @@ trait InfAlg {
   def logVariableBelief(vi: Int): FastFactor
 }
 
-case class Problem(factors: IndexedSeq[FastFactor],domains: Array[Int],ring: RingZ[Double]){
-  lazy val variables: Set[Int] = (for (f <- factors; v <- f.variables) yield v)(collection.breakOut)
-  private lazy val degrees: mutable.HashMap[Int,Int] = new mutable.HashMap[Int,Int]
-  def degreeOfVariable(v: Int): Int = degrees.getOrElseUpdate(v,factors.count(_.variables.contains(v)))
-}
+

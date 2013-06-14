@@ -1,7 +1,7 @@
 package vultura.fastfactors.algorithms
 
 import scala.util.Random
-import vultura.fastfactors.{LogD, FastFactor}
+import vultura.fastfactors.{Problem, LogD, FastFactor}
 import vultura.util.seq2randomSeq
 
 /**

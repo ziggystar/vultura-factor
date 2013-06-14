@@ -3,7 +3,7 @@ package vultura.fastfactors
 import org.specs2.Specification
 import org.specs2.specification.Fragments
 import Utils._
-import vultura.fastfactors.algorithms.{Problem, BeliefPropagation}
+import vultura.fastfactors.algorithms.BeliefPropagation
 
 /**
  * Created by IntelliJ IDEA.

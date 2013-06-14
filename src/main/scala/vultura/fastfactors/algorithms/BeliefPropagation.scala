@@ -2,7 +2,7 @@ package vultura.fastfactors.algorithms
 
 import scala.collection.mutable
 import scala.util.Random
-import vultura.fastfactors.{LogD, RingZ, FastFactor}
+import vultura.fastfactors.{Problem, LogD, RingZ, FastFactor}
 
 /**
  * Belief Propagation on loopy graphs using `FastFactor` operations.

@@ -7,7 +7,7 @@ import vultura.factors.{uai, TableFactor}
 import vultura.fastfactors._
 import vultura.util.{Benchmark, TreeWidth, IntDomainCPI}
 import scala.util.Random
-import vultura.fastfactors.algorithms.{CBP, Problem, BeliefPropagation}
+import vultura.fastfactors.algorithms.{CBP, BeliefPropagation}
 
 /**
  * Created by IntelliJ IDEA.
