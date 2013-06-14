@@ -54,12 +54,12 @@ class CalibratedJunctionTree(val problem: Problem) extends InfAlg {
         }
       }
     val calibratedTree: Tree[FastFactor] = upDownCalibrated.cobind{
-      case Node((factor,_,downMessage,_),children) =>
+      case Node((factor,_,_,downMessage),children) =>
         FastFactor.multiply(problem.ring)(problem.domains)(
           (children.map(_.rootLabel._3) :+ downMessage :+ factor)(collection.breakOut)
         )
     }
-    (calibratedTree, problem.ring.sumA(calibratedTree.rootLabel.values))
+    (calibratedTree, upDownCalibrated.rootLabel._3.values(0))
   }
 
   /** @return Natural logarithm of partition function. */
