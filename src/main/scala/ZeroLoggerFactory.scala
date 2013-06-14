@@ -19,5 +19,5 @@ object ZeroLoggerFactory {
 
   // Set Sample's logging level to Finest
   final def newLogger(singleton: CBP.type) =
-    (Filter.Finer, SimpleFormatter, ConsoleAppender)
+    (Filter.Info, SimpleFormatter, ConsoleAppender)
 }

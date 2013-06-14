@@ -12,7 +12,7 @@ case class Problem(factors: IndexedSeq[FastFactor],domains: Array[Int],ring: Rin
   private lazy val degrees: mutable.HashMap[Int,Int] = new mutable.HashMap[Int,Int]
   def degreeOfVariable(v: Int): Int = degrees.getOrElseUpdate(v,factors.count(_.variables.contains(v)))
   def uaiString: String = {
-    require(variables == Set(0 until variables.size))
+    require(variables == Seq.range(0,variables.size).toSet)
     Seq[Any](
       " ",
       variables.size,

@@ -70,9 +70,8 @@ class CBP(val problem: Problem,
     //if the variable is conditioned, construct a factor f with f(v) = bp.Z for v == assigned value and 0 else
     val z = bp.Z
     val range: Range = 0 until domains(vi)
-    assignment.get(vi).map(xi =>
-        FastFactor(Array(vi), range.map(yi => if (yi == xi) z else ring.zero)(collection.breakOut))
-    )
+    assignment.get(vi)
+      .map(xi => FastFactor(Array(vi), range.map(yi => if (yi == xi) ring.one else ring.zero)(collection.breakOut)))
       .getOrElse(bp.variableBelief(vi).map(ring.prod(_,z)))
   }.reduce[FastFactor]{ case (f1,f2) => FastFactor(f1.variables,f1.values.zip(f2.values).map(t => ring.sum(t._1,t._2)))}
 

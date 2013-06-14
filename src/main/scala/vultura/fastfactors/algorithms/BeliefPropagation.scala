@@ -10,7 +10,7 @@ import vultura.fastfactors.{Problem, LogD, RingZ, FastFactor}
  * Date: 6/10/13
  */
 class BeliefPropagation(val problem: Problem, random: Random = new Random)
-extends InfAlg {
+extends InfAlg with ConvergingStepper[Unit] {
 
   val Problem(factors: IndexedSeq[FastFactor], domains: Array[Int], ring: RingZ[Double]) = problem
 
@@ -127,7 +127,7 @@ extends InfAlg {
       false
   }
 
-  def run(maxiter: Int = 1000, tol: Double = 1e-7) {
+  def run(maxiter: Int = 1000, tol: Double = 1e-7): Boolean = {
     var iterations = 0
     var converged = false
     while(iterations <= maxiter && !converged){
@@ -158,7 +158,15 @@ extends InfAlg {
     totalIterations += iterations
     invalidateCaches()
     logger.fine(f"BP ran for after $iterations, converged: $didConverge")
+    didConverge
   }
+
+
+  /*
+  * @param a Configuration object.
+  * @return True if the algorithm converged.
+  */
+  def step(u: Unit): Boolean = run(1)
 
   def clusterBelief(ci: Int): FastFactor = clusterBeliefCache.getOrElseUpdate(ci,FastFactor.multiplyRetain(ring)(domains)(
     factors = cg.neighbours(ci).map(from => messages((from,ci)).factor) :+ cg.clusterFactors(ci),

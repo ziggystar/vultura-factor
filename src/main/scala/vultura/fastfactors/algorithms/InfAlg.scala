@@ -13,6 +13,8 @@ trait InfAlg {
   def logZ: Double
   /** @return Partition function in encoding specified by `ring`. */
   def Z: Double
+  def decodedZ: Double = getProblem.ring.decode(Array(Z))(0)
+  def decodedVariableBelief(vi: Int): FastFactor = getProblem.ring.decode(variableBelief(vi))
   /** @return marginal distribution of variable in encoding specified by `ring`. */
   def variableBelief(vi: Int): FastFactor
   /** @return marginal distribution of variable in log encoding. */

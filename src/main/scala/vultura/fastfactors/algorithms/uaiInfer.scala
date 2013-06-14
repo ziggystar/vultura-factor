@@ -1,13 +1,14 @@
-package vultura.tools
+package vultura.fastfactors.algorithms
 
 import org.rogach.scallop.{ValueConverter, ScallopConf}
 import java.io._
 import org.rogach.scallop
 import vultura.factors.{uai, TableFactor}
 import vultura.fastfactors._
-import vultura.util.{Benchmark, TreeWidth, IntDomainCPI}
+import vultura.util.{Benchmark, TreeWidth}
 import scala.util.Random
-import vultura.fastfactors.algorithms.{CBP, BeliefPropagation}
+import vultura.fastfactors.Problem
+import vultura.util.IntDomainCPI
 
 /**
  * Created by IntelliJ IDEA.
