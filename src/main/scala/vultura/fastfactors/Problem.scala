@@ -14,7 +14,7 @@ case class Problem(factors: IndexedSeq[FastFactor],domains: Array[Int],ring: Rin
   def uaiString: String = {
     require(variables == Seq.range(0,variables.size).toSet)
     Seq[Any](
-      " ",
+      "MARKOV",
       variables.size,
       domains.mkString(" "),
       factors.size,
