@@ -73,7 +73,7 @@ class CBP(val problem: Problem,
     assignment.get(vi)
       .map(xi => FastFactor(Array(vi), range.map(yi => if (yi == xi) ring.one else ring.zero)(collection.breakOut)))
       .getOrElse(bp.variableBelief(vi).map(ring.prod(_,z)))
-  }.reduce[FastFactor]{ case (f1,f2) => FastFactor(f1.variables,f1.values.zip(f2.values).map(t => ring.sum(t._1,t._2)))}
+  }.reduce[FastFactor]{ case (f1,f2) => FastFactor(f1.variables,f1.values.zip(f2.values).map(t => ring.sum(t._1,t._2)))}.normalize(problem.ring)
 
 
   /** @return marginal distribution of variable in log encoding. */
