@@ -1,6 +1,6 @@
 package vultura.fastfactors.algorithms
 
-import vultura.fastfactors.{LogD, FastFactor, Problem}
+import vultura.fastfactors.{RingZ, LogD, FastFactor, Problem}
 import vultura.util.TreeWidth._
 import scalaz._
 import Scalaz._
@@ -14,53 +14,19 @@ import scala.collection.mutable
 
 class CalibratedJunctionTree(val problem: Problem) extends InfAlg {
   def getProblem: Problem = problem
-  val (trees: Seq[Tree[FastFactor]], myLogZ) = {
-    val pretrees: Seq[Tree[(Set[Int], Seq[FastFactor])]] = compactJTrees(minDegreeJTs(problem.factors.map(f => f.variables.toSet -> f)))
-    val calibratedTreesWithZ = pretrees
-      .map(_.map{case (vars, factors) => FastFactor.multiply(problem.ring)(problem.domains)(factors.toIndexedSeq)})
-      .map(calibrate)
+  val (calibratedTrees: Seq[Tree[FastFactor]], myLogZ) = {
+    val calibratedTreesWithZ = uncalibratedTrees.map(CalibratedJunctionTree.calibrate(_,problem.ring, problem.domains))
     (calibratedTreesWithZ.map(_._1),problem.ring.prodA(calibratedTreesWithZ.map(_._2)(collection.breakOut)))
   }
 
-  /** Discards the tree structure and returns calibrated cliques and the partition function for the tree. */
-  def calibrate(tree: Tree[FastFactor]): (Tree[FastFactor], Double) = {
-    import CalibratedJunctionTree._
-    val withSepsets: Tree[(FastFactor, Set[Int])] =
-      scand(tree)(Set[Int]()){ case (parentSet, subtree) =>
-        val newLabel: (FastFactor, Set[Int]) = (subtree.rootLabel, parentSet)
-        val childSepSets: Stream[Set[Int]] =
-          subtree.subForest.map(_.rootLabel.variables.toSet.intersect(subtree.rootLabel.variables.toSet))
-        (newLabel, childSepSets)
-      }
-    val upwardCalibrated: Tree[(FastFactor,Set[Int],FastFactor)] =
-      withSepsets.scanr[(FastFactor,Set[Int],FastFactor)]{ case ((factor,sepset),children) =>
-        val upwardMessage = FastFactor.multiplyRetain(problem.ring)(problem.domains)(
-          children.map(_.rootLabel._3).toIndexedSeq :+ factor,
-          sepset.toArray.sorted
-        )
-        (factor,sepset,upwardMessage)
-      }
-    val upDownCalibrated: Tree[(FastFactor,Set[Int],FastFactor,FastFactor)] =
-      scand(upwardCalibrated)(FastFactor(Array(),Array(problem.ring.one))){
-        case (downMessage,Node((factor,sepset,upmessage),children)) => {
-          val newLabel = (factor,sepset,upmessage,downMessage)
-          val downMessages = mapOthers2(children.map(_.rootLabel)){case (childLabel,otherChildLabels) =>
-            FastFactor.multiplyRetain(problem.ring)(problem.domains)(
-              otherChildLabels.map(_._3).toIndexedSeq :+ factor :+ downMessage,
-              childLabel._2.toArray.sorted
-            )
-          }
-          (newLabel,downMessages)
-        }
-      }
-    val calibratedTree: Tree[FastFactor] = upDownCalibrated.cobind{
-      case Node((factor,_,_,downMessage),children) =>
-        FastFactor.multiply(problem.ring)(problem.domains)(
-          (children.map(_.rootLabel._3) :+ downMessage :+ factor)(collection.breakOut)
-        )
+  def uncalibratedTrees: Seq[Tree[FastFactor]] = {
+    //1. create format for jt-creation
+    //2. multiplay all factors of each clique into one
+    compactJTrees(minDegreeJTs(problem.factors.map(f => f.variables.toSet -> f)))
+        .map(_.map {
+        case (vars, factors) => FastFactor.multiplyRetain(problem.ring)(problem.domains)(factors.toIndexedSeq,vars.toArray.sorted)
+      })
     }
-    (calibratedTree, upDownCalibrated.rootLabel._3.values(0))
-  }
 
   /** @return Natural logarithm of partition function. */
   def logZ: Double = if(problem.ring == LogD) myLogZ else math.log(problem.ring.decode(Array(myLogZ))(0))
@@ -71,7 +37,7 @@ class CalibratedJunctionTree(val problem: Problem) extends InfAlg {
   private val marginalCache = new mutable.HashMap[Int, FastFactor]()
   /** @return marginal distribution of variable in encoding specified by `ring`. */
   def variableBelief(vi: Int): FastFactor = marginalCache.getOrElseUpdate(vi,
-    trees.flatMap(_.flatten)
+    calibratedTrees.flatMap(_.flatten)
       .find(_.variables.contains(vi))
       .map(f => FastFactor.multiplyRetain(problem.ring)(problem.domains)(Seq(f),Array(vi)).normalize(problem.ring))
       .get
@@ -80,9 +46,78 @@ class CalibratedJunctionTree(val problem: Problem) extends InfAlg {
   /** @return marginal distribution of variable in log encoding. */
   def logVariableBelief(vi: Int): FastFactor =
     if(problem.ring == LogD) variableBelief(vi) else LogD.encode(problem.ring.decode(variableBelief(vi)))
+
+  def graphviz: String = {
+    def nodeName(cliqueFactor: FastFactor): String = "n" + cliqueFactor.variables.mkString("_")
+
+    val calibratedTrees: Seq[Tree[(FastFactor, Set[Int], FastFactor, FastFactor)]] =
+      uncalibratedTrees.map(CalibratedJunctionTree.calibrateTree(_,problem.ring, problem.domains))
+
+    val nodes = calibratedTrees.flatMap(_.flatten.map{case (cliqueFactor,_,_,_) =>
+      f"""${nodeName(cliqueFactor)} [label="${cliqueFactor.toStringShort}"]"""
+    })
+
+    val edges: Seq[((FastFactor, FastFactor), FastFactor)] =
+      calibratedTrees.flatMap(_.cobind[Seq[((FastFactor,FastFactor),FastFactor)]]{ case Node((cliqueFactor,_,_,_),children) =>
+        children.map{case Node((childFactor,_,up,down),_) => Seq((cliqueFactor -> childFactor,down),(childFactor -> cliqueFactor,up))
+        }.flatten
+      }.flatten).flatten
+    val edgeStrings = edges.map{case ((from,to),msg) => f"""${nodeName(from)} -> ${nodeName(to)} [label="${msg.toStringShort}"]"""}
+
+    "digraph CalibratedJunctionTree {\n" +
+      nodes.mkString("\n") + "\n" +
+      "\n" +
+      edgeStrings.mkString("\n") + "\n" +
+      "}"
+  }
 }
 
 object CalibratedJunctionTree{
+  /** Discards the tree structure and returns calibrated cliques and the partition function for the tree. */
+  def calibrate(tree: Tree[FastFactor], ring: RingZ[Double], domains: Array[Int]): (Tree[FastFactor], Double) = {
+    val calTree: Tree[(FastFactor,Set[Int],FastFactor,FastFactor)] = calibrateTree(tree,ring, domains)
+    val compressedTree: Tree[FastFactor] = calTree.cobind{
+      case Node((factor,_,_,downMessage),children) =>
+        FastFactor.multiply(ring)(domains)(
+          (children.map(_.rootLabel._3) :+ downMessage :+ factor)(collection.breakOut)
+        )
+    }
+    (compressedTree, calTree.rootLabel._3.values(0))
+  }
+
+  /** @return Tuple entries are: (clique factor, sepset with parent, message to parent, message from parent). */
+  def calibrateTree(tree: Tree[FastFactor],
+                    ring: RingZ[Double],
+                    domains: Array[Int]): Tree[(FastFactor, Set[Int], FastFactor, FastFactor)] = {
+    val withSepsets: Tree[(FastFactor, Set[Int])] =
+      scand(tree)(Set[Int]()){ case (parentSet, subtree) =>
+        val newLabel: (FastFactor, Set[Int]) = (subtree.rootLabel, parentSet)
+        val childSepSets: Stream[Set[Int]] =
+          subtree.subForest.map(_.rootLabel.variables.toSet.intersect(subtree.rootLabel.variables.toSet))
+        (newLabel, childSepSets)
+      }
+    val upwardCalibrated: Tree[(FastFactor,Set[Int],FastFactor)] =
+      withSepsets.scanr[(FastFactor,Set[Int],FastFactor)]{ case ((factor,sepset),children) =>
+        val upwardMessage = FastFactor.multiplyRetain(ring)(domains)(
+          children.map(_.rootLabel._3).toIndexedSeq :+ factor,
+          sepset.toArray.sorted
+        )
+        (factor,sepset,upwardMessage)
+      }
+    scand(upwardCalibrated)(FastFactor(Array(),Array(ring.one))){
+      case (downMessage,Node((factor,sepset,upmessage),children)) => {
+        val newLabel = (factor,sepset,upmessage,downMessage)
+        val downMessages = mapOthers2(children.map(_.rootLabel)){case (childLabel,otherChildLabels) =>
+          FastFactor.multiplyRetain(ring)(domains)(
+            otherChildLabels.map(_._3).toIndexedSeq :+ factor :+ downMessage,
+            childLabel._2.toArray.sorted
+          )
+        }
+        (newLabel,downMessages)
+      }
+    }
+  }
+
   /** downward propagation in trees. */
   def scand[A,B,C](tree: Tree[A])(init: B)(f: (B,Tree[A]) => (C,Seq[B])): Tree[C] = {
     val (newVal, childPropagations) = f(init,tree)

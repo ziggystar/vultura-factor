@@ -209,6 +209,13 @@ extends InfAlg with ConvergingStepper[Unit] {
     }
     max
   }
+
+  def graphviz: String = {
+    "digraph {\n" +
+      cg.clusterFactors.zipWithIndex.map{case (f,i) => f"""$i [label="${f.toStringShort}"]"""}.mkString("\n") + "\n" +
+      messages.map{case ((src,sink),msg) => f"""$src -> $sink [label="${msg.factor.toStringShort}"]"""}.mkString("\n") + "\n" +
+      "}"
+  }
 }
 
 

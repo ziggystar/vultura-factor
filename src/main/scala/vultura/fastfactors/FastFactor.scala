@@ -65,7 +65,8 @@ case class FastFactor(variables: Array[Int], values: Array[Double]){
     variables.deep == ff.variables.deep && values.deep == ff.values.deep
   }
 
-  override def toString: String = f"FastFactor(VARS: ${variables.mkString(",")},VALUES: ${values.mkString(",")}})"
+  override def toString: String = f"FastFactor(VAR: ${variables.mkString(",")},VAL: ${values.mkString(",")})"
+  def toStringShort: String = f"${variables.mkString(",")} | ${values.map("%.2f".format(_)).mkString(",")}"
   def map(f: Double => Double): FastFactor = this.copy(values = values.map(f))
 }
 
@@ -129,6 +130,7 @@ object FastFactor{
   }
 
   def multiply(ring: RingZ[Double])(domains: Array[Int])(factors: IndexedSeq[FastFactor]): FastFactor = {
+    assert(!factors.isEmpty)
     val variables = merge(factors.map(_.variables))
     val numValues = variables.map(domains).foldLeft(1)(_ * _)
     val values = new Array[Double](numValues)

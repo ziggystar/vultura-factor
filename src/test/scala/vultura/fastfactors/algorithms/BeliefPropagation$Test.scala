@@ -23,7 +23,7 @@ class BeliefPropagation$Test extends Specification {
 
   val smallTreeProblem1 = generators.treeK(3,2,2,generators.expGauss(1),new Random(1))
   val treeProblem1 = generators.treeK(15,3,16,generators.expGauss(1),new Random(1))
-  val treeProblem2 = generators.treeK(8,5,2,generators.expGauss(1),new Random(1))
+  val treeProblem2 = generators.treeK(15,3,2,generators.expGauss(1),new Random(1))
 
   def haveSameStructureAs(ref: FastFactor): Matcher[FastFactor] = new Matcher[FastFactor]{
     def apply[S <: FastFactor](t: Expectable[S]): MatchResult[S] = result(
@@ -77,18 +77,24 @@ class BeliefPropagation$Test extends Specification {
   p^
   "tests on generated trees" ^
     "compare marginals" ^
-      (bpTree1.decodedVariableBelief(3) must beSimilarTo(jtTree1.decodedVariableBelief(3),1e-5)) ^
+      (bpSmallTree1.decodedVariableBelief(0) must beSimilarTo(jtSmallTree1.decodedVariableBelief(0),1e-5)) ^
+      (bpSmallTree1.decodedVariableBelief(1) must beSimilarTo(jtSmallTree1.decodedVariableBelief(1),1e-5)) ^      (bpTree1.decodedVariableBelief(3) must beSimilarTo(jtTree1.decodedVariableBelief(3),1e-5)) ^
       (bpTree1.decodedVariableBelief(5) must beSimilarTo(jtTree1.decodedVariableBelief(5),1e-5)) ^
       (bpTree1.decodedVariableBelief(8) must beSimilarTo(jtTree1.decodedVariableBelief(8),1e-5)) ^
       (bpTree1.decodedVariableBelief(10) must beSimilarTo(jtTree1.decodedVariableBelief(10),1e-5)) ^
+      (bpTree2.decodedVariableBelief(0) must beSimilarTo(jtTree2.decodedVariableBelief(0),1e-5)) ^
       (bpTree2.decodedVariableBelief(3) must beSimilarTo(jtTree2.decodedVariableBelief(3),1e-5)) ^
       (bpTree2.decodedVariableBelief(5) must beSimilarTo(jtTree2.decodedVariableBelief(5),1e-5)) ^
-      (bpTree2.decodedVariableBelief(8) must beSimilarTo(jtTree2.decodedVariableBelief(8),1e-5)) ^
-      (bpTree2.decodedVariableBelief(10) must beSimilarTo(jtTree2.decodedVariableBelief(10),1e-5)) ^
+      (bpTree2.decodedVariableBelief(6) must beSimilarTo(jtTree2.decodedVariableBelief(6),1e-5)) ^
     p^
     "compare partition function" ^
       (bpSmallTree1.logZ must beCloseTo(jtSmallTree1.logZ,1e-7)) ^
       (bpTree1.logZ must beCloseTo(jtTree1.logZ,1e-7)) ^
       (bpTree2.logZ must beCloseTo(jtTree2.logZ,1e-7))
+
+
+    "printing" ^
+      {println(bpTree2.graphviz); true} ^
+      {println(jtTree2.graphviz); true}
 
 }
