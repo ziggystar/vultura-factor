@@ -13,30 +13,33 @@ package object generators {
     def generate(variables: Array[Int], domains: Array[Int], random: Random): FastFactor
     def apply(v1: Seq[Int], v2: IndexedSeq[Int], v3: Random): FastFactor = generate(v1.toArray.sorted,v2.toArray,v3)
   }
+  trait SimpleGenerator extends FactorGenerator {
+    final def generate(variables: Array[Int], domains: Array[Int], random: Random): FastFactor =  {
+      val entries: Int = variables.map(domains).product
+      FastFactor(variables, generateValues(entries,random))
+    }
+    def generateValues(numValues: Int, random: Random): Array[Double]
+  }
+
+  implicit def fun2SimpleGenerator(f: ( Int, Random) => Array[Double]) = new SimpleGenerator {
+    def generateValues(numValues: Int, random: Random): Array[Double] = f(numValues,random)
+  }
 
   /** @return a neutral factor. */
-  object maxEntropy extends FactorGenerator{
-    def generate(variables: Array[Int], domains: Array[Int], random: Random): FastFactor ={
-      val entries: Int = variables.map(domains).product
-      FastFactor(variables, Array.fill(entries)(1d/entries))
-    }
-  }
+  val maxEntropy: FactorGenerator = (entries: Int, random: Random) => Array.fill(entries)(1d/entries)
 
   /** @return a factor that is 1 for a random entry and `weight` for all others. */
-  def clause(weight: Double, neutral: Double = 1d): FactorGenerator = new FactorGenerator {
-    def generate(variables: Array[Int], domains: Array[Int], random: Random): FastFactor = {
-      val entries: Int = variables.map(domains).product
-      new FastFactor(variables, Array.fill(entries)(weight).updated(random.nextInt(entries),neutral))
-    }
-  }
+  def clause(weight: Double, neutral: Double = 1d): FactorGenerator =
+    (entries: Int, random: Random) => Array.fill(entries)(weight).updated(random.nextInt(entries),neutral)
 
   /** @return a factor that is 1 for all entries except one, which is 0. */
   def deterministicClause = clause(1d,0d)
+  def sigmaClause(sigma: Double): FactorGenerator =
+    (entries: Int, random: Random) =>
+      Array.fill(entries)(math.exp(random.nextGaussian() * sigma)).updated(random.nextInt(entries),1d)
 
-  def expGauss(sigma: Double = 1d, mean: Double = 0d): FactorGenerator = new FactorGenerator{
-    def generate(variables: Array[Int], domains: Array[Int], random: Random): FastFactor =
-      FastFactor(variables,Array.fill(variables.map(domains).product)(math.exp(random.nextGaussian() * sigma + mean)))
-  }
+  def expGauss(sigma: Double = 1d, mean: Double = 0d): FactorGenerator =
+    (entries: Int, random: Random) => Array.fill(entries)(math.exp(random.nextGaussian() * sigma + mean))
 
   def grid(width: Int, height: Int, domainSize: Int, factorGenerator: FactorGenerator, random: Random): Problem = {
     val variables: Map[(Int, Int), Int] = (for (x <- 0 until width; y <- 0 until height) yield (x, y)).zipWithIndex.toMap
@@ -107,10 +110,12 @@ package object generators {
         named("potential",potential) <~ ")" ^^ {
         case w ~ _ ~ h ~ _ ~ d ~ _ ~ pots => (seed: Long) => grid(w,h,d,pots,new Random(seed))
       }
-    def potential: Parser[FactorGenerator] = pFmaxEnt | pFexpGauss | pFdetClause
+    def potential: Parser[FactorGenerator] = pFmaxEnt | pFexpGauss | pFdetClause | pFClause | pFSigmaClause
     def pFmaxEnt: Parser[FactorGenerator] = "max-entropy" ^^^ maxEntropy
     def pFexpGauss: Parser[FactorGenerator] = "expgauss(" ~> named("sigma",pDecimal) <~ ")" ^^ {sigma => expGauss(sigma)}
     def pFdetClause: Parser[FactorGenerator] = "det-clause" ^^^ deterministicClause
+    def pFClause: Parser[FactorGenerator] = "clause(" ~> named("weight",pDecimal) <~ ")" ^^ {weight => clause(weight)}
+    def pFSigmaClause: Parser[FactorGenerator] = "sigma-clause(" ~> named("sigma",pDecimal) <~ ")" ^^ {sigma => sigmaClause(sigma)}
   }
 
 }
