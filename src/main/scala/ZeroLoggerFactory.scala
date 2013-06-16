@@ -14,6 +14,16 @@ import vultura.fastfactors.algorithms.{CBP, BeliefPropagation}
  * Date: 6/11/13
  */
 object ZeroLoggerFactory {
+    // Set package com.yourDomain.yourProject's default logging level to Info
+  final def newLogger(singleton: Singleton) =
+    (Filter.Info, SimplerFormatter, ConsoleAppender)
+
+  final def newLogger(singleton: BeliefPropagation.type) =
+    (Filter.Info, SimplerFormatter, ConsoleAppender)
+
+  final def newLogger(singleton: CBP.type) =
+    (Filter.Info, SimplerFormatter, ConsoleAppender)
+
   object SimplerFormatter extends Formatter {
     private def now: Fastring = {
       val calendarNow = Calendar.getInstance
@@ -64,13 +74,4 @@ object ZeroLoggerFactory {
       fast"${level.name}:$now: ${throwable}"
     }
   }
-  // Set package com.yourDomain.yourProject's default logging level to Info
-  final def newLogger(singleton: Singleton) =
-    (Filter.Fine, SimplerFormatter, ConsoleAppender)
-
-  final def newLogger(singleton: BeliefPropagation.type) =
-    (Filter.Fine, SimplerFormatter, ConsoleAppender)
-
-  final def newLogger(singleton: CBP.type) =
-    (Filter.Info, SimplerFormatter, ConsoleAppender)
 }
