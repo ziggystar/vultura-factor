@@ -1,4 +1,4 @@
-package vultura.fastfactors.algorithms
+package vultura.tools
 
 import org.rogach.scallop.{ValueConverter, ScallopConf}
 import java.io._
@@ -9,6 +9,7 @@ import vultura.util.{Benchmark, TreeWidth}
 import scala.util.Random
 import vultura.fastfactors.Problem
 import vultura.util.IntDomainCPI
+import vultura.fastfactors.algorithms.{BeliefPropagation, CBP}
 
 /**
  * Created by IntelliJ IDEA.
@@ -108,8 +109,8 @@ object uaiInfer {
           logger.fine(f"BP converged after ${bp.iterations} iterations with ${bp.getMessageUpdates} message updates; remaining message delta of ${bp.maxDelta}")
         if(config.useLog()) bp.logZ else math.exp(bp.logZ)
       }
-      case "JTREE" => p => veJunctionTree(p.factors,p.ring,p.domains)
-      case "VE" => p => variableElimination(p.factors,p.ring,p.domains)
+      case "JTREE" => veJunctionTree
+      case "VE" => variableElimination
     }
 
     def calcCondZs: IndexedSeq[Double] = cpi.map{ assignment =>
@@ -149,38 +150,6 @@ object uaiInfer {
     val newDomains = domains.zipWithIndex.map{case (d,v) => if(condition.contains(v)) 1 else d}
     val simplifiedProblem = condProblem.map(_.simplify(newDomains))
     (simplifiedProblem,newDomains)
-  }
-
-  def veJunctionTree(problem: IndexedSeq[FastFactor], ring: RingZ[Double], domains: Array[Int]): Double = {
-    import TreeWidth._
-    import scalaz._
-    import Scalaz._
-    val trees: Seq[Tree[(Set[Int], Seq[FastFactor])]] = compactJTrees(minDegreeJTs(problem.map(f => f.variables.toSet -> f)))
-    def veR(tree: Tree[(Set[Int], Seq[FastFactor])]): (Set[Int], Seq[FastFactor]) = tree match {
-      case Node((vars,factors), sf) if !sf.isEmpty =>
-        (vars,factors ++ sf.map(veR(_)).map(fs => FastFactor.multiplyMarginalize(ring)(domains)(fs._2,(fs._1 -- vars).toArray)))
-      case Node(root, _) => root
-    }
-    ring.prodA(
-      trees
-        .map(veR)
-        .map{case (vars,factors) => FastFactor.multiplyMarginalize(ring)(domains)(factors,vars.toArray).values(0)}(collection.breakOut)
-    )
-  }
-
-  def variableElimination(problem: IndexedSeq[FastFactor], ring: RingZ[Double], domains: Array[Int]): Double = {
-    val graph: IndexedSeq[Set[Int]] = problem.map(_.variables.toSet)
-//    val (ordering: List[Int], potentialSize) = TreeWidth.vertexOrdering(TreeWidth.weightedMinDegree(domains))(graph)
-    val (ordering: List[Int], _) = TreeWidth.minDegreeOrderingAndWidth(graph)
-
-    val eliminationResult: List[FastFactor] = ordering.foldLeft(problem.toList) {
-      case (factors, elimVar) =>
-        val (eliminatedFactors, remainingFactors) = factors.partition(_.variables.exists(_ == elimVar))
-        val product = FastFactor.multiplyMarginalize(ring)(domains)(eliminatedFactors, Array(elimVar))
-        product :: remainingFactors
-    }
-    val constants: Array[Double] = eliminationResult.map(_.values.head)(collection.breakOut)
-    ring.prodA(constants)
   }
 
   def partialFoldGraph[A](graph: Map[A,Set[A]])(contract: PartialFunction[(A,A),A]): Map[A,Set[A]] = {
