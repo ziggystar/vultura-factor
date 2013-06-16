@@ -86,15 +86,14 @@ object ictai13 {
       groundTruth = createGroundTruth(problem)
       algorithmSeed <- Experiment.generateSeed("seed.algorithm")(config.algorithmSeed(),config.algorithmRuns())
       algorithm = createAlgorithm(config.problemCfg(),problem,algorithmSeed)
+      _ <- Experiment(algorithm)
+        .withReport(meanDiffReporter(groundTruth))
+        .withReport(meanKLReporter(groundTruth))
+        .withReport(meanSquaredDiffReporter(groundTruth))
+        .withReport(maxDiffReporter(groundTruth))
     } yield (groundTruth,algorithm)
 
-    val finalExperiment = experiment
-      .withReport(meanDiffReporter)
-      .withReport(meanKLReporter)
-      .withReport(meanSquaredDiffReporter)
-      .withReport(maxDiffReporter)
-
-    finalExperiment.run(System.out)
+    experiment.run(System.out)
   }
 
   def printProblem(p: Problem, print: Boolean){
@@ -126,12 +125,12 @@ object ictai13 {
   def meanSquareDiff(problem: Problem, trueMargs: Int => FastFactor, estimate: Int => FastFactor): Double =
     margStatistics(problem,trueMargs,estimate){case (f1,f2) => math.pow(FastFactor.maxDiff(f1,f2),2)}(_.mean)
 
-  def meanDiffReporter: Reporter[(InfAlg,InfAlg)] =  Reporter[(InfAlg,InfAlg)]("diff.mean")(
-    ia => meanDiff(ia._1.getProblem,ia._1.decodedVariableBelief,ia._2.decodedVariableBelief).toString)
-  def meanKLReporter: Reporter[(InfAlg,InfAlg)] =  Reporter[(InfAlg,InfAlg)]("kl.mean")(
-      ia => meanKL(ia._1.getProblem,ia._1.decodedVariableBelief,ia._2.decodedVariableBelief).toString)
-  def maxDiffReporter: Reporter[(InfAlg,InfAlg)] =  Reporter[(InfAlg,InfAlg)]("diff.max")(
-      ia => maxDiff(ia._1.getProblem,ia._1.decodedVariableBelief,ia._2.decodedVariableBelief).toString)
-  def meanSquaredDiffReporter: Reporter[(InfAlg,InfAlg)] =  Reporter[(InfAlg,InfAlg)]("squarediff.mean")(
-      ia => meanSquareDiff(ia._1.getProblem,ia._1.decodedVariableBelief,ia._2.decodedVariableBelief).toString)
+  def meanDiffReporter(gt: InfAlg): Reporter[InfAlg] =  Reporter[InfAlg]("diff.mean")(
+    ia => meanDiff(gt.getProblem,gt.decodedVariableBelief,ia.decodedVariableBelief).toString)
+  def meanKLReporter(gt: InfAlg): Reporter[InfAlg] =  Reporter[InfAlg]("kl.mean")(
+      ia => meanKL(gt.getProblem,gt.decodedVariableBelief,ia.decodedVariableBelief).toString)
+  def maxDiffReporter(gt: InfAlg): Reporter[InfAlg] =  Reporter[InfAlg]("diff.max")(
+      ia => maxDiff(gt.getProblem,gt.decodedVariableBelief,ia.decodedVariableBelief).toString)
+  def meanSquaredDiffReporter(gt: InfAlg): Reporter[InfAlg] =  Reporter[InfAlg]("squarediff.mean")(
+      ia => meanSquareDiff(gt.getProblem,gt.decodedVariableBelief,ia.decodedVariableBelief).toString)
 }

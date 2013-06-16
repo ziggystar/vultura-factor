@@ -11,9 +11,9 @@ import java.io.{PrintStream, OutputStreamWriter, OutputStream}
 trait Experiment[A]{
   def iterator: Iterator[(A,Reporter[A])]
 
-  def map[B](f: A => B): Experiment[B] = Experiment(iterator.map{case (a,ra) => (f(a),ra.hold(a))})
-  def filter(f: A => Boolean): Experiment[A] = Experiment(iterator.filter(ara => f(ara._1)))
-  def flatMap[B](f: A => Experiment[B]): Experiment[B] = Experiment(
+  def map[B](f: A => B): Experiment[B] = Experiment.fromIterator(iterator.map{case (a,ra) => (f(a),ra.hold(a))})
+  def filter(f: A => Boolean): Experiment[A] = Experiment.fromIterator(iterator.filter(ara => f(ara._1)))
+  def flatMap[B](f: A => Experiment[B]): Experiment[B] = Experiment.fromIterator(
     for(
       (a,ra) <- iterator;
       (b,rb) <- f(a).iterator
@@ -25,18 +25,21 @@ trait Experiment[A]{
       os.println(ra.buildRow(a))
     }
   }
-  def withReport(r: Reporter[A]): Experiment[A] = Experiment(iterator.map{case ((a,ra)) => (a,ra.also(r))})
+  def withReport(r: Reporter[A]): Experiment[A] = Experiment.fromIterator(iterator.map{case ((a,ra)) => (a,ra.also(r))})
 }
 
 object Experiment{
-  def apply[A](as: Iterator[(A,Reporter[A])]): Experiment[A] = new Experiment[A] {
+  def apply[A](a: A): Experiment[A] = new Experiment[A] {
+    def iterator = Iterator((a,Reporter.empty))
+  }
+  def fromIterator[A](as: Iterator[(A,Reporter[A])]): Experiment[A] = new Experiment[A] {
     def iterator: Iterator[(A, Reporter[A])] = as
   }
 
   def generateSeed(name: String)(start: Long, number: Int) = {
     require(number > 0)
-    Experiment(Iterator.iterate(start){_ + 1}.take(number).map(i => (i,Reporter(name)((_: Long).toString))))
+    Experiment.fromIterator(Iterator.iterate(start){_ + 1}.take(number).map(i => (i,Reporter(name)((_: Long).toString))))
   }
   def description(name: String)(value: String): Experiment[Unit] =
-    Experiment(Iterator((Unit,Reporter.constant(name,value))))
+    Experiment.fromIterator(Iterator((Unit,Reporter.constant(name,value))))
 }

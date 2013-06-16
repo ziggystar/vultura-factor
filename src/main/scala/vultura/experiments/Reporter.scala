@@ -42,6 +42,10 @@ object Reporter{
     def colNames: Seq[String] = Seq(head)
     def eval(a: Unit): Seq[String] = Seq(value)
   }
+  def empty: Reporter[Unit] = new Reporter[Unit] {
+    def colNames: Seq[String] = Seq()
+    def eval(a: Unit): Seq[String] = Seq()
+  }
   implicit def absorbUnit1[A](r: Reporter[(Unit,A)]): Reporter[A] = r.comap((Unit,_))
   implicit def absorbUnit2[A](r: Reporter[(A,Unit)]): Reporter[A] = r.comap((_,Unit))
   implicit def unitToAny[A](r: Reporter[Unit]): Reporter[A] = r.comap(_ => Unit)
