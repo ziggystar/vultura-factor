@@ -62,11 +62,11 @@ class BeliefPropagation$Test extends Specification {
   "constructing bethe graph" ^
     "from one factor over single variable" ^
       "must have correct neighbours" !
-        (BeliefPropagation.createBetheClusterGraph(IS(FF(AI(0),AD(1,2))),AI(2),NormalD).neighbours.deep === AAI(AI(1),AI(0)).deep) ^
+        (BeliefPropagation.createBetheClusterGraph(Problem(IS(FF(AI(0),AD(1,2))),AI(2),NormalD)).neighbours.deep === AAI(AI(1),AI(0)).deep) ^
       "must have correct neighbours" !
-        (BeliefPropagation.createBetheClusterGraph(IS(FF(AI(0),AD(1,2))),AI(2),NormalD).neighbours.deep === AAI(AI(1),AI(0)).deep) ^
+        (BeliefPropagation.createBetheClusterGraph(Problem(IS(FF(AI(0),AD(1,2))),AI(2),NormalD)).neighbours.deep === AAI(AI(1),AI(0)).deep) ^
       "must have correct sepsets" !
-        (BeliefPropagation.createBetheClusterGraph(IS(FF(AI(0),AD(1,2))),AI(2),NormalD).sepsets.mapValues(_.toSeq) === Map((0,1) -> Seq(0),(1,0) -> Seq(0))) ^
+        (BeliefPropagation.createBetheClusterGraph(Problem(IS(FF(AI(0),AD(1,2))),AI(2),NormalD)).sepsets.mapValues(_.toSeq) === Map((0,1) -> Seq(0),(1,0) -> Seq(0))) ^
       p^
   p^
   "tests of BP" ^
@@ -78,7 +78,8 @@ class BeliefPropagation$Test extends Specification {
   "tests on generated trees" ^
     "compare marginals" ^
       (bpSmallTree1.decodedVariableBelief(0) must beSimilarTo(jtSmallTree1.decodedVariableBelief(0),1e-5)) ^
-      (bpSmallTree1.decodedVariableBelief(1) must beSimilarTo(jtSmallTree1.decodedVariableBelief(1),1e-5)) ^      (bpTree1.decodedVariableBelief(3) must beSimilarTo(jtTree1.decodedVariableBelief(3),1e-5)) ^
+      (bpSmallTree1.decodedVariableBelief(1) must beSimilarTo(jtSmallTree1.decodedVariableBelief(1),1e-5)) ^
+      (bpTree1.decodedVariableBelief(3) must beSimilarTo(jtTree1.decodedVariableBelief(3),1e-5)) ^
       (bpTree1.decodedVariableBelief(5) must beSimilarTo(jtTree1.decodedVariableBelief(5),1e-5)) ^
       (bpTree1.decodedVariableBelief(8) must beSimilarTo(jtTree1.decodedVariableBelief(8),1e-5)) ^
       (bpTree1.decodedVariableBelief(10) must beSimilarTo(jtTree1.decodedVariableBelief(10),1e-5)) ^
