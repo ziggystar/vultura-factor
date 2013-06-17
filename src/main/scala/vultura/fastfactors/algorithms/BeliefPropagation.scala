@@ -10,7 +10,7 @@ import vultura.fastfactors.{Problem, LogD, RingZ, FastFactor}
  * Date: 6/10/13
  */
 class BeliefPropagation(val problem: Problem, random: Random = new Random)
-extends InfAlg with ConvergingStepper[Unit] {
+extends InfAlg with Iterator[InfAlg] {
 
   val Problem(factors: IndexedSeq[FastFactor], domains: Array[Int], ring: RingZ[Double]) = problem
 
@@ -18,13 +18,15 @@ extends InfAlg with ConvergingStepper[Unit] {
 
   implicit val (logger, formatter, appender) = BeliefPropagation.allLog
 
-  private val cg = BeliefPropagation.createBetheClusterGraph(factors,domains,ring)
+  private val cg = BeliefPropagation.createBetheClusterGraph(problem)
   logger.fine(f"bethe factor graph has ${cg.clusterFactors.size} clusters and ${cg.sepsets.size} edges")
   lazy val singleVariableClusters: Map[Int,Int] = cg.clusterFactors.zipWithIndex
     .collect{case (f,fi) if f.variables.size == 1 => f.variables.head -> fi}(collection.breakOut)
 
   //the messages are always guaranteed to be normalized
-  class Message(val factor: FastFactor, var lastUpdate: Long = -1)
+  class Message(val factor: FastFactor, var lastUpdate: Long = -1){
+    override def toString: String = f"${factor.toStringShort} ($lastUpdate)"
+  }
   val messages: mutable.HashMap[(Int,Int),Message] = new mutable.HashMap
   private var randomOrder: IndexedSeq[(Int, Int)] = null
   private var totalIterations = 0
@@ -36,6 +38,7 @@ extends InfAlg with ConvergingStepper[Unit] {
   private val clusterBeliefCache: mutable.HashMap[Int, FastFactor] = new mutable.HashMap[Int,FastFactor]
   private def invalidateCaches(){
     clusterBeliefCache.clear()
+    logZCache = None
   }
   //--------------- caches end
   init()
@@ -163,36 +166,64 @@ extends InfAlg with ConvergingStepper[Unit] {
   }
 
 
-  /*
-  * @param a Configuration object.
-  * @return True if the algorithm converged.
-  */
-  def step(u: Unit): Boolean = run(1,1e-10)
+  def hasNext: Boolean = !didConverge
+
+  def next(): InfAlg = {
+    require(!didConverge)
+    run(1)
+    this
+  }
 
   def clusterBelief(ci: Int): FastFactor = clusterBeliefCache.getOrElseUpdate(ci,FastFactor.multiplyRetain(ring)(domains)(
     factors = cg.neighbours(ci).map(from => messages((from,ci)).factor) :+ cg.clusterFactors(ci),
     cg.clusterFactors(ci).variables).normalize(ring))
 
   def variableBelief(vi: Int): FastFactor = clusterBelief(singleVariableClusters(vi))
-  /** @return marginal distribution of variable in log encoding. */
-  def logVariableBelief(vi: Int): FastFactor =
-    if(ring == LogD) variableBelief(vi) else LogD.encode(ring.decode(variableBelief(vi)))
 
+  var logZCache: Option[Double] = None
   def logZ: Double = {
-    def expectation(p: Array[Double], f: Array[Double]) = p.zip(f).map(t => if(t._1 == 0) 0 else t._1 * t._2).sum
-    def entropy(ps: Array[Double]) = -(for (p <- ps) yield if (p == 0) 0 else p * math.log(p)).sum
+    if(logZCache.isDefined)
+      logZCache.get
+    else{
+      def expectation(p: Array[Double], f: Array[Double]): Double = {
+        var result = 0d
+        var i = 0
+        while(i < p.length){
+          if(p(i) != 0)
+            result += p(i) * f(i)
+          i += 1
+        }
+        require(!result.isNaN)
+        result
+      }
+      def entropy(ps: Array[Double]) = {
+        var result = 0d
+        var i = 0
+        while(i < ps.length){
+          if(ps(i) != 0)
+            result += ps(i) * math.log(ps(i))
+          i += 1
+        }
+        require(!result.isNaN)
+        -result
+      }
 
-    val clusterExpectationAndEntropy = cg.clusterFactors.zipWithIndex.map {
-      case (f, cI) =>
-        expectation(ring.decode(clusterBelief(cI).values),ring.decode(f.values).map(math.log)) +
-          entropy(ring.decode(clusterBelief(cI).values))
+      val clusterExpectationAndEntropy = cg.clusterFactors.zipWithIndex.map {
+        case (f, cI) =>
+          expectation(ring.decode(clusterBelief(cI).values),ring.decode(f.values).map(math.log)) +
+            entropy(ring.decode(clusterBelief(cI).values))
+      }
+
+      val variableClusterIndices: Range = factors.size until cg.clusterFactors.size
+      val variableEntropies = variableClusterIndices
+        .map{vci => cg.neighbours(vci).size * entropy(ring.decode(clusterBelief(vci).values)) }
+
+      val clusterExpextationAndEntropySum: Double = clusterExpectationAndEntropy.sum
+      val variableEntropySum: Double = variableEntropies.sum
+      val result = clusterExpextationAndEntropySum - variableEntropySum
+      logZCache = Some(result)
+      result
     }
-
-    val variableClusterIndices: Range = factors.size until cg.clusterFactors.size
-    val variableEntropies = variableClusterIndices
-      .map{vci => cg.neighbours(vci).size * entropy(ring.decode(clusterBelief(vci).values)) }
-
-    clusterExpectationAndEntropy.sum - variableEntropies.sum
   }
 
   /** @return Partition function in encoding specified by `ring`. */
@@ -210,6 +241,9 @@ extends InfAlg with ConvergingStepper[Unit] {
     max
   }
 
+
+  def iteration: Int = iterations
+
   def graphviz: String = {
     "digraph {\n" +
       cg.clusterFactors.zipWithIndex.map{case (f,i) => f"""$i [label="${f.toStringShort}"]"""}.mkString("\n") + "\n" +
@@ -222,7 +256,8 @@ extends InfAlg with ConvergingStepper[Unit] {
 object BeliefPropagation{
   implicit val allLog@(logger, formatter, appender) = ZeroLoggerFactory.newLogger(this)
 
-  def createBetheClusterGraph(factors: IndexedSeq[FastFactor],domains: Array[Int], ring: RingZ[Double]): ClusterGraph  = {
+  def createBetheClusterGraph(problem: Problem): ClusterGraph  = {
+    val Problem(factors: IndexedSeq[FastFactor],domains: Array[Int], ring: RingZ[Double]) = problem
     //we append a cluster for each variable after the factor clusters
     val variables = factors.flatMap(_.variables).toSet.toArray
     val variableShift: Int = factors.size //shift a variable by this number to get its cluster index

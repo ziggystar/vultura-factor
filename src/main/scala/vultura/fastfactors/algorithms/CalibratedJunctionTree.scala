@@ -19,6 +19,9 @@ class CalibratedJunctionTree(val problem: Problem) extends InfAlg {
     (calibratedTreesWithZ.map(_._1),problem.ring.prodA(calibratedTreesWithZ.map(_._2)(collection.breakOut)))
   }
 
+  //TODO doesn't make much sense?
+  def iteration: Int = 1
+
   def uncalibratedTrees: Seq[Tree[FastFactor]] = {
     //1. create format for jt-creation
     //2. multiplay all factors of each clique into one
@@ -42,10 +45,6 @@ class CalibratedJunctionTree(val problem: Problem) extends InfAlg {
       .map(f => FastFactor.multiplyRetain(problem.ring)(problem.domains)(Seq(f),Array(vi)).normalize(problem.ring))
       .get
   )
-
-  /** @return marginal distribution of variable in log encoding. */
-  def logVariableBelief(vi: Int): FastFactor =
-    if(problem.ring == LogD) variableBelief(vi) else LogD.encode(problem.ring.decode(variableBelief(vi)))
 
   def graphviz: String = {
     def nodeName(cliqueFactor: FastFactor): String = "n" + cliqueFactor.variables.mkString("_")

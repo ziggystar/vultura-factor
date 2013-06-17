@@ -7,12 +7,13 @@ package vultura.experiments
 
 
 trait Reporter[-A]{
+  def header: String = prefix + colNames.mkString(separator)
+  def buildRow(a: A): String = prefix + eval(a).mkString(separator)
+
   def separator: String = "\t"
   def prefix: String = "*"
   def colNames: Seq[String]
   def eval(a: A): Seq[String]
-  def header: String = prefix + colNames.mkString(separator)
-  def buildRow(a: A): String = prefix + eval(a).mkString(separator)
 
   def +[B](other: Reporter[B]) = new Reporter[(A,B)]{
     def colNames: Seq[String] = Reporter.this.colNames ++ other.colNames

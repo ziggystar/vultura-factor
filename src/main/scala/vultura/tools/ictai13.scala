@@ -70,28 +70,35 @@ object ictai13 {
   }
 
   /*
-  Each output line contains:
-  <problem-cfg> <problem-seed> <PR> <algorithm-cfg> <algorithm-seed> <PR estimate> <MAR KL> <MAR maxdiff> <MAR mean maxDiff> <iteration> <CPU time>
-   */
+    Each output line contains:
+    <problem-cfg> <problem-seed> <PR> <algorithm-cfg> <algorithm-seed> <PR estimate> <MAR KL> <MAR maxdiff> <MAR mean maxDiff> <iteration> <CPU time>
+     */
   def main(args: Array[String]) {
     val config = new Config(args)
 
-    val generator = generateFromString(config.problemCfg()).fold(msg => sys.error("could not parse problem descriptor:\n" + msg), identity)
+    val generator: (Long) => Problem =
+      generateFromString(config.problemCfg()).fold(msg => sys.error("could not parse problem descriptor:\n" + msg), identity)
 
-    val experiment: Experiment[(InfAlg,InfAlg)] = for{
+    val experiment: Experiment[InfAlg] = for {
       _ <- Experiment.description("config.problem")(config.problemCfg())
         .withReport(Reporter.constant("config.algorithm",config.algorithmCfg()))
       pi <- Experiment.generateSeed("seed.problem")(config.problemSeed(),config.problemCount())
-      problem = generator(pi)
-      groundTruth = createGroundTruth(problem)
+      problem <- Experiment(generator(pi))
+        .withReport(numVars())
+        .withReport(numFactors())
+        .withReport(maxDomainSize())
+      groundTruth <- Experiment(createGroundTruth(problem))
+        .withReport(logZReporter("true.lnZ"))
       algorithmSeed <- Experiment.generateSeed("seed.algorithm")(config.algorithmSeed(),config.algorithmRuns())
-      algorithm = createAlgorithm(config.problemCfg(),problem,algorithmSeed)
+      algorithm <- createAlgorithm(config.problemCfg(),problem,algorithmSeed)
       _ <- Experiment(algorithm)
+        .withReport(logZReporter("estimate.lnZ"))
         .withReport(meanDiffReporter(groundTruth))
         .withReport(meanKLReporter(groundTruth))
         .withReport(meanSquaredDiffReporter(groundTruth))
         .withReport(maxDiffReporter(groundTruth))
-    } yield (groundTruth,algorithm)
+        .withReport(iaIteration("iteration.alg"))
+    } yield algorithm
 
     experiment.run(System.out)
   }
@@ -102,15 +109,20 @@ object ictai13 {
   }
 
   /** Provides ln(Z) and variable marginals. */
-  def createGroundTruth(p: Problem): InfAlg = new CalibratedJunctionTree(p)
+  def createGroundTruth(p: Problem): InfAlg = {
+    printProblem(p,true)
+    new CalibratedJunctionTree(p)
+  }
 
-  def createAlgorithm(config: String, p: Problem, seed: Long): InfAlg with ConvergingStepper[Unit] =
-    new CBP(p,new Random(seed),CBP.leafSelectionSlowestSettler,CBP.variableSelectionSlowestSettler,10,1e-5)
-//      new BeliefPropagation(p,new Random(seed))
+  def createAlgorithm(config: String, p: Problem, seed: Long): Experiment[InfAlg] = {
+    Experiment.fromIterator(new CBP(p,new Random(seed),CBP.leafSelectionDepth,CBP.variableSelectionSlowestSettler,CBP.CLAMP_METHOD.CLAMP,30,1e-7).take(100))
+    //      Experiment.fromIterator(new BeliefPropagation(p,new Random(seed)))
+  }
 
 //    def getCPUTime: Double = (ManagementFactory.getThreadMXBean.getCurrentThreadCpuTime - startTime) * 1e-9
 
   //evaluation stuff below
+
   def mapVars[A](problem: Problem, f: Int => A): IndexedSeq[A] = problem.variables.map(f)(collection.breakOut)
   def margStatistics[A,B](problem: Problem, trueMargs: Int => FastFactor, estimate: Int => FastFactor)
                          (map: (FastFactor,FastFactor) => A)
@@ -133,4 +145,11 @@ object ictai13 {
       ia => maxDiff(gt.getProblem,gt.decodedVariableBelief,ia.decodedVariableBelief).toString)
   def meanSquaredDiffReporter(gt: InfAlg): Reporter[InfAlg] =  Reporter[InfAlg]("squarediff.mean")(
       ia => meanSquareDiff(gt.getProblem,gt.decodedVariableBelief,ia.decodedVariableBelief).toString)
+
+  def iaIteration(name: String = "iteration"): Reporter[InfAlg] = Reporter(name)(_.iteration.toString)
+  def logZReporter(name: String = "lnZ"): Reporter[InfAlg] = Reporter(name)(_.logZ.toString)
+
+  def numFactors(name: String = "problem.factors"): Reporter[Problem] = Reporter(name)(_.factors.size.toString)
+  def numVars(name: String = "problem.variables"): Reporter[Problem] = Reporter(name)(_.variables.size.toString)
+  def maxDomainSize(name: String = "problem.domainsize.max"): Reporter[Problem] = Reporter(name)(_.domains.max.toString)
 }

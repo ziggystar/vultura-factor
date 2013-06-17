@@ -1,6 +1,6 @@
 package vultura.fastfactors.algorithms
 
-import vultura.fastfactors.{Problem, FastFactor}
+import vultura.fastfactors.{LogD, NormalD, Problem, FastFactor}
 
 /**
  * Created by IntelliJ IDEA.
@@ -14,23 +14,12 @@ trait InfAlg {
   /** @return Partition function in encoding specified by `ring`. */
   def Z: Double
   def decodedZ: Double = getProblem.ring.decode(Array(Z))(0)
-  def decodedVariableBelief(vi: Int): FastFactor = getProblem.ring.decode(variableBelief(vi))
+  def decodedVariableBelief(vi: Int): FastFactor =
+    if(getProblem.ring != NormalD) getProblem.ring.decode(variableBelief(vi)) else variableBelief(vi)
   /** @return marginal distribution of variable in encoding specified by `ring`. */
   def variableBelief(vi: Int): FastFactor
   /** @return marginal distribution of variable in log encoding. */
-  def logVariableBelief(vi: Int): FastFactor
+  def logVariableBelief(vi: Int): FastFactor  =
+      if(getProblem.ring == LogD) variableBelief(vi) else LogD.encode(decodedVariableBelief(vi))
+  def iteration: Int
 }
-
-/**
- * Can be advanced by one step, giving parameter of type `A` and tells about convergence, usually with respect to `A`.
- * @tparam A
- */
-trait ConvergingStepper[A]{
-  /*
-  * @param a Configuration object.
-  * @return True if the algorithm converged.
-  */
-  def step(a: A): Boolean
-}
-
-
