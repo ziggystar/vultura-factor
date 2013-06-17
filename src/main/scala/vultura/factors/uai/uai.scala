@@ -69,7 +69,7 @@ package object uai {
     val numFactors = tokens.next().toInt
     val factorVars = Seq.fill(numFactors){
       val nv = tokens.next().toInt
-      Array.fill(nv)(tokens.next().toInt)
+      Array.fill(nv)(tokens.next().toInt).reverse
     }
     val factorValues = Seq.fill(numFactors){
       val nv = tokens.next().toInt
