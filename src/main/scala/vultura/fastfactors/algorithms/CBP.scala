@@ -65,8 +65,7 @@ class CBP(val problem: Problem,
       case CLAMP => _ ++ assignment.map{case (variable,value) => FastFactor(Array(variable),Array.fill(domains(variable))(ring.zero).updated(value,ring.one))}
     }
     val conditionedProblem: Problem = problem.copy(factors = clampFactor(problem.factors))
-    val bp = new BeliefPropagation(conditionedProblem,random)
-    bp.run(bpMaxiter,bpTol)
+    val bp = new BeliefPropagation(conditionedProblem,random,bpTol,bpMaxiter)
     if(!bp.converged)
       logger.fine(f"bp run did not converge for assignment $assignment")
     bp

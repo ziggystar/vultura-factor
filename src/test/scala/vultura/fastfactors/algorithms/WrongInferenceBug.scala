@@ -39,9 +39,5 @@ class WrongInferenceBug extends Specification {
   def is: Fragments =
     (new CalibratedJunctionTree(problem).logZ must beCloseTo(result,1e-3)) ^
     (math.log(vultura.fastfactors.variableElimination(problem)) must beCloseTo(result,1e-3)) ^
-    "bp must infer correct result" ! ({
-      val bp = new BeliefPropagation(problem,new Random(0))
-      bp.run(100,1e-9)
-      bp.logZ
-    } must beCloseTo(result,1e-3))
+    "bp must infer correct result" ! (new BeliefPropagation(problem,new Random(0),1e-10,100).logZ must beCloseTo(result,1e-3))
 }

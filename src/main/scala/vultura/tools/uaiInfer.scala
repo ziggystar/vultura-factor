@@ -100,11 +100,9 @@ object uaiInfer {
       }
 
       case "BP" => { problem =>
-        val bp = new BeliefPropagation(problem)
-        val maxiter: Int = 1000
-        bp.run(maxiter,1e-7)
+        val bp = new BeliefPropagation(problem,random,1e-7,1000)
         if(!bp.converged)
-          logger.warning(f"BP did not converge after $maxiter iterations with ${bp.getMessageUpdates} message updates; remaining message delta of ${bp.maxDelta}")
+          logger.warning(f"BP did not converge after ${bp.iterations} iterations with ${bp.getMessageUpdates} message updates; remaining message delta of ${bp.maxDelta}")
         else
           logger.fine(f"BP converged after ${bp.iterations} iterations with ${bp.getMessageUpdates} message updates; remaining message delta of ${bp.maxDelta}")
         if(config.useLog()) bp.logZ else math.exp(bp.logZ)

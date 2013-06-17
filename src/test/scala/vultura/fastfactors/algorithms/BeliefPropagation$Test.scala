@@ -14,12 +14,6 @@ import org.specs2.matcher.{MatchResult, Expectable, Matcher}
  * Date: 6/10/13
  */
 class BeliefPropagation$Test extends Specification {
-  def BpLogZ(problem: Problem): Double = {
-    val bp = new BeliefPropagation(problem)
-    bp.run(10000,1e-10)
-    bp.logZ
-  }
-
 
   val smallTreeProblem1 = generators.treeK(3,2,2,generators.expGauss(1),new Random(1))
   val treeProblem1 = generators.treeK(15,3,16,generators.expGauss(1),new Random(1))
@@ -44,11 +38,7 @@ class BeliefPropagation$Test extends Specification {
   def beSimilarTo(ref: FastFactor, tol: Double): Matcher[FastFactor] =
     haveSameStructureAs(ref) and haveCloseValuessAs(ref,tol)
 
-  def bpInfer(problem: Problem): BeliefPropagation = {
-    val bp = new BeliefPropagation(problem,new Random(1))
-    bp.run(100,1e-10)
-    bp
-  }
+  def bpInfer(problem: Problem): BeliefPropagation = new BeliefPropagation(problem,new Random(1),1e-10,100)
   def jtInfer(problem: Problem) = new CalibratedJunctionTree(problem)
 
   val testProblem1 = Problem(IS(FF(AI(0),AD(1,2)),FF(AI(0),AD(3,4))),Array(2),NormalD)
@@ -76,9 +66,9 @@ class BeliefPropagation$Test extends Specification {
   p^
   "tests of BP" ^
     "BP on two independent variables" !
-      (BpLogZ(testProblem2) must beCloseTo(testProblem2lnZ,1e-8)) ^
+      (bpInfer(testProblem2).logZ must beCloseTo(testProblem2lnZ,1e-8)) ^
     "BP on one var with two factors" !
-      (BpLogZ(testProblem1) must beCloseTo(testProblem1lnZ,1e-8)) ^
+      (bpInfer(testProblem1).logZ must beCloseTo(testProblem1lnZ,1e-8)) ^
   p^
   "tests on generated trees" ^
     "compare marginals" ^

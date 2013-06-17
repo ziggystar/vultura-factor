@@ -110,12 +110,11 @@ object ictai13 {
 
   /** Provides ln(Z) and variable marginals. */
   def createGroundTruth(p: Problem): InfAlg = {
-    printProblem(p,true)
     new CalibratedJunctionTree(p)
   }
 
   def createAlgorithm(config: String, p: Problem, seed: Long): Experiment[InfAlg] = {
-    Experiment.fromIterator(new CBP(p,new Random(seed),CBP.leafSelectionDepth,CBP.variableSelectionSlowestSettler,CBP.CLAMP_METHOD.CLAMP,30,1e-7).take(100))
+    Experiment.fromIterator(new CBP(p,new Random(seed),CBP.leafSelectionSlowestSettler,CBP.variableSelectionSlowestSettler,CBP.CLAMP_METHOD.CONDITION_SIMPLIFY,30,1e-15).take(32))
     //      Experiment.fromIterator(new BeliefPropagation(p,new Random(seed)))
   }
 

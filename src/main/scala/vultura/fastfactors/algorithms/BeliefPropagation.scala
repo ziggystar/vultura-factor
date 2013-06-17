@@ -9,7 +9,7 @@ import vultura.fastfactors.{Problem, LogD, RingZ, FastFactor}
  * User: Thomas Geier
  * Date: 6/10/13
  */
-class BeliefPropagation(val problem: Problem, random: Random = new Random)
+class BeliefPropagation(val problem: Problem, random: Random = new Random, tol: Double = 1e-7, runInitially: Int = 0)
 extends InfAlg with Iterator[InfAlg] {
 
   val Problem(factors: IndexedSeq[FastFactor], domains: Array[Int], ring: RingZ[Double]) = problem
@@ -55,6 +55,7 @@ extends InfAlg with Iterator[InfAlg] {
     totalIterations = 0
     messageUpdates = 0L
     lastMaxDelta = Double.PositiveInfinity
+    run(runInitially)
   }
   //----------- initialisation stuff ends here ---------
 
@@ -130,7 +131,7 @@ extends InfAlg with Iterator[InfAlg] {
       false
   }
 
-  def run(maxiter: Int = 1000, tol: Double = 1e-7): Boolean = {
+  def run(maxiter: Int = 1000): Boolean = {
     var iterations = 0
     var converged = false
     val startMessageUpdates = messageUpdates
