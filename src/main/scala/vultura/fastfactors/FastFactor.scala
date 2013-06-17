@@ -155,7 +155,7 @@ object FastFactor{
   }
 
   def multiplyRetain(ring: RingZ[Double])(domains: Array[Int])(factors: Seq[FastFactor], retain: Array[Int]): FastFactor = {
-    val numValues = retain.map(domains).foldLeft(1)(_ * _)
+    val numValues = mapMultiply(retain,domains)
     val values = new Array[Double](numValues)
     sumProduct(retain,domains,factors.map(_.variables)(collection.breakOut),factors.map(_.values)(collection.breakOut): Array[Array[Double]],ring,values)
     FastFactor(retain,values)
