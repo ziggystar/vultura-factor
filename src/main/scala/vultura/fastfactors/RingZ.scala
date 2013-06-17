@@ -174,7 +174,4 @@ object LogD extends RingZ[Double] {
 
   override def decode(p: Array[Double]): Array[Double] = p.map(math.exp)
   override def encode(p: Array[Double]): Array[Double] = p.map(math.log)
-
-  /** @return In normal representation (not log). */
-  override def maxNorm(a: Array[Double], b: Array[Double]): Double = super.maxNorm(a, b)
 }
