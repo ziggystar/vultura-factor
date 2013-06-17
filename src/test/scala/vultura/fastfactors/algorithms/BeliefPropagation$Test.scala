@@ -14,8 +14,8 @@ import org.specs2.matcher.{MatchResult, Expectable, Matcher}
  * Date: 6/10/13
  */
 class BeliefPropagation$Test extends Specification {
-  def BpLogZ(factors: IndexedSeq[FastFactor], ring: RingZ[Double], domains: Array[Int]): Double = {
-    val bp = new BeliefPropagation(Problem(factors,domains,ring))
+  def BpLogZ(problem: Problem): Double = {
+    val bp = new BeliefPropagation(problem)
     bp.run(10000,1e-10)
     bp.logZ
   }
@@ -51,6 +51,11 @@ class BeliefPropagation$Test extends Specification {
   }
   def jtInfer(problem: Problem) = new CalibratedJunctionTree(problem)
 
+  val testProblem1 = Problem(IS(FF(AI(0),AD(1,2)),FF(AI(0),AD(3,4))),Array(2),NormalD)
+  val testProblem1lnZ = math.log(11d)
+  val testProblem2 = Problem(IS(FF(AI(0),AD(1,2)),FF(AI(1),AD(3,4))),Array(2,2),NormalD)
+  val testProblem2lnZ = math.log(21d)
+
   val bpSmallTree1 = bpInfer(smallTreeProblem1)
   val jtSmallTree1 = jtInfer(smallTreeProblem1)
   val bpTree1 = bpInfer(treeProblem1)
@@ -71,9 +76,9 @@ class BeliefPropagation$Test extends Specification {
   p^
   "tests of BP" ^
     "BP on two independent variables" !
-      (BpLogZ(IS(FF(AI(0),AD(1,2)),FF(AI(1),AD(3,4))),NormalD,Array(2,2)) must beCloseTo(math.log(21d),1e-8)) ^
+      (BpLogZ(testProblem2) must beCloseTo(testProblem2lnZ,1e-8)) ^
     "BP on one var with two factors" !
-      (BpLogZ(IS(FF(AI(0),AD(1,2)),FF(AI(0),AD(3,4))),NormalD,Array(2)) must beCloseTo(math.log(11d),1e-8)) ^
+      (BpLogZ(testProblem1) must beCloseTo(testProblem1lnZ,1e-8)) ^
   p^
   "tests on generated trees" ^
     "compare marginals" ^
@@ -92,10 +97,4 @@ class BeliefPropagation$Test extends Specification {
       (bpSmallTree1.logZ must beCloseTo(jtSmallTree1.logZ,1e-7)) ^
       (bpTree1.logZ must beCloseTo(jtTree1.logZ,1e-7)) ^
       (bpTree2.logZ must beCloseTo(jtTree2.logZ,1e-7))
-
-
-    "printing" ^
-      {println(bpTree2.graphviz); true} ^
-      {println(jtTree2.graphviz); true}
-
 }

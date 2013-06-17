@@ -10,6 +10,11 @@ import org.specs2.specification.Fragments
  * Date: 6/17/13
  */
 class SimplestProblem extends Specification {
+
+  def is: Fragments =
+  (inferJT(tiny1) must beCloseTo(logZTiny,1e-4)) ^
+    (inferVE(tiny1) must beCloseTo(logZTiny,1e-4))
+
   val tiny1 = Problem.fromUaiString(
     """MARKOV
       |2
@@ -25,14 +30,4 @@ class SimplestProblem extends Specification {
   def inferJT(p: Problem): Double = new CalibratedJunctionTree(p).logZ
 //  def inferBP(p: Problem): Double
   def inferVE(p: Problem): Double = math.log(variableElimination(p))
-
-  def is: Fragments =
-  (inferJT(tiny1) must beCloseTo(logZTiny,1e-4)) ^
-    (inferVE(tiny1) must beCloseTo(logZTiny,1e-4)) ^
-    "graphviz" ! {
-      println(tiny1.factors.mkString("\n"))
-      println(new CalibratedJunctionTree(tiny1).graphviz)
-      true
-    }
-
 }

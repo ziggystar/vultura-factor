@@ -139,12 +139,16 @@ extends InfAlg with Iterator[InfAlg] {
       var edgeIndex = 0
       while(edgeIndex < randomOrder.length){
         val edge@(i,j) = randomOrder(edgeIndex)
+        val lastUpdate: Long = messages(edge).lastUpdate
         var needsUpdate = false
         val incomingNeighbours = cg.neighbours(i)
         var IneighboursIndex = 0
         while(!needsUpdate && IneighboursIndex < incomingNeighbours.length){
           val Ineighbour: Int = incomingNeighbours(IneighboursIndex)
-          needsUpdate = (Ineighbour != j) && messages((Ineighbour, i)).lastUpdate >= messages(edge).lastUpdate
+          val foundUpdateReason = ((Ineighbour != i) && messages((Ineighbour, i)).lastUpdate >= lastUpdate)
+          if(foundUpdateReason)
+            logger.finer(f"updating $i->$j because of $Ineighbour->$i")
+          needsUpdate = foundUpdateReason
           IneighboursIndex += 1
         }
 
@@ -247,7 +251,7 @@ extends InfAlg with Iterator[InfAlg] {
   def graphviz: String = {
     "digraph {\n" +
       cg.clusterFactors.zipWithIndex.map{case (f,i) => f"""$i [label="${f.toStringShort}"]"""}.mkString("\n") + "\n" +
-      messages.map{case ((src,sink),msg) => f"""$src -> $sink [label="${msg.factor.toStringShort}"]"""}.mkString("\n") + "\n" +
+      messages.map{case ((src,sink),msg) => f"""$src -> $sink [label="${msg.factor.toStringShort} : ${msg.lastUpdate}"]"""}.mkString("\n") + "\n" +
       "}"
   }
 }
