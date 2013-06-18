@@ -114,8 +114,8 @@ object ictai13 {
   }
 
   def createAlgorithm(config: String, p: Problem, seed: Long): Experiment[InfAlg] = {
-    Experiment.fromIterator(new CBP(p,new Random(seed),CBP.leafSelectionSlowestSettler,CBP.variableSelectionSlowestSettler,CBP.CLAMP_METHOD.CONDITION_SIMPLIFY,30,1e-15).take(32))
-    //      Experiment.fromIterator(new BeliefPropagation(p,new Random(seed)))
+    Experiment.fromIterator(CBPConfig(p,CBP.leafSelectionSlowestSettler,CBP.variableSelectionSlowestSettler,CBP.CLAMP_METHOD.CONDITION_SIMPLIFY,30,1e-15,seed).iterator.take(32))
+    //      Experiment.fromIterable(new BeliefPropagation(p,new Random(seed)))
   }
 
 //    def getCPUTime: Double = (ManagementFactory.getThreadMXBean.getCurrentThreadCpuTime - startTime) * 1e-9

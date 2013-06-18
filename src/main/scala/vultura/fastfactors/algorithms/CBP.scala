@@ -9,12 +9,12 @@ import scala.collection.mutable
  * Conditioned Belief Propagation.
  */
 class CBP(val problem: Problem,
-          random: Random = new Random,
-          leafSelection: (Map[Map[Int,Int],BeliefPropagation], Random) => Map[Int,Int],
-          variableSelection: (BeliefPropagation, Random) => Int,
+          val leafSelection: (Map[Map[Int,Int],BeliefPropagation], Random) => Map[Int,Int],
+          val variableSelection: (BeliefPropagation, Random) => Int,
           val clampMethod: CBP.CLAMP_METHOD.Value = CBP.CLAMP_METHOD.CLAMP,
-          bpMaxiter: Int = 1000,
-          bpTol: Double = 1e-7) extends InfAlg with Iterator[InfAlg] {
+          val bpMaxiter: Int = 1000,
+          val bpTol: Double = 1e-10,
+          private val random: Random = new Random(0L)) extends InfAlg with Iterator[InfAlg] {
   implicit val (logger, formatter, appender) = CBP.allLog
 
   val Problem(factors,domains,ring) = problem
@@ -112,4 +112,14 @@ object CBP {
   def variableSelectionSlowestSettler(bp: BeliefPropagation, random: Random): Int = {
     vultura.util.maxByMultiple(bp.messages.toSeq)(_._2.lastUpdate).flatMap(_._2.factor.variables).pickRandom(random)
   }
+}
+
+case class CBPConfig(problem: Problem,
+                     leafSelection: (Map[Map[Int,Int],BeliefPropagation], Random) => Map[Int,Int],
+                     variableSelection: (BeliefPropagation, Random) => Int,
+                     clampMethod: CBP.CLAMP_METHOD.Value = CBP.CLAMP_METHOD.CLAMP,
+                     bpMaxiter: Int = 1000,
+                     bpTol: Double = 1e-10,
+                     seed: Long = 0L) extends Iterable[InfAlg] {
+  def iterator: Iterator[InfAlg] = new CBP(problem,leafSelection,variableSelection,clampMethod,bpMaxiter,bpTol,new Random(seed))
 }
