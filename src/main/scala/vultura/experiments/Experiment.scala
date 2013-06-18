@@ -18,6 +18,7 @@ trait Experiment[A]{
       (a,ra) <- iterator;
       (b,rb) <- f(a).iterator
     ) yield (b,ra.hold(a) + rb))
+  def take(i: Int) = Experiment.fromIteratorWithReport(iterator.take(i))
   def run(os: PrintStream) {
     val buffered = iterator.buffered
     os.println(buffered.head._2.header)

@@ -11,6 +11,7 @@ import scala.util.Random
 import vultura.fastfactors.Problem
 import vultura.util._
 import vultura.experiments.{Reporter, Experiment}
+import scala.util.parsing.combinator.JavaTokenParsers
 
 /**
  * Created by IntelliJ IDEA.
@@ -90,7 +91,7 @@ object ictai13 {
       groundTruth <- Experiment(createGroundTruth(problem))
         .withReport(logZReporter("true.lnZ"))
       algorithmSeed <- Experiment.generateSeed("seed.algorithm")(config.algorithmSeed(),config.algorithmRuns())
-      algorithm <- createAlgorithm(config.problemCfg(),problem,algorithmSeed)
+      algorithm <- createAlgorithm(config.algorithmCfg(),problem,algorithmSeed,config.algorithmSteps())
       _ <- Experiment(algorithm)
         .withReport(logZReporter("estimate.lnZ"))
         .withReport(meanDiffReporter(groundTruth))
@@ -113,10 +114,8 @@ object ictai13 {
     new CalibratedJunctionTree(p)
   }
 
-  def createAlgorithm(config: String, p: Problem, seed: Long): Experiment[InfAlg] = {
-    Experiment.fromIterator(CBPConfig(p,CBP.leafSelectionSlowestSettler,CBP.variableSelectionSlowestSettler,CBP.CLAMP_METHOD.CONDITION_SIMPLIFY,30,1e-15,seed).iterator.take(32))
-    //      Experiment.fromIterable(new BeliefPropagation(p,new Random(seed)))
-  }
+  def createAlgorithm(config: String, p: Problem, seed: Long, steps: Int): Experiment[InfAlg] =
+    AlgConfParser.parse(config)(p,seed).take(steps)
 
 //    def getCPUTime: Double = (ManagementFactory.getThreadMXBean.getCurrentThreadCpuTime - startTime) * 1e-9
 
@@ -152,3 +151,42 @@ object ictai13 {
   def numVars(name: String = "problem.variables"): Reporter[Problem] = Reporter(name)(_.variables.size.toString)
   def maxDomainSize(name: String = "problem.domainsize.max"): Reporter[Problem] = Reporter(name)(_.domains.max.toString)
 }
+
+object AlgConfParser extends JavaTokenParsers {
+  def algConf: Parser[(Problem,Long) => Experiment[InfAlg]] = cbp ^^ {
+    case cbpConf => (p,seed) => Experiment.fromIterator(cbpConf.copy(seed=seed).iterator(p))
+  }
+  def cbp: Parser[CBPConfig] = "CBP" ~ "[" ~> repsep(cbpMod,",") <~ "]" ^^ {
+    case mods => mods.foldLeft(CBPConfig()){case (old,mod) => mod(old)}
+  }
+  def cbpMod: Parser[CBPConfig => CBPConfig] = leafSel | varSel | clampMethod | tol | bpIter
+  def leafSel: Parser[CBPConfig => CBPConfig] = "leafsel=" ~> (
+      "random" ^^^ CBP.leafSelectionRandom _ |
+        "depth" ^^^ CBP.leafSelectionDepth _ |
+        "z" ^^^ CBP.leafSelectionOnlyZ _ |
+        "slowsettler" ^^^ CBP.leafSelectionOnlyZ _
+    ) ^^ (strat => _.copy(leafSelection=strat))
+  def varSel: Parser[CBPConfig => CBPConfig] = "varsel=" ~> (
+      "random" ^^^ CBP.variableSelectionRandom _ |
+      "degree" ^^^ CBP.variableSelectionHighDegree _ |
+      "slowsettler" ^^^ CBP.variableSelectionSlowestSettler _
+    ) ^^ (strat => _.copy(variableSelection=strat))
+  def clampMethod: Parser[CBPConfig => CBPConfig] = "clamp=" ~> (
+      "CLAMP" ^^^ CBP.CLAMP_METHOD.CLAMP |
+      "CONDITION" ^^^ CBP.CLAMP_METHOD.CONDITION |
+      "CONDITION_SIMPLIFY" ^^^ CBP.CLAMP_METHOD.CONDITION_SIMPLIFY
+    ) ^^ (method => _.copy(clampMethod = method))
+  def tol: Parser[CBPConfig => CBPConfig] = "tol=" ~> (floatingPointNumber ^^ (_.toDouble)) ^^
+    (x => _.copy(bpTol=x))
+  def bpIter: Parser[CBPConfig => CBPConfig] = "bpiter=" ~> (wholeNumber ^^ (_.toInt)) ^^
+    (x => _.copy(bpMaxiter=x))
+
+  def parse(s: String): (Problem,Long) => Experiment[InfAlg] = {
+    parseAll(algConf,s) match {
+      case Success(alg,_) => alg
+      case Failure(msg,_) => sys.error(msg)
+    }
+
+  }
+}
+
