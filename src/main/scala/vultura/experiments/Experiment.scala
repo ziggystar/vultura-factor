@@ -2,6 +2,7 @@ package vultura.experiments
 
 import Reporter._
 import java.io.{PrintStream, OutputStreamWriter, OutputStream}
+import vultura.util.ParIterator
 
 /**
  * @author Thomas Geier
@@ -19,12 +20,17 @@ trait Experiment[A]{
       (b,rb) <- f(a).iterator
     ) yield (b,ra.hold(a) + rb))
   def take(i: Int) = Experiment.fromIteratorWithReport(iterator.take(i))
-  def run(os: PrintStream) {
-    val buffered = iterator.buffered
-    os.println(buffered.head._2.header)
-    buffered.foreach{ case (a, ra) =>
-      os.println(ra.buildRow(a))
-    }
+  def run(printHeader: Boolean = true): Seq[String] = {
+    var firstLine = printHeader
+
+    iterator.flatMap{ case (a, ra) =>
+      if(firstLine){
+        firstLine = false
+        Seq(ra.header,ra.buildRow(a))
+      }
+      else
+        Seq(ra.buildRow(a))
+    }.toIndexedSeq
   }
   def withReport(r: Reporter[A]): Experiment[A] = Experiment.fromIteratorWithReport(iterator.map{case ((a,ra)) => (a,ra.also(r))})
 }

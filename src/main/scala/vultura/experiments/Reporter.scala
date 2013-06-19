@@ -11,7 +11,7 @@ trait Reporter[-A]{
   def buildRow(a: A): String = prefix + eval(a).mkString(separator)
 
   def separator: String = "\t"
-  def prefix: String = "*"
+  def prefix: String = ""
   def colNames: Seq[String]
   def eval(a: A): Seq[String]
 

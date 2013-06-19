@@ -12,6 +12,7 @@ import vultura.fastfactors.Problem
 import vultura.util._
 import vultura.experiments.{Reporter, Experiment}
 import scala.util.parsing.combinator.JavaTokenParsers
+import scala.collection.mutable
 
 /**
  * Created by IntelliJ IDEA.
@@ -68,6 +69,12 @@ object ictai13 {
       name = "no-print-problem",
       descr = "output each generated problem in uai format"
     )
+    val chunkSize = opt[Int](
+      name = "chunk-size",
+      descr = "max number of parallel algorithm evaluations",
+      short = 'P',
+      default = Some(4)
+    )
   }
 
   /*
@@ -77,10 +84,15 @@ object ictai13 {
   def main(args: Array[String]) {
     val config = new Config(args)
 
+    var printHeader = true
+
     val generator: (Long) => Problem =
       generateFromString(config.problemCfg()).fold(msg => sys.error("could not parse problem descriptor:\n" + msg), identity)
 
-    val experiment: Experiment[InfAlg] = for {
+    val resultStrings: mutable.Buffer[(Boolean, Seq[String])] = new mutable.ArrayBuffer[(Boolean,Seq[String])] with mutable.SynchronizedBuffer[(Boolean, Seq[String])]
+    val chunkSize = config.chunkSize()
+
+    val experimentPrePar = for {
       _ <- Experiment.description("config.problem")(config.problemCfg())
         .withReport(Reporter.constant("config.algorithm",config.algorithmCfg()))
       pi <- Experiment.generateSeed("seed.problem")(config.problemSeed(),config.problemCount())
@@ -90,18 +102,36 @@ object ictai13 {
         .withReport(maxDomainSize())
       groundTruth <- Experiment(createGroundTruth(problem))
         .withReport(logZReporter("true.lnZ"))
-      algorithmSeed <- Experiment.generateSeed("seed.algorithm")(config.algorithmSeed(),config.algorithmRuns())
-      algorithm <- createAlgorithm(config.algorithmCfg(),problem,algorithmSeed,config.algorithmSteps())
-      _ <- Experiment(algorithm)
-        .withReport(logZReporter("estimate.lnZ"))
-        .withReport(meanDiffReporter(groundTruth))
-        .withReport(meanKLReporter(groundTruth))
-        .withReport(meanSquaredDiffReporter(groundTruth))
-        .withReport(maxDiffReporter(groundTruth))
-        .withReport(iaIteration("iteration.alg"))
-    } yield algorithm
+      algorithmSeed <- Experiment.generateSeed("seed.algorithm")(config.algorithmSeed(), config.algorithmRuns())
+      algorithm <- createAlgorithm(config.algorithmCfg(), problem, algorithmSeed, config.algorithmSteps())
+    } yield (algorithm,groundTruth)
 
-    experiment.run(System.out)
+    experimentPrePar.iterator.grouped(chunkSize).foreach{ continues =>
+      continues.toSeq.par.foreach{ cont =>
+        System.gc()
+        val experiment = for {
+          (algorithm,groundTruth) <- Experiment.fromIteratorWithReport(Iterator(cont))
+           _ <- Experiment(algorithm)
+            .withReport(logZReporter("estimate.lnZ"))
+            .withReport(meanDiffReporter(groundTruth))
+            .withReport(meanKLReporter(groundTruth))
+            .withReport(meanSquaredDiffReporter(groundTruth))
+            .withReport(maxDiffReporter(groundTruth))
+            .withReport(iaIteration("iteration.alg"))
+        } yield Unit
+
+        val header: Boolean = this.synchronized {
+          val ph = printHeader; printHeader = false; ph
+        }
+        resultStrings += ((header,experiment.run(header)))
+      }
+    }
+
+    //print output
+    val (header,withoutHeader) = resultStrings.partition(_._1)
+    assert(header.size == 1)
+    println(header.head._2.mkString("\n"))
+    println(withoutHeader.map(_._2).map(_.mkString("\n")).mkString("\n"))
   }
 
   def printProblem(p: Problem, print: Boolean){
