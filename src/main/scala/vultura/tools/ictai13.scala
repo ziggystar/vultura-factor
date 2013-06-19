@@ -103,14 +103,15 @@ object ictai13 {
       groundTruth <- Experiment(createGroundTruth(problem))
         .withReport(logZReporter("true.lnZ"))
       algorithmSeed <- Experiment.generateSeed("seed.algorithm")(config.algorithmSeed(), config.algorithmRuns())
-      algorithm <- createAlgorithm(config.algorithmCfg(), problem, algorithmSeed, config.algorithmSteps())
-    } yield (algorithm,groundTruth)
+
+    } yield (problem,algorithmSeed,groundTruth)
 
     experimentPrePar.iterator.grouped(chunkSize).foreach{ continues =>
       continues.toSeq.par.foreach{ cont =>
         System.gc()
         val experiment = for {
-          (algorithm,groundTruth) <- Experiment.fromIteratorWithReport(Iterator(cont))
+          (problem,algorithmSeed,groundTruth) <- Experiment.fromIteratorWithReport(Iterator(cont))
+          algorithm <- createAlgorithm(config.algorithmCfg(), problem, algorithmSeed, config.algorithmSteps())
            _ <- Experiment(algorithm)
             .withReport(logZReporter("estimate.lnZ"))
             .withReport(meanDiffReporter(groundTruth))
@@ -144,8 +145,10 @@ object ictai13 {
     new CalibratedJunctionTree(p)
   }
 
-  def createAlgorithm(config: String, p: Problem, seed: Long, steps: Int): Experiment[InfAlg] =
-    AlgConfParser.parse(config)(p,seed).take(steps)
+  def createAlgorithm(config: String, p: Problem, seed: Long, steps: Int): Experiment[InfAlg] = {
+    println(config)
+    AlgConfParser.parse(config)(p, seed).take(steps)
+  }
 
 //    def getCPUTime: Double = (ManagementFactory.getThreadMXBean.getCurrentThreadCpuTime - startTime) * 1e-9
 
