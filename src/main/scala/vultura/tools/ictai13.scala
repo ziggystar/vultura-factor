@@ -111,8 +111,8 @@ object ictai13 {
         System.gc()
         val experiment = for {
           (problem,algorithmSeed,groundTruth) <- Experiment.fromIteratorWithReport(Iterator(cont))
-          algorithm <- createAlgorithm(config.algorithmCfg(), problem, algorithmSeed, config.algorithmSteps())
-           _ <- Experiment(algorithm)
+          conf: AlgConfig <- AlgConfParser.parse(config.algorithmCfg())
+          _ <- Experiment.fromIterator(conf.iterator(problem,algorithmSeed).take(config.algorithmSteps()))
             .withReport(logZReporter("estimate.lnZ"))
             .withReport(meanDiffReporter(groundTruth))
             .withReport(meanKLReporter(groundTruth))
@@ -145,10 +145,9 @@ object ictai13 {
     new CalibratedJunctionTree(p)
   }
 
-  def createAlgorithm(config: String, p: Problem, seed: Long, steps: Int): Experiment[InfAlg] = {
-    println(config)
-    AlgConfParser.parse(config)(p, seed).take(steps)
-  }
+//  def createAlgorithm(config: String, p: Problem, seed: Long, steps: Int): Experiment[InfAlg] = {
+//    AlgConfParser.parse(config)(p, seed).take(steps)
+//  }
 
 //    def getCPUTime: Double = (ManagementFactory.getThreadMXBean.getCurrentThreadCpuTime - startTime) * 1e-9
 
@@ -186,40 +185,67 @@ object ictai13 {
 }
 
 object AlgConfParser extends JavaTokenParsers {
-  def algConf: Parser[(Problem,Long) => Experiment[InfAlg]] = cbp ^^ {
-    case cbpConf => (p,seed) => Experiment.fromIterator(cbpConf.copy(seed=seed).iterator(p))
+  def algConf: Parser[Experiment[AlgConfig]] = "CBP[" ~> cbpModE <~ "]" ^^ {
+    case cbpModExp => for {
+      conf <- Experiment.fromIterator(cbpModExp.iterator)
+      mod = conf(CBPConfig())
+      _ <- Experiment(mod).withReport(Reporter("cbp.conf")(_.toString))
+    } yield mod
   }
+
   def cbp: Parser[CBPConfig] = "CBP" ~ "[" ~> repsep(cbpMod,",") <~ "]" ^^ {
     case mods => mods.foldLeft(CBPConfig()){case (old,mod) => mod(old)}
   }
   def cbpMod: Parser[CBPConfig => CBPConfig] = leafSel | varSel | clampMethod | tol | bpIter
-  def leafSel: Parser[CBPConfig => CBPConfig] = "leafsel=" ~> (
-      "random" ^^^ CBP.leafSelectionRandom _ |
-        "depth" ^^^ CBP.leafSelectionDepth _ |
-        "z" ^^^ CBP.leafSelectionOnlyZ _ |
-        "slowsettler" ^^^ CBP.leafSelectionOnlyZ _
-    ) ^^ (strat => _.copy(leafSelection=strat))
-  def varSel: Parser[CBPConfig => CBPConfig] = "varsel=" ~> (
-      "random" ^^^ CBP.variableSelectionRandom _ |
-      "degree" ^^^ CBP.variableSelectionHighDegree _ |
-      "slowsettler" ^^^ CBP.variableSelectionSlowestSettler _
-    ) ^^ (strat => _.copy(variableSelection=strat))
-  def clampMethod: Parser[CBPConfig => CBPConfig] = "clamp=" ~> (
-      "CLAMP" ^^^ CBP.CLAMP_METHOD.CLAMP |
-      "CONDITION" ^^^ CBP.CLAMP_METHOD.CONDITION |
-      "CONDITION_SIMPLIFY" ^^^ CBP.CLAMP_METHOD.CONDITION_SIMPLIFY
-    ) ^^ (method => _.copy(clampMethod = method))
+
+  def cbpModE: Parser[List[CBPConfig => CBPConfig]] = repsep(leafSelE | varSelE | clampMethodE | tolE | bpIterE, ",") ^^ {
+    case expMods => expMods.foldLeft(List(identity[CBPConfig] _))((mod1,mod2) => for(f1 <- mod1;f2 <- mod2) yield f1 compose f2)
+  }
+
+  def leafSel: Parser[CBPConfig => CBPConfig] = "leafsel=" ~> leafSelString ^^ (strat => _.copy(leafSelection=strat))
+  def leafSelE: Parser[List[CBPConfig => CBPConfig]] =
+    parseList("leafsel",leafSelString) ^^ (_.map(method => (_: CBPConfig).copy(leafSelection=method)))
+
+  def varSel: Parser[CBPConfig => CBPConfig] = "varsel=" ~> varSelString ^^ (strat => _.copy(variableSelection=strat))
+  def varSelE: Parser[List[CBPConfig => CBPConfig]] =
+    parseList("varsel",varSelString) ^^ (_.map(method => (_: CBPConfig).copy(variableSelection=method)))
+
+  def clampMethod: Parser[CBPConfig => CBPConfig] = "clamp=" ~> clampMethodString ^^ (method => _.copy(clampMethod = method))
+  def clampMethodE: Parser[List[CBPConfig => CBPConfig]] =
+    parseList[CBP.CLAMP_METHOD.Value]("clamp", clampMethodString) ^^ (_.map(method => (_: CBPConfig).copy(clampMethod=method)))
+
   def tol: Parser[CBPConfig => CBPConfig] = "tol=" ~> (floatingPointNumber ^^ (_.toDouble)) ^^
     (x => _.copy(bpTol=x))
+  def tolE: Parser[List[CBPConfig => CBPConfig]] =
+    parseList[Double]("tol", floatingPointNumber ^^ (_.toDouble)) ^^ (_.map(x => (_: CBPConfig).copy(bpTol=x)))
+
   def bpIter: Parser[CBPConfig => CBPConfig] = "bpiter=" ~> (wholeNumber ^^ (_.toInt)) ^^
     (x => _.copy(bpMaxiter=x))
+  def bpIterE: Parser[List[CBPConfig => CBPConfig]] =
+    parseList[Int]("bpiter", wholeNumber ^^ (_.toInt)) ^^ (_.map(x => (_: CBPConfig).copy(bpMaxiter=x)))
 
-  def parse(s: String): (Problem,Long) => Experiment[InfAlg] = {
+  def parseList[A](name: String, parser: Parser[A]): Parser[List[A]] =
+    name ~ "=" ~> ("{" ~> rep1sep(parser,",")<~ "}" | parser ^^ (x => List(x)))
+
+  def varSelString: Parser[(BeliefPropagation, Random) => Int] =
+    "random" ^^^ CBP.variableSelectionRandom _ |
+      "degree" ^^^ CBP.variableSelectionHighDegree _ |
+      "slowsettler" ^^^ CBP.variableSelectionSlowestSettler
+  def clampMethodString: Parser[CBP.CLAMP_METHOD.Value] =
+    "CLAMP" ^^^ CBP.CLAMP_METHOD.CLAMP |
+      "CONDITION" ^^^ CBP.CLAMP_METHOD.CONDITION |
+      "CONDITION_SIMPLIFY" ^^^ CBP.CLAMP_METHOD.CONDITION_SIMPLIFY
+  def leafSelString: Parser[(Map[Map[Int, Int], BeliefPropagation], Random) => Map[Int, Int]] =
+    "random" ^^^ CBP.leafSelectionRandom _ |
+      "depth" ^^^ CBP.leafSelectionDepth _ |
+      "z" ^^^ CBP.leafSelectionOnlyZ _ |
+      "slowsettler" ^^^ CBP.leafSelectionOnlyZ _
+
+  def parse(s: String): Experiment[AlgConfig] = {
     parseAll(algConf,s) match {
       case Success(alg,_) => alg
-      case Failure(msg,_) => sys.error(msg)
+      case ns@NoSuccess(msg,_) => sys.error(msg + "\n" + ns)
     }
-
   }
 }
 

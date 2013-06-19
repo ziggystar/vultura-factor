@@ -114,11 +114,14 @@ object CBP {
   }
 }
 
+trait AlgConfig {
+  def iterator(p: Problem, seed: Long): Iterator[InfAlg]
+}
+
 case class CBPConfig(leafSelection: (Map[Map[Int,Int],BeliefPropagation], Random) => Map[Int,Int] = CBP.leafSelectionRandom,
                      variableSelection: (BeliefPropagation, Random) => Int = CBP.variableSelectionRandom,
                      clampMethod: CBP.CLAMP_METHOD.Value = CBP.CLAMP_METHOD.CLAMP,
                      bpMaxiter: Int = 1000,
-                     bpTol: Double = 1e-10,
-                     seed: Long = 0L) {
-  def iterator(p: Problem): Iterator[InfAlg] = new CBP(p,leafSelection,variableSelection,clampMethod,bpMaxiter,bpTol,new Random(seed))
+                     bpTol: Double = 1e-10) extends AlgConfig {
+  def iterator(p: Problem, seed: Long): Iterator[InfAlg] = new CBP(p,leafSelection,variableSelection,clampMethod,bpMaxiter,bpTol,new Random(seed))
 }

@@ -36,9 +36,7 @@ trait Experiment[A]{
 }
 
 object Experiment{
-  def apply[A](a: A): Experiment[A] = new Experiment[A] {
-    def iterator = Iterator((a,Reporter.empty))
-  }
+  def apply[A](a: A): Experiment[A] = fromIterator(Iterator(a))
   def fromIteratorWithReport[A](as: Iterator[(A,Reporter[A])]): Experiment[A] = new Experiment[A] {
     def iterator: Iterator[(A, Reporter[A])] = as
   }
