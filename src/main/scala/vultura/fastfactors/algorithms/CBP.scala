@@ -9,13 +9,16 @@ import scala.collection.mutable
  * Conditioned Belief Propagation.
  */
 class CBP(val problem: Problem,
-          val leafSelection: (Map[Map[Int,Int],BeliefPropagation], Random) => Map[Int,Int],
-          val variableSelection: (BeliefPropagation, Random) => Int,
+          leafSel: CBP.LEAF_SELECTION.Value,
+          varSel: CBP.VARIABLE_SELECTION.Value,
           val clampMethod: CBP.CLAMP_METHOD.Value = CBP.CLAMP_METHOD.CLAMP,
           val bpMaxiter: Int = 1000,
           val bpTol: Double = 1e-10,
           private val random: Random = new Random(0L)) extends InfAlg with Iterator[InfAlg] {
   implicit val (logger, formatter, appender) = CBP.allLog
+
+  val leafSelection: (Map[Map[Int,Int],BeliefPropagation], Random) => Map[Int,Int] = CBP.LEAF_SELECTION.selector(leafSel)
+  val variableSelection: (BeliefPropagation, Random) => Int = CBP.VARIABLE_SELECTION.selector(varSel)
 
   val Problem(factors,domains,ring) = problem
   def getProblem: Problem = problem
@@ -98,19 +101,38 @@ object CBP {
     val CLAMP, CONDITION, CONDITION_SIMPLIFY = Value
   }
 
-  /** Expand evenly. */
-  def leafSelectionDepth(leafs: Map[Map[Int,Int], BeliefPropagation], random: Random): Map[Int,Int] =
-    vultura.util.maxByMultiple(leafs.keys.toSeq)(ass => -ass.size).pickRandom(random)
-  def leafSelectionRandom(leafs: Map[Map[Int,Int],BeliefPropagation], random: Random): Map[Int,Int] = leafs.keys.pickRandom(random)
-  def leafSelectionOnlyZ(leafs: Map[Map[Int,Int],BeliefPropagation], random: Random): Map[Int,Int] = leafs.maxBy(_._2.logZ)._1
-  def leafSelectionSlowestSettler(leafs: Map[Map[Int,Int],BeliefPropagation], random: Random): Map[Int,Int] =
-    vultura.util.maxByMultiple(leafs.toSeq)(_._2.messages.map(_._2.lastUpdate).max).pickRandom(random)._1
+  object VARIABLE_SELECTION extends Enumeration {
+    val MAX_DEGREE, RANDOM, SLOW_SETTLER = Value
 
-  def variableSelectionHighDegree(bp: BeliefPropagation, random: Random): Int =
-    vultura.util.maxByMultiple(bp.problem.variables.toSeq)(bp.problem.degreeOfVariable).pickRandom(random)
-  def variableSelectionRandom(bp: BeliefPropagation, random: Random): Int = bp.problem.variables.pickRandom(random)
-  def variableSelectionSlowestSettler(bp: BeliefPropagation, random: Random): Int = {
-    vultura.util.maxByMultiple(bp.messages.toSeq)(_._2.lastUpdate).flatMap(_._2.factor.variables).pickRandom(random)
+    def variableSelectionHighDegree(bp: BeliefPropagation, random: Random): Int =
+      vultura.util.maxByMultiple(bp.problem.variables.toSeq)(bp.problem.degreeOfVariable).pickRandom(random)
+    def variableSelectionRandom(bp: BeliefPropagation, random: Random): Int = bp.problem.variables.pickRandom(random)
+    def variableSelectionSlowestSettler(bp: BeliefPropagation, random: Random): Int =
+      vultura.util.maxByMultiple(bp.messages.toSeq)(_._2.lastUpdate).flatMap(_._2.factor.variables).pickRandom(random)
+    def selector(v: Value): (BeliefPropagation, Random) => Int = v match {
+      case MAX_DEGREE => variableSelectionHighDegree
+      case RANDOM => variableSelectionRandom
+      case SLOW_SETTLER => variableSelectionSlowestSettler
+    }
+  }
+
+  object LEAF_SELECTION extends Enumeration {
+    val MIN_DEPTH,RANDOM,MAX_Z,SLOW_SETTLER = Value
+
+    /** Expand evenly. */
+    def leafSelectionDepth(leafs: Map[Map[Int,Int], BeliefPropagation], random: Random): Map[Int,Int] =
+      vultura.util.maxByMultiple(leafs.keys.toSeq)(ass => -ass.size).pickRandom(random)
+    def leafSelectionRandom(leafs: Map[Map[Int,Int],BeliefPropagation], random: Random): Map[Int,Int] = leafs.keys.pickRandom(random)
+    def leafSelectionOnlyZ(leafs: Map[Map[Int,Int],BeliefPropagation], random: Random): Map[Int,Int] = leafs.maxBy(_._2.logZ)._1
+    def leafSelectionSlowestSettler(leafs: Map[Map[Int,Int],BeliefPropagation], random: Random): Map[Int,Int] =
+      vultura.util.maxByMultiple(leafs.toSeq)(_._2.messages.map(_._2.lastUpdate).max).pickRandom(random)._1
+
+    def selector(v: Value): (Map[Map[Int, Int], BeliefPropagation], Random) => Map[Int, Int] = v match {
+      case MIN_DEPTH => leafSelectionDepth
+      case RANDOM => leafSelectionRandom
+      case MAX_Z => leafSelectionOnlyZ
+      case SLOW_SETTLER => leafSelectionSlowestSettler
+    }
   }
 }
 
@@ -118,10 +140,18 @@ trait AlgConfig {
   def iterator(p: Problem, seed: Long): Iterator[InfAlg]
 }
 
-case class CBPConfig(leafSelection: (Map[Map[Int,Int],BeliefPropagation], Random) => Map[Int,Int] = CBP.leafSelectionRandom,
-                     variableSelection: (BeliefPropagation, Random) => Int = CBP.variableSelectionRandom,
+case class CBPConfig(leafSelection: CBP.LEAF_SELECTION.Value = CBP.LEAF_SELECTION.RANDOM,
+                     variableSelection: CBP.VARIABLE_SELECTION.Value = CBP.VARIABLE_SELECTION.RANDOM,
                      clampMethod: CBP.CLAMP_METHOD.Value = CBP.CLAMP_METHOD.CLAMP,
                      bpMaxiter: Int = 1000,
                      bpTol: Double = 1e-10) extends AlgConfig {
-  def iterator(p: Problem, seed: Long): Iterator[InfAlg] = new CBP(p,leafSelection,variableSelection,clampMethod,bpMaxiter,bpTol,new Random(seed))
+  def iterator(p: Problem, seed: Long): Iterator[InfAlg] =
+    new CBP(
+      p,
+      leafSelection,
+      variableSelection,
+      clampMethod,
+      bpMaxiter,
+      bpTol,
+      new Random(seed))
 }

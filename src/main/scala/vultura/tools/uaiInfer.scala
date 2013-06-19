@@ -94,7 +94,7 @@ object uaiInfer {
     logger.info(f"running algorithm ${config.algorithm()}")
     val infer: Problem => Double = config.algorithm().toUpperCase match {
       case "CBP" => { problem =>
-        val cbp = new CBP(problem,CBP.leafSelectionSlowestSettler,CBP.variableSelectionSlowestSettler,CBP.CLAMP_METHOD.CLAMP,50,1e-10,random)
+        val cbp = new CBP(problem,CBP.LEAF_SELECTION.RANDOM,CBP.VARIABLE_SELECTION.RANDOM,CBP.CLAMP_METHOD.CLAMP,50,1e-10,random)
         cbp.run(30)
         cbp.logZ
       }

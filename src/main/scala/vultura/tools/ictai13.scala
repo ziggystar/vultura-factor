@@ -13,6 +13,7 @@ import vultura.util._
 import vultura.experiments.{Reporter, Experiment}
 import scala.util.parsing.combinator.JavaTokenParsers
 import scala.collection.mutable
+import scala.Enumeration
 
 /**
  * Created by IntelliJ IDEA.
@@ -185,11 +186,17 @@ object ictai13 {
 }
 
 object AlgConfParser extends JavaTokenParsers {
+  val cbpReporter: Reporter[CBPConfig] = Reporter(
+    Seq("bp.tol","bp.maxiter","cbp.sel.leaf","cbp.sel.var","cbp.clamp")
+  )(
+    cfg => Seq(cfg.bpTol.toString,cfg.bpMaxiter.toString,cfg.leafSelection.toString,cfg.variableSelection.toString,cfg.clampMethod.toString)
+  )
+
   def algConf: Parser[Experiment[AlgConfig]] = "CBP[" ~> cbpModE <~ "]" ^^ {
     case cbpModExp => for {
       conf <- Experiment.fromIterator(cbpModExp.iterator)
       mod = conf(CBPConfig())
-      _ <- Experiment(mod).withReport(Reporter("cbp.conf")(_.toString))
+      _ <- Experiment(mod).withReport(cbpReporter)
     } yield mod
   }
 
@@ -227,19 +234,21 @@ object AlgConfParser extends JavaTokenParsers {
   def parseList[A](name: String, parser: Parser[A]): Parser[List[A]] =
     name ~ "=" ~> ("{" ~> rep1sep(parser,",")<~ "}" | parser ^^ (x => List(x)))
 
-  def varSelString: Parser[(BeliefPropagation, Random) => Int] =
-    "random" ^^^ CBP.variableSelectionRandom _ |
-      "degree" ^^^ CBP.variableSelectionHighDegree _ |
-      "slowsettler" ^^^ CBP.variableSelectionSlowestSettler
+  def varSelString: Parser[CBP.VARIABLE_SELECTION.Value] =
+    "random" ^^^ CBP.VARIABLE_SELECTION.RANDOM|
+      "degree" ^^^ CBP.VARIABLE_SELECTION.MAX_DEGREE |
+      "slowsettler" ^^^ CBP.VARIABLE_SELECTION.SLOW_SETTLER
+
   def clampMethodString: Parser[CBP.CLAMP_METHOD.Value] =
     "CLAMP" ^^^ CBP.CLAMP_METHOD.CLAMP |
       "CONDITION" ^^^ CBP.CLAMP_METHOD.CONDITION |
       "CONDITION_SIMPLIFY" ^^^ CBP.CLAMP_METHOD.CONDITION_SIMPLIFY
-  def leafSelString: Parser[(Map[Map[Int, Int], BeliefPropagation], Random) => Map[Int, Int]] =
-    "random" ^^^ CBP.leafSelectionRandom _ |
-      "depth" ^^^ CBP.leafSelectionDepth _ |
-      "z" ^^^ CBP.leafSelectionOnlyZ _ |
-      "slowsettler" ^^^ CBP.leafSelectionOnlyZ _
+
+  def leafSelString: Parser[CBP.LEAF_SELECTION.Value] =
+    "random" ^^^ CBP.LEAF_SELECTION.RANDOM |
+      "depth" ^^^ CBP.LEAF_SELECTION.MIN_DEPTH |
+      "z" ^^^ CBP.LEAF_SELECTION.MAX_Z |
+      "slowsettler" ^^^ CBP.LEAF_SELECTION.SLOW_SETTLER
 
   def parse(s: String): Experiment[AlgConfig] = {
     parseAll(algConf,s) match {
