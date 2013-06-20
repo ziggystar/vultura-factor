@@ -14,6 +14,7 @@ import vultura.experiments.{Reporter, Experiment}
 import scala.util.parsing.combinator.JavaTokenParsers
 import scala.collection.mutable
 import scala.Enumeration
+import vultura.fastfactors.algorithms.CBP.TypefulEnum
 
 /**
  * Created by IntelliJ IDEA.
@@ -234,21 +235,12 @@ object AlgConfParser extends JavaTokenParsers {
   def parseList[A](name: String, parser: Parser[A]): Parser[List[A]] =
     name ~ "=" ~> ("{" ~> rep1sep(parser,",")<~ "}" | parser ^^ (x => List(x)))
 
-  def varSelString: Parser[CBP.VARIABLE_SELECTION.Value] =
-    "random" ^^^ CBP.VARIABLE_SELECTION.RANDOM|
-      "degree" ^^^ CBP.VARIABLE_SELECTION.MAX_DEGREE |
-      "slowsettler" ^^^ CBP.VARIABLE_SELECTION.SLOW_SETTLER
+  def varSelString: Parser[CBP.VARIABLE_SELECTION.Value] = enumParser(CBP.VARIABLE_SELECTION)
+  def clampMethodString: Parser[CBP.CLAMP_METHOD.Value] = enumParser(CBP.CLAMP_METHOD)
+  def leafSelString: Parser[CBP.LEAF_SELECTION.Value] = enumParser(CBP.LEAF_SELECTION)
 
-  def clampMethodString: Parser[CBP.CLAMP_METHOD.Value] =
-    "CLAMP" ^^^ CBP.CLAMP_METHOD.CLAMP |
-      "CONDITION" ^^^ CBP.CLAMP_METHOD.CONDITION |
-      "CONDITION_SIMPLIFY" ^^^ CBP.CLAMP_METHOD.CONDITION_SIMPLIFY
-
-  def leafSelString: Parser[CBP.LEAF_SELECTION.Value] =
-    "random" ^^^ CBP.LEAF_SELECTION.RANDOM |
-      "depth" ^^^ CBP.LEAF_SELECTION.MIN_DEPTH |
-      "z" ^^^ CBP.LEAF_SELECTION.MAX_Z |
-      "slowsettler" ^^^ CBP.LEAF_SELECTION.SLOW_SETTLER
+  def enumParser[A](enum: Enumeration): Parser[enum.Value] =
+    enum.values.map(value => value.toString ^^^ value).reduce(_ | _)
 
   def parse(s: String): Experiment[AlgConfig] = {
     parseAll(algConf,s) match {

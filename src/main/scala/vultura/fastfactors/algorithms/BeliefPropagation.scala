@@ -113,7 +113,7 @@ extends InfAlg with Iterator[InfAlg] {
 
     ring.normalizeInplace(newValues)
 
-    //TODO use sumProduct message directly and write to existing array?
+    //TODO: [performance] use sumProduct message directly and write to existing array?
     val delta = maxDiff(oldMessage.factor.values,newValues)
     if(delta > tol){
       messageUpdates += 1

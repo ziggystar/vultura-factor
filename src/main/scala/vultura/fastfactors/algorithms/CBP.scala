@@ -17,33 +17,44 @@ class CBP(val problem: Problem,
           private val random: Random = new Random(0L)) extends InfAlg with Iterator[InfAlg] {
   implicit val (logger, formatter, appender) = CBP.allLog
 
-  val leafSelection: (Map[Map[Int,Int],BeliefPropagation], Random) => Map[Int,Int] = CBP.LEAF_SELECTION.selector(leafSel)
-  val variableSelection: (BeliefPropagation, Random) => Int = CBP.VARIABLE_SELECTION.selector(varSel)
+  val leafSelection: (Map[Map[Int,Int],BeliefPropagation], Random) => Map[Int,Int] = CBP.LEAF_SELECTION.apply(leafSel)
+  val variableSelection: (BeliefPropagation, Random) => Int = CBP.VARIABLE_SELECTION.apply(varSel)
 
   val Problem(factors,domains,ring) = problem
   def getProblem: Problem = problem
 
+  var exactlySolved: Map[Map[Int,Int],InfAlg] = _
   var queue: Map[Map[Int,Int],BeliefPropagation] = _
   var iterations: Int = _
 
   init()
 
   def init(){
-    queue = Map(Map[Int,Int]() -> constructBP(Map()))
+    exactlySolved = Map()
+    queue = Map()
+    processPA(Map()) match {
+      case Left(bp) => queue = Map(Map[Int,Int]() -> bp)
+      case Right(ia) => exactlySolved = Map(Map[Int,Int]() -> ia)
+    }
     iterations = 0
   }
 
   def run(maxIter: Int){
     var steps = 0
-    while(steps < maxIter){
+    while(steps < maxIter && !queue.isEmpty){
+      //TODO [bug][improvement] handle constant problems properly (special case of 'solved exactly')
       val selectAssignment =  leafSelection(queue,random)
       logger.finer(f"CBP refining assignment $selectAssignment")
       val selectVar: Int = variableSelection(queue(selectAssignment),random)
       val newAssignments: IndexedSeq[Map[Int, Int]] =
         for(x <- 0 until domains(selectVar)) yield selectAssignment + (selectVar -> x)
-      queue = queue - selectAssignment ++ newAssignments.map(a => a -> constructBP(a))
+
+      val newLeafs: IndexedSeq[(Map[Int, Int], Either[BeliefPropagation, InfAlg])] = newAssignments.map(a => a -> processPA(a))
+      val newBPLeafs: IndexedSeq[(Map[Int, Int], BeliefPropagation)] = newLeafs.collect{case (pa,Left(bp)) => (pa,bp)}
+      val newExactLeafs: IndexedSeq[(Map[Int, Int], InfAlg)] = newLeafs.collect{case (pa,Right(ia)) => (pa,ia)}
+      exactlySolved = exactlySolved ++ newExactLeafs
+      queue = queue - selectAssignment ++ newBPLeafs
       steps += 1
-//      logger.info("size of queue is " + queue.size)
     }
     iterations += steps
     beliefCache.clear()
@@ -60,7 +71,8 @@ class CBP(val problem: Problem,
     this
   }
 
-  def constructBP(assignment: Map[Int,Int]): BeliefPropagation = {
+  /** @return right is exact solution. */
+  def processPA(assignment: Map[Int,Int]): Either[BeliefPropagation,InfAlg] = {
     import CBP.CLAMP_METHOD._
     val clampFactor: IndexedSeq[FastFactor] => IndexedSeq[FastFactor] = clampMethod match {
       case CONDITION => _.map(_.condition(assignment,domains))
@@ -68,28 +80,39 @@ class CBP(val problem: Problem,
       case CLAMP => _ ++ assignment.map{case (variable,value) => FastFactor(Array(variable),Array.fill(domains(variable))(ring.zero).updated(value,ring.one))}
     }
     val conditionedProblem: Problem = problem.copy(factors = clampFactor(problem.factors))
-    val bp = new BeliefPropagation(conditionedProblem,random,bpTol,bpMaxiter)
+    if(conditionedProblem.variables.isEmpty)
+      Right(new CalibratedJunctionTree(conditionedProblem))
+    else
+      Left(constructBP(conditionedProblem))
+  }
+
+  def constructBP(p: Problem): BeliefPropagation = {
+    val bp = new BeliefPropagation(p,random,bpTol,bpMaxiter)
     if(!bp.converged)
-      logger.fine(f"bp run did not converge for assignment $assignment")
+      logger.fine(f"bp run did not converge")
     bp
   }
+
   def logZ: Double = {
     val conditionedZs: Array[Double] = queue.map(_._2.logZ)(collection.breakOut)
-    LogD.sumA(conditionedZs)
+    val exactZs: Array[Double] = exactlySolved.map(_._2.logZ)(collection.breakOut)
+    LogD.sumA(conditionedZs ++ exactZs)
   }
+
   /** @return Partition function in encoding specified by `ring`. */
-  def Z: Double = ring.sumA(queue.map(_._2.Z)(collection.breakOut))
+  def Z: Double = ring.sumA((queue.map(_._2.Z) ++ exactlySolved.map(_._2.Z))(collection.breakOut))
 
   private val beliefCache = new mutable.HashMap[Int,FastFactor]
 
-  def variableBelief(vi: Int): FastFactor = beliefCache.getOrElseUpdate(vi,queue.map{ case (assignment,bp) =>
+  def variableBelief(vi: Int): FastFactor = beliefCache.getOrElseUpdate(vi,(queue ++ exactlySolved).map{ case (assignment,bp) =>
     //if the variable is conditioned, construct a factor f with f(v) = bp.Z for v == assigned value and 0 else
     val z = bp.Z
     val range: Range = 0 until domains(vi)
     assignment.get(vi)
-      .map(xi => FastFactor(Array(vi), range.map(yi => if (yi == xi) ring.one else ring.zero)(collection.breakOut)))
+      .map(xi => FastFactor(Array(vi), range.map(yi => if (yi == xi) z else ring.zero)(collection.breakOut)))
       .getOrElse(bp.variableBelief(vi).map(ring.prod(_,z)))
-  }.reduce[FastFactor]{ case (f1,f2) => FastFactor(f1.variables,f1.values.zip(f2.values).map(t => ring.sum(t._1,t._2)))}.normalize(problem.ring))
+  }.reduce[FastFactor]{ case (f1,f2) => FastFactor(f1.variables,f1.values.zip(f2.values).map(t => ring.sum(t._1,t._2)))}
+    .normalize(problem.ring))
 
   def iteration: Int = iterations
 }
@@ -97,26 +120,38 @@ class CBP(val problem: Problem,
 object CBP {
   implicit val allLog@(logger, formatter, appender) = ZeroLoggerFactory.newLogger(this)
 
+  trait TypefulEnum[A]{ self: Enumeration =>
+    def apply(value: self.Value): A
+  }
   object CLAMP_METHOD extends Enumeration {
-    val CLAMP, CONDITION, CONDITION_SIMPLIFY = Value
+    val CLAMP, CONDITION_SIMPLIFY, CONDITION = Value
   }
 
-  object VARIABLE_SELECTION extends Enumeration {
-    val MAX_DEGREE, RANDOM, SLOW_SETTLER = Value
+  object VARIABLE_SELECTION extends Enumeration with TypefulEnum[(BeliefPropagation, Random) => Int]{
+    val MAX_DEGREE, RANDOM, SLOW_SETTLER, BACKDOOR = Value
 
     def variableSelectionHighDegree(bp: BeliefPropagation, random: Random): Int =
       vultura.util.maxByMultiple(bp.problem.variables.toSeq)(bp.problem.degreeOfVariable).pickRandom(random)
     def variableSelectionRandom(bp: BeliefPropagation, random: Random): Int = bp.problem.variables.pickRandom(random)
     def variableSelectionSlowestSettler(bp: BeliefPropagation, random: Random): Int =
       vultura.util.maxByMultiple(bp.messages.toSeq)(_._2.lastUpdate).flatMap(_._2.factor.variables).pickRandom(random)
-    def selector(v: Value): (BeliefPropagation, Random) => Int = v match {
+    def backdoor(bp: BeliefPropagation, random: Random): Int = {
+      val cliques = for {
+        tree <- bp.problem.minDegreeJunctionTrees(random)
+        (clique,_) <- tree.flatten
+      } yield clique
+      vultura.util.maxByMultiple(cliques)(_.size).pickRandom(random).pickRandom(random)
+    }
+
+    def apply(v: Value): (BeliefPropagation, Random) => Int = v match {
       case MAX_DEGREE => variableSelectionHighDegree
       case RANDOM => variableSelectionRandom
       case SLOW_SETTLER => variableSelectionSlowestSettler
+      case BACKDOOR => backdoor
     }
   }
 
-  object LEAF_SELECTION extends Enumeration {
+  object LEAF_SELECTION extends Enumeration with TypefulEnum[(Map[Map[Int, Int], BeliefPropagation], Random) => Map[Int, Int]]{
     val MIN_DEPTH,RANDOM,MAX_Z,SLOW_SETTLER = Value
 
     /** Expand evenly. */
@@ -127,7 +162,7 @@ object CBP {
     def leafSelectionSlowestSettler(leafs: Map[Map[Int,Int],BeliefPropagation], random: Random): Map[Int,Int] =
       vultura.util.maxByMultiple(leafs.toSeq)(_._2.messages.map(_._2.lastUpdate).max).pickRandom(random)._1
 
-    def selector(v: Value): (Map[Map[Int, Int], BeliefPropagation], Random) => Map[Int, Int] = v match {
+    def apply(v: Value): (Map[Map[Int, Int], BeliefPropagation], Random) => Map[Int, Int] = v match {
       case MIN_DEPTH => leafSelectionDepth
       case RANDOM => leafSelectionRandom
       case MAX_Z => leafSelectionOnlyZ
@@ -144,7 +179,7 @@ case class CBPConfig(leafSelection: CBP.LEAF_SELECTION.Value = CBP.LEAF_SELECTIO
                      variableSelection: CBP.VARIABLE_SELECTION.Value = CBP.VARIABLE_SELECTION.RANDOM,
                      clampMethod: CBP.CLAMP_METHOD.Value = CBP.CLAMP_METHOD.CLAMP,
                      bpMaxiter: Int = 1000,
-                     bpTol: Double = 1e-10) extends AlgConfig {
+                     bpTol: Double = 1e-15) extends AlgConfig {
   def iterator(p: Problem, seed: Long): Iterator[InfAlg] =
     new CBP(
       p,

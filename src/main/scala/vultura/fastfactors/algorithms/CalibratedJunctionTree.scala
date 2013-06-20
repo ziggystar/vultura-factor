@@ -19,12 +19,12 @@ class CalibratedJunctionTree(val problem: Problem) extends InfAlg {
     (calibratedTreesWithZ.map(_._1),problem.ring.prodA(calibratedTreesWithZ.map(_._2)(collection.breakOut)))
   }
 
-  //TODO doesn't make much sense?
+  //TODO [design] doesn't make much sense?
   def iteration: Int = 1
 
   def uncalibratedTrees: Seq[Tree[FastFactor]] = {
     //1. create format for jt-creation
-    //2. multiplay all factors of each clique into one
+    //2. multiply all factors of each clique into one
     compactJTrees(minDegreeJTs(problem.factors.map(f => f.variables.toSet -> f)))
         .map(_.map {
         case (vars, factors) => FastFactor.multiplyRetain(problem.ring)(problem.domains)(factors.toIndexedSeq,vars.toArray.sorted)

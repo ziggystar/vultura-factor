@@ -2,6 +2,9 @@ package vultura.fastfactors
 
 import scala.collection.mutable
 import vultura.factors.uai
+import scala.util.Random
+import vultura.util.TreeWidth._
+import scalaz.Tree
 
 /**
  * Created by IntelliJ IDEA.
@@ -24,6 +27,9 @@ case class Problem(factors: IndexedSeq[FastFactor],domains: Array[Int],ring: Rin
       factors.map(f => f.values.size + " " + ring.decode(f.values).mkString(" ")).mkString("\n")
     ).mkString("\n")
   }
+
+  def minDegreeJunctionTrees(random: Random): Seq[Tree[(Set[Int], Seq[FastFactor])]] =
+    compactJTrees(minDegreeJTs(factors.map(f => f.variables.toSet -> f)))
 }
 
 object Problem{
