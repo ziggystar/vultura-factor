@@ -93,12 +93,6 @@ class CBP(val problem: Problem,
     bp
   }
 
-  def logZ: Double = {
-    val conditionedZs: Array[Double] = queue.map(_._2.logZ)(collection.breakOut)
-    val exactZs: Array[Double] = exactlySolved.map(_._2.logZ)(collection.breakOut)
-    LogD.sumA(conditionedZs ++ exactZs)
-  }
-
   /** @return Partition function in encoding specified by `ring`. */
   def Z: Double = ring.sumA((queue.map(_._2.Z) ++ exactlySolved.map(_._2.Z))(collection.breakOut))
 

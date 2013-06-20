@@ -144,7 +144,7 @@ object ictai13 {
 
   /** Provides ln(Z) and variable marginals. */
   def createGroundTruth(p: Problem): InfAlg = {
-    new CalibratedJunctionTree(p)
+    new CalibratedJunctionTree(p).toResult
   }
 
 //  def createAlgorithm(config: String, p: Problem, seed: Long, steps: Int): Experiment[InfAlg] = {

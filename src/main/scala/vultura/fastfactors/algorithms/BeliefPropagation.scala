@@ -186,7 +186,7 @@ extends InfAlg with Iterator[InfAlg] {
   def variableBelief(vi: Int): FastFactor = clusterBelief(singleVariableClusters(vi))
 
   var logZCache: Option[Double] = None
-  def logZ: Double = {
+  override def logZ: Double = {
     if(logZCache.isDefined)
       logZCache.get
     else{
@@ -245,7 +245,6 @@ extends InfAlg with Iterator[InfAlg] {
     }
     max
   }
-
 
   def iteration: Int = iterations
 

@@ -31,9 +31,6 @@ class CalibratedJunctionTree(val problem: Problem) extends InfAlg {
       })
     }
 
-  /** @return Natural logarithm of partition function. */
-  def logZ: Double = if(problem.ring == LogD) myLogZ else math.log(problem.ring.decode(Array(myLogZ))(0))
-
   /** @return Partition function in encoding specified by `ring`. */
   def Z: Double = myLogZ
 

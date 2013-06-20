@@ -82,6 +82,18 @@ object NormalD extends RingZ[Double]{
       i += 1
     }
   }
+
+  /** @return In normal representation (not log). */
+  override def entropy(a: Array[Double]): Double = {
+    var i = 0
+    var e = 0d
+    while(i < a.length){
+      if(a(i) != 0)
+        e += a(i) * math.log(a(i))
+      i += 1
+    }
+    e
+  }
 }
 
 object LogD extends RingZ[Double] {
