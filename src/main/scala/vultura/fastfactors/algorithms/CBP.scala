@@ -128,7 +128,7 @@ object CBP {
   }
 
   object VARIABLE_SELECTION extends Enumeration with TypefulEnum[(BeliefPropagation, Random) => Int]{
-    val MAX_DEGREE, RANDOM, SLOW_SETTLER, BACKDOOR = Value
+    val MAX_DEGREE, RANDOM, SLOW_SETTLER, BACKDOOR, MIN_ENTROPY = Value
 
     def variableSelectionHighDegree(bp: BeliefPropagation, random: Random): Int =
       vultura.util.maxByMultiple(bp.problem.variables.toSeq)(bp.problem.degreeOfVariable).pickRandom(random)
@@ -143,11 +143,18 @@ object CBP {
       vultura.util.maxByMultiple(cliques)(_.size).pickRandom(random).pickRandom(random)
     }
 
+    def maxentropy(bp: BeliefPropagation, random: Random): Int = {
+      vultura.util.maxByMultiple(bp.problem.variables.toSeq)(
+        v => -1 * bp.problem.ring.entropy(bp.variableBelief(v).values)
+      ).pickRandom(random)
+    }
+
     def apply(v: Value): (BeliefPropagation, Random) => Int = v match {
       case MAX_DEGREE => variableSelectionHighDegree
       case RANDOM => variableSelectionRandom
       case SLOW_SETTLER => variableSelectionSlowestSettler
       case BACKDOOR => backdoor
+      case MIN_ENTROPY => maxentropy
     }
   }
 
