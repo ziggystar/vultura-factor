@@ -6,7 +6,7 @@ package vultura.experiments
  */
 
 
-trait Reporter[-A]{
+trait Reporter[-A]{ outer =>
   def header: String = prefix + colNames.mkString(separator)
   def buildRow(a: A): String = prefix + eval(a).mkString(separator)
 
@@ -27,7 +27,11 @@ trait Reporter[-A]{
     def eval(a: B): Seq[String] = Reporter.this.eval(f(a))
     def colNames: Seq[String] = Reporter.this.colNames
   }
-  def hold(a: A): Reporter[Unit] = comap(Unit => a)
+  def hold(a: A): Reporter[Unit] = new Reporter[Unit]{
+    val preresult: Seq[String] = outer.eval(a)
+    def colNames: Seq[String] = outer.colNames
+    def eval(a: Unit): Seq[String] = preresult
+  }
 }
 
 object Reporter{

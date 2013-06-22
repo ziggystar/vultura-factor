@@ -93,7 +93,7 @@ object ictai13 {
       _ <- Exp()
         .addColumn("config.problem", _ => config.problemCfg())
         .addColumn("config.algorithm",_ => config.algorithmCfg())
-      pi <- Exp.seed(config.problemSeed(),config.problemCount(),"seed.problem")
+      pi <- Exp.seed(config.problemSeed(),config.problemCount(),"seed.problem").parallel(8)
       problemGenerator <- generator
       problem = problemGenerator(pi)
       _ <- Exp.values(problem)
@@ -105,13 +105,13 @@ object ictai13 {
       algorithmSeed <- Exp.seed(config.algorithmSeed(), config.algorithmRuns(),"seed.algorithm")
       conf: AlgConfig <- AlgConfParser.parse(config.algorithmCfg())
       _ <- Exp.fromIterator(conf.iterator(problem,algorithmSeed).take(config.algorithmSteps()))
-          .withReport(logZReporter("estimate.lnZ"))
-          .withReport(meanDiffReporter(groundTruth))
-          .withReport(meanKLReporter(groundTruth))
-          .withReport(meanSquaredDiffReporter(groundTruth))
-          .withReport(maxDiffReporter(groundTruth))
-          .withReport(iaIteration("iteration.alg"))
-      } yield Unit: Unit
+        .withReport(logZReporter("estimate.lnZ"))
+        .withReport(meanDiffReporter(groundTruth))
+        .withReport(meanKLReporter(groundTruth))
+        .withReport(meanSquaredDiffReporter(groundTruth))
+        .withReport(maxDiffReporter(groundTruth))
+        .withReport(iaIteration("iteration.alg"))
+    } yield Unit: Unit
 
     val result = experiment.create
     println(result._1.mkString("\t"))

@@ -94,7 +94,8 @@ class CBP(val problem: Problem,
   }
 
   /** @return Partition function in encoding specified by `ring`. */
-  def Z: Double = ring.sumA((queue.map(_._2.Z) ++ exactlySolved.map(_._2.Z))(collection.breakOut))
+  def Z: Double =
+    ring.sumA((queue.map(_._2.Z) ++ exactlySolved.map(_._2.Z))(collection.breakOut))
 
   private val beliefCache = new mutable.HashMap[Int,FastFactor]
 
