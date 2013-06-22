@@ -10,7 +10,7 @@ import java.lang.management.ManagementFactory
 import scala.util.Random
 import vultura.fastfactors.Problem
 import vultura.util._
-import vultura.experiments.{Reporter, Experiment}
+import vultura.experiments.{Exp, Reporter, Experiment}
 import scala.util.parsing.combinator.JavaTokenParsers
 import scala.collection.mutable
 import scala.Enumeration
@@ -184,6 +184,56 @@ object ictai13 {
   def numFactors(name: String = "problem.factors"): Reporter[Problem] = Reporter(name)(_.factors.size.toString)
   def numVars(name: String = "problem.variables"): Reporter[Problem] = Reporter(name)(_.variables.size.toString)
   def maxDomainSize(name: String = "problem.domainsize.max"): Reporter[Problem] = Reporter(name)(_.domains.max.toString)
+}
+
+object ProblemSourceParser extends JavaTokenParsers {
+  def int: Parser[Int] = wholeNumber ^^ (_.toInt)
+  def float: Parser[Double] = floatingPointNumber ^^ (_.toDouble)
+
+  def pots: Parser[FactorGenerator] = ???
+
+  def expAll[A](p: Parser[A]): Parser[Exp[A]] = "{" ~> repsep(p,",") <~ "}" ^^ (as => Exp.values(as:_*)) | p ^^ (Exp.values(_))
+
+  def expInt: Parser[Exp[Int]] = expAll(int)
+  def expFloat: Parser[Exp[Double]] = expAll(float)
+
+  def expPots: Parser[Exp[FactorGenerator]] = pFmaxEnt | pFexpGauss | pFdetClause | pFSigmaClause
+  def pFmaxEnt: Parser[Exp[FactorGenerator]] = "max-entropy" ^^^ Exp.values(maxEntropy)
+  def pFdetClause: Parser[Exp[FactorGenerator]] = "det-clause" ^^^ Exp.values(deterministicClause)
+  def pFexpGauss: Parser[Exp[FactorGenerator]] =
+    for(eSigma <- "expgauss(" ~> expFloat <~ ")") yield for(sigma <- eSigma) yield expGauss(sigma)
+  def pFSigmaClause: Parser[Exp[FactorGenerator]] =
+    for( eSigma <- "clause(" ~> expFloat <~ ")") yield for(sigma <- eSigma) yield sigmaClause(sigma)
+
+  def grid: Parser[Exp[Long => Problem]] =
+    for{
+      ex ~ ey ~ edoms ~ epots <- "grid(" ~> (expInt <~ ",") ~ (expInt <~ ",") ~ (expInt <~ ",") ~ expPots <~ ")"
+    } yield for{
+      x <- ex
+      y <- ey
+      doms <- edoms
+      pots <- epots
+    } yield (seed: Long) => generators.grid(x,y,doms,pots,new Random(seed))
+
+  def randomK: Parser[Exp[Long => Problem]] =
+    for{
+      eV ~ eE ~ eK ~ eDoms ~ epots <- "randomK(" ~> (expInt <~ ",") ~ (expInt <~ ",") ~ (expInt <~ ",") ~ (expInt <~ ",") ~ expPots <~ ")"
+    } yield for{
+      v <- eV
+      e <- eE
+      k <- eK
+      doms <- eDoms
+      pots <- epots
+    } yield (seed: Long) => generators.randomK(v,e,k,doms,pots,new Random(seed))
+
+  def pGen: Parser[Exp[(Long) => Problem]] = grid | randomK
+
+  def parse(s: String): Exp[Long => Problem] = {
+    parseAll(pGen,s) match {
+      case Success(alg,_) => alg
+      case ns@NoSuccess(msg,_) => sys.error(msg + "\n" + ns)
+    }
+  }
 }
 
 object AlgConfParser extends JavaTokenParsers {
