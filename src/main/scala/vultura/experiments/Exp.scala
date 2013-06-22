@@ -50,7 +50,6 @@ trait Exp[B] { outer =>
 
     override def flatMap[C](f: (B) => Exp[C]): Exp[C] = Exp.fromIteratorWithR(generator.grouped(chunkSize)
       .flatMap{ chunk =>
-      println("doing")
         chunk.par.map{ case (b,rb) =>
           f(b).generator.view.map{case (c,rc) =>  (null.asInstanceOf[C],(rb.hold(b): Reporter[C]) also (rc.hold(c): Reporter[C]))}.toIndexedSeq
         }

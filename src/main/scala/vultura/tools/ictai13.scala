@@ -13,6 +13,8 @@ import vultura.util._
 import vultura.experiments.{Exp, Reporter}
 import scala.util.parsing.combinator.JavaTokenParsers
 import scala.Enumeration
+import scala.Some
+import vultura.fastfactors.algorithms.CBPConfig
 
 /**
  * Created by IntelliJ IDEA.
@@ -89,11 +91,11 @@ object ictai13 {
 
     val chunkSize = config.chunkSize()
 
-    val experiment: Exp[Unit] = for {
+    val experiment: Exp[(Problem, AlgConfig, Long, InfAlg)] = for {
       _ <- Exp()
         .addColumn("config.problem", _ => config.problemCfg())
         .addColumn("config.algorithm",_ => config.algorithmCfg())
-      pi <- Exp.seed(config.problemSeed(),config.problemCount(),"seed.problem").parallel(8)
+      pi <- Exp.seed(config.problemSeed(),config.problemCount(),"seed.problem")
       problemGenerator <- generator
       problem = problemGenerator(pi)
       _ <- Exp.values(problem)
@@ -104,6 +106,10 @@ object ictai13 {
         .withReport(logZReporter("true.lnZ"))
       algorithmSeed <- Exp.seed(config.algorithmSeed(), config.algorithmRuns(),"seed.algorithm")
       conf: AlgConfig <- AlgConfParser.parse(config.algorithmCfg())
+    } yield (problem,conf,algorithmSeed,groundTruth)
+
+    val parExp = for{
+      (problem,conf,algorithmSeed,groundTruth) <- experiment.parallel(chunkSize)
       _ <- Exp.fromIterator(conf.iterator(problem,algorithmSeed).take(config.algorithmSteps()))
         .withReport(logZReporter("estimate.lnZ"))
         .withReport(meanDiffReporter(groundTruth))
@@ -113,7 +119,7 @@ object ictai13 {
         .withReport(iaIteration("iteration.alg"))
     } yield Unit: Unit
 
-    val result = experiment.create
+    val result = parExp.create
     println(result._1.mkString("\t"))
     result._2.foreach(row => println(row.mkString("\t")))
   }
