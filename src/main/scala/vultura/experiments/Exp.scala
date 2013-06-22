@@ -34,6 +34,7 @@ trait Exp[B] { outer =>
       (c,rc) <- f(b).generator
     } yield (c,rb.hold(b) + rc: Reporter[C])
   )
+  def take(n: Int): Exp[B] = Exp(generator.view.take(n))
   def withReport(r: Reporter[B]) = Exp(generator.view.map{case (b,rb) => (b,rb also r)})
   def addColumn(name: String, value: B => String): Exp[B] = withReport(Reporter(name)(value))
   def parallelize(chunkSize: Int): Exp[B] = ???
@@ -42,8 +43,12 @@ trait Exp[B] { outer =>
 object Exp {
   def apply(): Exp[Unit] = Exp[Unit](Iterable((Unit,Reporter.empty)))
   def apply[A](it: Iterable[(A,Reporter[A])]): Exp[A] = new Exp[A]{
-    require(!it.isEmpty, "creating empty experiment")
     protected def generator: Iterable[(A, Reporter[A])] = it
   }
+  def fromIterable[A](i: Iterable[A]): Exp[A] = Exp(i.view.map(_ -> (Reporter.empty: Reporter[A])))
+  def fromIterator[A](i: => Iterator[A]): Exp[A] = Exp.fromIterable(new Iterable[A]{ def iterator: Iterator[A] = i})
   def values[A](vals: A*): Exp[A] = Exp(vals.map(a => a -> (Reporter.empty: Reporter[A])))
+  def seed(start: Long, number: Int, name: String = "seed"): Exp[Long] =
+    Exp.values(Seq.iterate(start,number)(_ + 1):_*)
+      .addColumn(name,_.toString)
 }

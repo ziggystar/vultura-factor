@@ -15,10 +15,10 @@ class ExpTest extends Specification {
     (Exp().flatMap(_ => Exp.values(1,2).addColumn("n",_.toString)).create._2.toSeq === List(List("1"),List("2"))) ^
     "expressions may only be evaluated once" ! {
       var i = 0
-      val iterable = new Iterable[Int]{
-        def iterator: Iterator[Int] = Iterator.continually({i += 1; i}).take(3)
-      }
-      (for (_ <- Exp(); i <- Exp.values(iterable).addColumn("n",_.toString)) yield i).create
-      i === 3
+      val iterable = Iterator.continually({i += 1; i}).take(2)
+
+      (for {
+        i <- Exp.fromIterator(iterable).addColumn("n",_.toString)
+      } yield Unit).create._2.toIndexedSeq === Seq(Seq("1"),Seq("2"))
     }
 }

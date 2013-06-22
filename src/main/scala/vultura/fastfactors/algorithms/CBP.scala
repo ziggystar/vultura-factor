@@ -172,8 +172,15 @@ object CBP {
   }
 }
 
-trait AlgConfig {
+trait AlgConfig { outer =>
   def iterator(p: Problem, seed: Long): Iterator[InfAlg]
+  def iterable(p: Problem, seed: Long) = new Iterable[InfAlg]{
+    println("construct iterable")
+    def iterator: Iterator[InfAlg] = outer.iterator(p,seed).map{x =>
+      println("here")
+      x
+    }
+  }
 }
 
 case class CBPConfig(leafSelection: CBP.LEAF_SELECTION.Value = CBP.LEAF_SELECTION.RANDOM,
@@ -181,13 +188,12 @@ case class CBPConfig(leafSelection: CBP.LEAF_SELECTION.Value = CBP.LEAF_SELECTIO
                      clampMethod: CBP.CLAMP_METHOD.Value = CBP.CLAMP_METHOD.CLAMP,
                      bpMaxiter: Int = 1000,
                      bpTol: Double = 1e-15) extends AlgConfig {
-  def iterator(p: Problem, seed: Long): Iterator[InfAlg] =
-    new CBP(
-      p,
-      leafSelection,
-      variableSelection,
-      clampMethod,
-      bpMaxiter,
-      bpTol,
-      new Random(seed))
+  def iterator(p: Problem, seed: Long): Iterator[InfAlg] = new CBP(
+    p,
+    leafSelection,
+    variableSelection,
+    clampMethod,
+    bpMaxiter,
+    bpTol,
+    new Random(seed))
 }
