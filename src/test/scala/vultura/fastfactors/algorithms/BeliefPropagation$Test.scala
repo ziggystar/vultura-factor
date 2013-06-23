@@ -38,7 +38,7 @@ class BeliefPropagation$Test extends Specification {
   def beSimilarTo(ref: FastFactor, tol: Double): Matcher[FastFactor] =
     haveSameStructureAs(ref) and haveCloseValuessAs(ref,tol)
 
-  def bpInfer(problem: Problem): BeliefPropagation = new BeliefPropagation(problem,new Random(1),1e-10,100)
+  def bpInfer(problem: Problem, seed: Long = 1): BeliefPropagation = new BeliefPropagation(problem,new Random(seed),1e-10,100)
   def jtInfer(problem: Problem) = new CalibratedJunctionTree(problem)
 
   val testProblem1 = Problem(IS(FF(AI(0),AD(1,2)),FF(AI(0),AD(3,4))),Array(2),NormalD)
@@ -46,12 +46,21 @@ class BeliefPropagation$Test extends Specification {
   val testProblem2 = Problem(IS(FF(AI(0),AD(1,2)),FF(AI(1),AD(3,4))),Array(2,2),NormalD)
   val testProblem2lnZ = math.log(21d)
 
+  val randomProblem = generators.grid(6,6,2,generators.expGauss(3),new Random(0))
+
   val bpSmallTree1 = bpInfer(smallTreeProblem1)
   val jtSmallTree1 = jtInfer(smallTreeProblem1)
   val bpTree1 = bpInfer(treeProblem1)
   val jtTree1 = jtInfer(treeProblem1)
   val bpTree2 = bpInfer(treeProblem2)
   val jtTree2 = jtInfer(treeProblem2)
+
+  def bpDeterminism(p: Problem): Fragments = {
+    val seed = new Random().nextLong()
+    "test on seed " + seed !
+      ((new BeliefPropagation(p,new Random(seed),1e-10,10).toResult === new BeliefPropagation(p,new Random(seed),1e-10,10).toResult) and
+      (new BeliefPropagation(p,new Random(seed),1e-10,10).toResult !== new BeliefPropagation(p,new Random(seed + 1),1e-10,10).toResult))
+  }
 
   def is: Fragments =
   "constructing bethe graph" ^
@@ -86,5 +95,11 @@ class BeliefPropagation$Test extends Specification {
     "compare partition function" ^
       (bpSmallTree1.logZ must beCloseTo(jtSmallTree1.logZ,1e-7)) ^
       (bpTree1.logZ must beCloseTo(jtTree1.logZ,1e-7)) ^
-      (bpTree2.logZ must beCloseTo(jtTree2.logZ,1e-7))
+      (bpTree2.logZ must beCloseTo(jtTree2.logZ,1e-7)) ^
+    p^
+    "running twice with same random seeds must yield same results" ^
+      bpDeterminism(generators.grid(8,8,2,generators.expGauss(3),new Random(0))) ^
+      bpDeterminism(generators.grid(8,8,2,generators.expGauss(3),new Random(1))) ^
+      bpDeterminism(generators.grid(8,8,2,generators.expGauss(3),new Random(2)))
+
 }

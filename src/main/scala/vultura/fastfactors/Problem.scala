@@ -30,6 +30,17 @@ case class Problem(factors: IndexedSeq[FastFactor],domains: Array[Int],ring: Rin
 
   def minDegreeJunctionTrees(random: Random): Seq[Tree[(Set[Int], Seq[FastFactor])]] =
     compactJTrees(minDegreeJTs(factors.map(f => f.variables.toSet -> f)))
+
+  override def hashCode = {
+    import scala.util.hashing.MurmurHash3._
+    val mix1: Int = mix(arrayHash(domains), orderedHash(factors))
+    val mix2: Int = mixLast(mix1, ring.hashCode())
+    finalizeHash(mix2, factors.size)
+  }
+  override def equals(obj: Any): Boolean = obj match {
+    case Problem(oFactors, oDomains, oRing) => factors == oFactors && domains.deep == oDomains.deep && ring == oRing
+    case _ => false
+  }
 }
 
 object Problem{

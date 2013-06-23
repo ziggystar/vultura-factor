@@ -9,12 +9,12 @@ import scala.collection.mutable
  * Conditioned Belief Propagation.
  */
 class CBP(val problem: Problem,
-          leafSel: CBP.LEAF_SELECTION.Value,
-          varSel: CBP.VARIABLE_SELECTION.Value,
+          val leafSel: CBP.LEAF_SELECTION.Value,
+          val varSel: CBP.VARIABLE_SELECTION.Value,
           val clampMethod: CBP.CLAMP_METHOD.Value = CBP.CLAMP_METHOD.CLAMP,
           val bpMaxiter: Int = 1000,
           val bpTol: Double = 1e-10,
-          private val random: Random = new Random(0L)) extends InfAlg with Iterator[InfAlg] {
+          private val random: Random) extends InfAlg with Iterator[InfAlg] {
   implicit val (logger, formatter, appender) = CBP.allLog
 
   val leafSelection: (Map[Map[Int,Int],BeliefPropagation], Random) => Map[Int,Int] = CBP.LEAF_SELECTION.apply(leafSel)
@@ -42,7 +42,6 @@ class CBP(val problem: Problem,
   def run(maxIter: Int){
     var steps = 0
     while(steps < maxIter && !queue.isEmpty){
-      //TODO [bug][improvement] handle constant problems properly (special case of 'solved exactly')
       val selectAssignment =  leafSelection(queue,random)
       logger.finer(f"CBP refining assignment $selectAssignment")
       val selectVar: Int = variableSelection(queue(selectAssignment),random)
@@ -62,7 +61,7 @@ class CBP(val problem: Problem,
 
 
   def hasNext: Boolean = true
-  var firstRun = true
+  private var firstRun = true
   def next(): InfAlg = {
     if(!firstRun){
       run(1)
@@ -77,7 +76,9 @@ class CBP(val problem: Problem,
     val clampFactor: IndexedSeq[FastFactor] => IndexedSeq[FastFactor] = clampMethod match {
       case CONDITION => _.map(_.condition(assignment,domains))
       case CONDITION_SIMPLIFY => _.map(_.condition(assignment,domains).simplify(domains))
-      case CLAMP => _ ++ assignment.map{case (variable,value) => FastFactor(Array(variable),Array.fill(domains(variable))(ring.zero).updated(value,ring.one))}
+      case CLAMP => _ ++ assignment.map{
+        case (variable,value) => FastFactor(Array(variable),Array.fill(domains(variable))(ring.zero).updated(value,ring.one))
+      }
     }
     val conditionedProblem: Problem = problem.copy(factors = clampFactor(problem.factors))
     if(conditionedProblem.variables.isEmpty)
@@ -87,14 +88,18 @@ class CBP(val problem: Problem,
   }
 
   def constructBP(p: Problem): BeliefPropagation = {
-    val bp = new BeliefPropagation(p,random,bpTol,bpMaxiter)
+    val seed = random.nextLong()
+    println("creating new BP seed " + seed)
+    val r: Random = new Random(seed)
+    val bp = new BeliefPropagation(p,r,bpTol,bpMaxiter)
     if(!bp.converged)
       logger.fine(f"bp run did not converge")
     bp
   }
 
   /** @return Partition function in encoding specified by `ring`. */
-  def Z: Double = ring.sumA((queue.map(_._2.Z) ++ exactlySolved.map(_._2.Z))(collection.breakOut))
+  def Z: Double =
+    ring.sumA((queue.map(_._2.Z) ++ exactlySolved.map(_._2.Z))(collection.breakOut))
 
   private val beliefCache = new mutable.HashMap[Int,FastFactor]
 
@@ -117,6 +122,7 @@ object CBP {
   trait TypefulEnum[A]{ self: Enumeration =>
     def apply(value: self.Value): A
   }
+
   object CLAMP_METHOD extends Enumeration {
     val CLAMP, CONDITION_SIMPLIFY, CONDITION = Value
   }
@@ -158,8 +164,10 @@ object CBP {
     /** Expand evenly. */
     def leafSelectionDepth(leafs: Map[Map[Int,Int], BeliefPropagation], random: Random): Map[Int,Int] =
       vultura.util.maxByMultiple(leafs.keys.toSeq)(ass => -ass.size).pickRandom(random)
-    def leafSelectionRandom(leafs: Map[Map[Int,Int],BeliefPropagation], random: Random): Map[Int,Int] = leafs.keys.pickRandom(random)
-    def leafSelectionOnlyZ(leafs: Map[Map[Int,Int],BeliefPropagation], random: Random): Map[Int,Int] = leafs.maxBy(_._2.logZ)._1
+    def leafSelectionRandom(leafs: Map[Map[Int,Int],BeliefPropagation], random: Random): Map[Int,Int] =
+      leafs.keys.pickRandom(random)
+    def leafSelectionOnlyZ(leafs: Map[Map[Int,Int],BeliefPropagation], random: Random): Map[Int,Int] =
+      vultura.util.maxByMultiple(leafs.toSeq)(_._2.logZ).pickRandom(random)._1
     def leafSelectionSlowestSettler(leafs: Map[Map[Int,Int],BeliefPropagation], random: Random): Map[Int,Int] =
       vultura.util.maxByMultiple(leafs.toSeq)(_._2.messages.map(_._2.lastUpdate).max).pickRandom(random)._1
 
@@ -172,22 +180,17 @@ object CBP {
   }
 }
 
-trait AlgConfig {
-  def iterator(p: Problem, seed: Long): Iterator[InfAlg]
-}
-
 case class CBPConfig(leafSelection: CBP.LEAF_SELECTION.Value = CBP.LEAF_SELECTION.RANDOM,
                      variableSelection: CBP.VARIABLE_SELECTION.Value = CBP.VARIABLE_SELECTION.RANDOM,
                      clampMethod: CBP.CLAMP_METHOD.Value = CBP.CLAMP_METHOD.CLAMP,
                      bpMaxiter: Int = 1000,
                      bpTol: Double = 1e-15) extends AlgConfig {
-  def iterator(p: Problem, seed: Long): Iterator[InfAlg] =
-    new CBP(
-      p,
-      leafSelection,
-      variableSelection,
-      clampMethod,
-      bpMaxiter,
-      bpTol,
-      new Random(seed))
+  def iterator(p: Problem, seed: Long): Iterator[InfAlg] = new CBP(
+    p,
+    leafSelection,
+    variableSelection,
+    clampMethod,
+    bpMaxiter,
+    bpTol,
+    new Random(seed))
 }

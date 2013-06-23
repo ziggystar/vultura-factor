@@ -1,8 +1,6 @@
 package vultura.experiments
 
 import Reporter._
-import java.io.{PrintStream, OutputStreamWriter, OutputStream}
-import vultura.util.ParIterator
 
 /**
  * @author Thomas Geier
