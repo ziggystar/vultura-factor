@@ -89,9 +89,7 @@ class CBP(val problem: Problem,
 
   def constructBP(p: Problem): BeliefPropagation = {
     val seed = random.nextLong()
-    println("creating new BP seed " + seed)
-    val r: Random = new Random(seed)
-    val bp = new BeliefPropagation(p,r,bpTol,bpMaxiter)
+    val bp = new BeliefPropagation(p, new Random(seed),bpTol,bpMaxiter)
     if(!bp.converged)
       logger.fine(f"bp run did not converge")
     bp
