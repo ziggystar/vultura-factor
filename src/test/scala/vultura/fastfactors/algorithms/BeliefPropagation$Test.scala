@@ -55,6 +55,13 @@ class BeliefPropagation$Test extends Specification {
   val bpTree2 = bpInfer(treeProblem2)
   val jtTree2 = jtInfer(treeProblem2)
 
+  def bpDeterminism(p: Problem): Fragments = {
+    val seed = new Random().nextLong()
+    "test on seed " + seed !
+      ((new BeliefPropagation(p,new Random(seed),1e-10,10).toResult === new BeliefPropagation(p,new Random(seed),1e-10,10).toResult) and
+      (new BeliefPropagation(p,new Random(seed),1e-10,10).toResult !== new BeliefPropagation(p,new Random(seed + 1),1e-10,10).toResult))
+  }
+
   def is: Fragments =
   "constructing bethe graph" ^
     "from one factor over single variable" ^
@@ -91,8 +98,8 @@ class BeliefPropagation$Test extends Specification {
       (bpTree2.logZ must beCloseTo(jtTree2.logZ,1e-7)) ^
     p^
     "running twice with same random seeds must yield same results" ^
-      (bpInfer(smallTreeProblem1).toResult === bpInfer(smallTreeProblem1).toResult) ^
-      "need to yield different result with different seed" ! (bpInfer(randomProblem, 1).toResult !== bpInfer(randomProblem, 2).toResult) ^
-      "need to yield same result with same seed" ! ((bpInfer(randomProblem).toResult === bpInfer(randomProblem).toResult))
+      bpDeterminism(generators.grid(8,8,2,generators.expGauss(3),new Random(0))) ^
+      bpDeterminism(generators.grid(8,8,2,generators.expGauss(3),new Random(1))) ^
+      bpDeterminism(generators.grid(8,8,2,generators.expGauss(3),new Random(2)))
 
 }

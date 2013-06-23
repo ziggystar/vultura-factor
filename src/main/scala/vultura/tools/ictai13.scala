@@ -6,7 +6,6 @@ import org.rogach.scallop
 import vultura.fastfactors._
 import generators._
 import vultura.fastfactors.algorithms._
-import java.lang.management.ManagementFactory
 import scala.util.Random
 import vultura.fastfactors.Problem
 import vultura.util._
@@ -15,6 +14,8 @@ import scala.util.parsing.combinator.JavaTokenParsers
 import scala.Enumeration
 import scala.Some
 import vultura.fastfactors.algorithms.CBPConfig
+
+import language.reflectiveCalls
 
 /**
  * Created by IntelliJ IDEA.
@@ -130,15 +131,7 @@ object ictai13 {
   }
 
   /** Provides ln(Z) and variable marginals. */
-  def createGroundTruth(p: Problem): InfAlg = {
-    new CalibratedJunctionTree(p).toResult
-  }
-
-//  def createAlgorithm(config: String, p: Problem, seed: Long, steps: Int): Experiment[InfAlg] = {
-//    AlgConfParser.parse(config)(p, seed).take(steps)
-//  }
-
-//    def getCPUTime: Double = (ManagementFactory.getThreadMXBean.getCurrentThreadCpuTime - startTime) * 1e-9
+  def createGroundTruth(p: Problem): InfAlg = new CalibratedJunctionTree(p).toResult
 
   //evaluation stuff below
 
@@ -176,8 +169,6 @@ object ictai13 {
 object ProblemSourceParser extends JavaTokenParsers {
   def int: Parser[Int] = wholeNumber ^^ (_.toInt)
   def float: Parser[Double] = floatingPointNumber ^^ (_.toDouble)
-
-  def pots: Parser[FactorGenerator] = ???
 
   def expAll[A](p: Parser[A]): Parser[Exp[A]] = "{" ~> repsep(p,",") <~ "}" ^^ (as => Exp.values(as:_*)) | p ^^ (Exp.values(_))
 
