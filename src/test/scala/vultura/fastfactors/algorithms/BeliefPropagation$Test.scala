@@ -38,13 +38,15 @@ class BeliefPropagation$Test extends Specification {
   def beSimilarTo(ref: FastFactor, tol: Double): Matcher[FastFactor] =
     haveSameStructureAs(ref) and haveCloseValuessAs(ref,tol)
 
-  def bpInfer(problem: Problem): BeliefPropagation = new BeliefPropagation(problem,new Random(1),1e-10,100)
+  def bpInfer(problem: Problem, seed: Long = 1): BeliefPropagation = new BeliefPropagation(problem,new Random(seed),1e-10,100)
   def jtInfer(problem: Problem) = new CalibratedJunctionTree(problem)
 
   val testProblem1 = Problem(IS(FF(AI(0),AD(1,2)),FF(AI(0),AD(3,4))),Array(2),NormalD)
   val testProblem1lnZ = math.log(11d)
   val testProblem2 = Problem(IS(FF(AI(0),AD(1,2)),FF(AI(1),AD(3,4))),Array(2,2),NormalD)
   val testProblem2lnZ = math.log(21d)
+
+  val randomProblem = generators.grid(6,6,2,generators.expGauss(3),new Random(0))
 
   val bpSmallTree1 = bpInfer(smallTreeProblem1)
   val jtSmallTree1 = jtInfer(smallTreeProblem1)
@@ -86,5 +88,11 @@ class BeliefPropagation$Test extends Specification {
     "compare partition function" ^
       (bpSmallTree1.logZ must beCloseTo(jtSmallTree1.logZ,1e-7)) ^
       (bpTree1.logZ must beCloseTo(jtTree1.logZ,1e-7)) ^
-      (bpTree2.logZ must beCloseTo(jtTree2.logZ,1e-7))
+      (bpTree2.logZ must beCloseTo(jtTree2.logZ,1e-7)) ^
+    p^
+    "running twice with same random seeds must yield same results" ^
+      (bpInfer(smallTreeProblem1).toResult === bpInfer(smallTreeProblem1).toResult) ^
+      "need to yield different result with different seed" ! (bpInfer(randomProblem, 1).toResult !== bpInfer(randomProblem, 2).toResult) ^
+      "need to yield same result with same seed" ! ((bpInfer(randomProblem).toResult === bpInfer(randomProblem).toResult))
+
 }
