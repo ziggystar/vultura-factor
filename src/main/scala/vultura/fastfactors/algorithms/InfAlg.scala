@@ -25,9 +25,8 @@ trait InfAlg {
   def toResult = Result(getProblem,Z,getProblem.variables.map(v => v -> variableBelief(v))(collection.breakOut))
 }
 
-case class Result(problem: Problem, Z: Double, variableBeliefs: Map[Int,FastFactor]) extends InfAlg{
+case class Result(problem: Problem, Z: Double, variableBeliefs: Map[Int,FastFactor], iteration: Int = 1) extends InfAlg{
   def getProblem: Problem = problem
   /** @return marginal distribution of variable in encoding specified by `ring`. */
   def variableBelief(vi: Int): FastFactor = variableBeliefs(vi)
-  def iteration: Int = 1
 }
