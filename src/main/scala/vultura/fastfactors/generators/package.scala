@@ -2,6 +2,7 @@ package vultura.fastfactors
 
 import scala.util.Random
 import scala.util.parsing.combinator.JavaTokenParsers
+import language.implicitConversions
 
 /**
  * Created by IntelliJ IDEA.

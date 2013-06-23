@@ -39,15 +39,13 @@ trait Exp[B] { outer =>
   def withReport(r: Reporter[B]) = Exp(generator.view.map{case (b,rb) => (b,rb also r)})
   def addColumn(name: String, value: B => String): Exp[B] = withReport(Reporter(name)(value))
 
+  /** Currently only supports flatMap calls. */
+  //TODO support map calls
   def parallel(chunkSize: Int): Exp[B] = new Exp[B]{ inner =>
-
-
     protected def generator: Iterable[(B, Reporter[B])] = outer.generator
 
     override def map[C](f: (B) => C): Exp[C] = ???
-
     override def withFilter(p: (B) => Boolean): Exp[B] = outer.withFilter(p).parallel(chunkSize)
-
     override def flatMap[C](f: (B) => Exp[C]): Exp[C] = Exp.fromIteratorWithR(generator.grouped(chunkSize)
       .flatMap{ chunk =>
         chunk.par.map{ case (b,rb) =>

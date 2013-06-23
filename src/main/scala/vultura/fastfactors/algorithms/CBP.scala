@@ -42,7 +42,6 @@ class CBP(val problem: Problem,
   def run(maxIter: Int){
     var steps = 0
     while(steps < maxIter && !queue.isEmpty){
-      //TODO [bug][improvement] handle constant problems properly (special case of 'solved exactly')
       val selectAssignment =  leafSelection(queue,random)
       logger.finer(f"CBP refining assignment $selectAssignment")
       val selectVar: Int = variableSelection(queue(selectAssignment),random)
