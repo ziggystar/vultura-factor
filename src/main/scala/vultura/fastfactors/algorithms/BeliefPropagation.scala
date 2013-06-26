@@ -214,9 +214,9 @@ extends InfAlg with Iterator[InfAlg] {
       }
 
       val clusterExpectationAndEntropy = cg.clusterFactors.zipWithIndex.map {
-        case (f, cI) =>
-          expectation(ring.decode(clusterBelief(cI).values),ring.decode(f.values).map(math.log)) +
-            entropy(ring.decode(clusterBelief(cI).values))
+        case (clusterFactor, clusterIndex) =>
+          expectation(ring.decode(clusterBelief(clusterIndex).values),ring.decode(clusterFactor.values).map(math.log)) +
+            entropy(ring.decode(clusterBelief(clusterIndex).values))
       }
 
       val variableClusterIndices: Range = factors.size until cg.clusterFactors.size
