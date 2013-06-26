@@ -10,7 +10,7 @@ import scala.collection.mutable
  */
 class CBP(val problem: Problem,
           val leafSel: CBP.LEAF_SELECTION.Value,
-          val varSel: CBP.VARIABLE_SELECTION.Value,
+          val varSel: (BeliefPropagation, Random) => Int,
           val clampMethod: CBP.CLAMP_METHOD.Value = CBP.CLAMP_METHOD.CLAMP,
           val bpMaxiter: Int = 1000,
           val bpTol: Double = 1e-10,
@@ -18,7 +18,7 @@ class CBP(val problem: Problem,
   implicit val (logger, formatter, appender) = CBP.allLog
 
   val leafSelection: (Map[Map[Int,Int],BeliefPropagation], Random) => Map[Int,Int] = CBP.LEAF_SELECTION.apply(leafSel)
-  val variableSelection: (BeliefPropagation, Random) => Int = CBP.VARIABLE_SELECTION.apply(varSel)
+  val variableSelection: (BeliefPropagation, Random) => Int = varSel
 
   val Problem(factors,domains,ring) = problem
   def getProblem: Problem = problem
@@ -186,7 +186,7 @@ case class CBPConfig(leafSelection: CBP.LEAF_SELECTION.Value = CBP.LEAF_SELECTIO
   def iterator(p: Problem, seed: Long): Iterator[InfAlg] = new CBP(
     p,
     leafSelection,
-    variableSelection,
+    CBP.VARIABLE_SELECTION(variableSelection),
     clampMethod,
     bpMaxiter,
     bpTol,
