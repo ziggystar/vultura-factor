@@ -7,18 +7,18 @@ version := "13.2-SNAPSHOT"
 scalaVersion := "2.10.1"
 
 //specs2 dependency
-libraryDependencies += "org.specs2" % "specs2_2.10" % "1.13" % "test"
+libraryDependencies += "org.specs2" % "specs2_2.10" % "1.14" % "test"
 
 //scalaz
-libraryDependencies += "org.scalaz" %% "scalaz-core" % "6.0.4"
+libraryDependencies += "org.scalaz" % "scalaz-core_2.10" % "6.0.4"
 
 //cli parsing
-libraryDependencies += "org.rogach" % "scallop_2.10" % "0.9.1"
+libraryDependencies += "org.rogach" % "scallop_2.10" % "0.9.2"
 
 //logging
 libraryDependencies += "com.dongxiguo" % "zero-log_2.10" % "0.3.3"
 
-publishMavenStyle := true
+publishMavenStyle := false
 
 publishTo <<= (version) { version: String =>
   val repoInfo = ( "tgeier releases" -> "/media/SFB-Space/SambaLDAP/HOMES/tgeier/public_html/mvn" )
