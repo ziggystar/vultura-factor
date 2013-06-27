@@ -18,7 +18,7 @@ extends InfAlg with Iterator[InfAlg] {
 
   implicit val (logger, formatter, appender) = BeliefPropagation.allLog
 
-  private val cg = BeliefPropagation.createBetheClusterGraph(problem)
+  val cg = BeliefPropagation.createBetheClusterGraph(problem)
   logger.fine(f"bethe factor graph has ${cg.clusterFactors.size} clusters and ${cg.sepsets.size} edges")
   lazy val singleVariableClusters: Map[Int,Int] = cg.clusterFactors.zipWithIndex
     .collect{case (f,fi) if f.variables.size == 1 => f.variables.head -> fi}(collection.breakOut)

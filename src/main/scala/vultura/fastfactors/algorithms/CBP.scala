@@ -126,13 +126,28 @@ object CBP {
   }
 
   object VARIABLE_SELECTION extends Enumeration with TypefulEnum[(BeliefPropagation, Random) => Int]{
-    val MAX_DEGREE, RANDOM, SLOW_SETTLER, BACKDOOR, MIN_ENTROPY = Value
+    val MAX_DEGREE, RANDOM, LAST_UPDATE, BACKDOOR, MIN_ENTROPY, LU_BIDI = Value
 
     def variableSelectionHighDegree(bp: BeliefPropagation, random: Random): Int =
       vultura.util.maxByMultiple(bp.problem.variables.toSeq)(bp.problem.degreeOfVariable).pickRandom(random)
+
     def variableSelectionRandom(bp: BeliefPropagation, random: Random): Int = bp.problem.variables.pickRandom(random)
+
     def variableSelectionSlowestSettler(bp: BeliefPropagation, random: Random): Int =
       vultura.util.maxByMultiple(bp.messages.toSeq)(_._2.lastUpdate).flatMap(_._2.factor.variables).pickRandom(random)
+
+    def lastUpdateBidir(bp: BeliefPropagation, random: Random): Int ={
+      def lastBidirectionalUpdate(v: Int) = {
+        val variableCluster: Int = bp.singleVariableClusters(v)
+        bp.cg.neighbours(variableCluster).map {
+          n =>
+            math.min(bp.messages((variableCluster, n)).lastUpdate, bp.messages((n, variableCluster)).lastUpdate)
+        }.max
+      }
+
+      vultura.util.maxByMultiple(bp.getProblem.variables.toSeq)(lastBidirectionalUpdate).pickRandom(random)
+    }
+
     def backdoor(bp: BeliefPropagation, random: Random): Int = {
       val cliques = for {
         tree <- bp.problem.minDegreeJunctionTrees(random)
@@ -150,7 +165,8 @@ object CBP {
     def apply(v: Value): (BeliefPropagation, Random) => Int = v match {
       case MAX_DEGREE => variableSelectionHighDegree
       case RANDOM => variableSelectionRandom
-      case SLOW_SETTLER => variableSelectionSlowestSettler
+      case LAST_UPDATE => variableSelectionSlowestSettler
+      case LU_BIDI => lastUpdateBidir
       case BACKDOOR => backdoor
       case MIN_ENTROPY => maxentropy
     }

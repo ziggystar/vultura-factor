@@ -20,5 +20,5 @@ class CBPTest extends Specification {
   def is: Fragments =
   "deterministic behaviour" ^
     testDeterminsim(CBPConfig()) ^
-    testDeterminsim(CBPConfig(variableSelection = CBP.VARIABLE_SELECTION.SLOW_SETTLER))
+    testDeterminsim(CBPConfig(variableSelection = CBP.VARIABLE_SELECTION.LAST_UPDATE))
 }
