@@ -64,6 +64,29 @@ extends InfAlg with Iterator[InfAlg] {
   def maxDelta = lastMaxDelta
   def converged = didConverge
 
+  def lastUpdate(variable: Int): Long = {
+    val clusterIndex: Int = singleVariableClusters(variable)
+    cg.neighbours(clusterIndex)
+      .flatMap(n => Seq(messages((clusterIndex,n)).lastUpdate, messages((n,clusterIndex)).lastUpdate))
+      .max
+  }
+
+  /** max over edge(min edge[->], edge[<-]) */
+  def lastUpdate2(variable: Int): Long = {
+    val clusterIndex: Int = singleVariableClusters(variable)
+    cg.neighbours(clusterIndex)
+      .map(n => Seq(messages((clusterIndex,n)).lastUpdate, messages((n,clusterIndex)).lastUpdate).min)
+      .max
+  }
+
+  /** min over max(incoming),max(outgoing) */
+  def lastUpdate3(variable: Int): Long = {
+    val clusterIndex: Int = singleVariableClusters(variable)
+    val incoming = cg.neighbours(clusterIndex).map(n => messages((n,clusterIndex)).lastUpdate).max
+    val outgoing = cg.neighbours(clusterIndex).map(n => messages((clusterIndex,n)).lastUpdate).max
+    math.min(incoming,outgoing)
+  }
+
   /** Computes the standard update:
     * $$\delta'_{i-j} \propto \Sum_{C_i - S_{i,j}} \Psi_i \cdot \Prod_{k\in(N_i - \{i\}} \delta_{k - j}$$.
     *
