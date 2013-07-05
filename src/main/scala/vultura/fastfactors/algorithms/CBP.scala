@@ -134,14 +134,14 @@ object CBP {
     def variableSelectionRandom(bp: BeliefPropagation, random: Random): Int = bp.problem.variables.pickRandom(random)
 
     def variableSelectionSlowestSettler(bp: BeliefPropagation, random: Random): Int =
-      vultura.util.maxByMultiple(bp.messages.toSeq)(_._2.lastUpdate).flatMap(_._2.factor.variables).pickRandom(random)
+      vultura.util.maxByMultiple(bp.allMessages.toSeq)(_.lastUpdate).flatMap(_.factor.variables).pickRandom(random)
 
     def lastUpdateBidir(bp: BeliefPropagation, random: Random): Int ={
       def lastBidirectionalUpdate(v: Int) = {
         val variableCluster: Int = bp.singleVariableClusters(v)
         bp.cg.neighbours(variableCluster).map {
           n =>
-            math.min(bp.messages((variableCluster, n)).lastUpdate, bp.messages((n, variableCluster)).lastUpdate)
+            math.min(bp.lookUpMessage(variableCluster, n).lastUpdate, bp.lookUpMessage(n, variableCluster).lastUpdate)
         }.max
       }
 
@@ -183,7 +183,7 @@ object CBP {
     def leafSelectionOnlyZ(leafs: Map[Map[Int,Int],BeliefPropagation], random: Random): Map[Int,Int] =
       vultura.util.maxByMultiple(leafs.toSeq)(_._2.logZ).pickRandom(random)._1
     def leafSelectionSlowestSettler(leafs: Map[Map[Int,Int],BeliefPropagation], random: Random): Map[Int,Int] =
-      vultura.util.maxByMultiple(leafs.toSeq)(_._2.messages.map(_._2.lastUpdate).max).pickRandom(random)._1
+      vultura.util.maxByMultiple(leafs.toSeq)(_._2.allMessages.map(_.lastUpdate).max).pickRandom(random)._1
 
     def apply(v: Value): (Map[Map[Int, Int], BeliefPropagation], Random) => Map[Int, Int] = v match {
       case MIN_DEPTH => leafSelectionDepth

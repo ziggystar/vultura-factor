@@ -12,6 +12,8 @@ libraryDependencies += "org.specs2" % "specs2_2.10" % "1.14" % "test"
 //scalaz
 libraryDependencies += "org.scalaz" % "scalaz-core_2.10" % "6.0.4"
 
+libraryDependencies += "net.sf.trove4j" % "trove4j" % "3.0.3"
+
 //cli parsing
 libraryDependencies += "org.rogach" % "scallop_2.10" % "0.9.2"
 

@@ -3,6 +3,8 @@ package vultura.fastfactors.algorithms
 import scala.collection.mutable
 import scala.util.Random
 import vultura.fastfactors.{Problem, LogD, RingZ, FastFactor}
+import scala.collection.immutable.Iterable
+import gnu.trove.map.hash.TLongObjectHashMap
 
 /**
  * Belief Propagation on loopy graphs using `FastFactor` operations.
@@ -27,7 +29,14 @@ extends InfAlg with Iterator[InfAlg] {
   class Message(val factor: FastFactor, var lastUpdate: Long = -1){
     override def toString: String = f"${factor.toStringShort} ($lastUpdate)"
   }
-  val messages: mutable.HashMap[(Int,Int),Message] = new mutable.HashMap
+
+  private val messageMap: TLongObjectHashMap[Message] = new TLongObjectHashMap[Message](cg.sepsets.size * 2)
+  @inline
+  private def edgeKey(from: Int, to: Int) = (from.asInstanceOf[Long] << 32) | to
+  @inline
+  def lookUpMessage(fromClusterIdx: Int, toClusterIdx: Int): Message = messageMap.get(edgeKey(fromClusterIdx,toClusterIdx))
+
+  def allMessages: Iterable[Message] = cg.sepsets.map(_._1).map(e => lookUpMessage(e._1,e._2))
   private var randomOrder: IndexedSeq[(Int, Int)] = null
   private var totalIterations = 0
   private var messageUpdates = 0L
@@ -45,8 +54,9 @@ extends InfAlg with Iterator[InfAlg] {
 
   // ---------- initialisation stuff -------------------
   private def initializeMessages(): Unit = cg.sepsets.foreach {
-    case (edge, vars) => messages(edge) = new Message(FastFactor.maxEntropy(vars, domains, ring))
+    case ((from,to), vars) => messageMap.put(edgeKey(from,to), new Message(FastFactor.maxEntropy(vars, domains, ring)))
   }
+
   protected def makeRandomOrder(): IndexedSeq[(Int, Int)] = random.shuffle(cg.sepsets.keys.toIndexedSeq)
 
   def init() {
@@ -67,7 +77,7 @@ extends InfAlg with Iterator[InfAlg] {
   def lastUpdate(variable: Int): Long = {
     val clusterIndex: Int = singleVariableClusters(variable)
     cg.neighbours(clusterIndex)
-      .flatMap(n => Seq(messages((clusterIndex,n)).lastUpdate, messages((n,clusterIndex)).lastUpdate))
+      .flatMap(n => Seq(lookUpMessage(clusterIndex,n).lastUpdate, lookUpMessage(n,clusterIndex).lastUpdate))
       .max
   }
 
@@ -75,15 +85,15 @@ extends InfAlg with Iterator[InfAlg] {
   def lastUpdate2(variable: Int): Long = {
     val clusterIndex: Int = singleVariableClusters(variable)
     cg.neighbours(clusterIndex)
-      .map(n => Seq(messages((clusterIndex,n)).lastUpdate, messages((n,clusterIndex)).lastUpdate).min)
+      .map(n => math.min(lookUpMessage(clusterIndex,n).lastUpdate, lookUpMessage(n,clusterIndex).lastUpdate))
       .max
   }
 
   /** min over max(incoming),max(outgoing) */
   def lastUpdate3(variable: Int): Long = {
     val clusterIndex: Int = singleVariableClusters(variable)
-    val incoming = cg.neighbours(clusterIndex).map(n => messages((n,clusterIndex)).lastUpdate).max
-    val outgoing = cg.neighbours(clusterIndex).map(n => messages((clusterIndex,n)).lastUpdate).max
+    val incoming = cg.neighbours(clusterIndex).map(n => lookUpMessage(n,clusterIndex).lastUpdate).max
+    val outgoing = cg.neighbours(clusterIndex).map(n => lookUpMessage(clusterIndex,n).lastUpdate).max
     math.min(incoming,outgoing)
   }
 
@@ -93,7 +103,7 @@ extends InfAlg with Iterator[InfAlg] {
     * @return The delta in normal domain of the update. */
    private def updateMessage(edge: (Int,Int), tol: Double): Boolean = {
     val (from,to) = edge
-    val oldMessage: Message = messages(edge)
+    val oldMessage: Message = lookUpMessage(from,to)
     val fromCluster: FastFactor = cg.clusterFactors(from)
 
     //multiply all incoming messages for `from` without that coming from `to`; also multiply 'from's factor
@@ -103,7 +113,7 @@ extends InfAlg with Iterator[InfAlg] {
         val domainSize = domains(oldMessage.factor.variables(0))
         val factors: Array[FastFactor] = cg.neighbours(from)
           .filterNot(_ == to)
-          .map(fromNeighbour => messages((fromNeighbour, from)).factor) :+ fromCluster
+          .map(fromNeighbour => lookUpMessage(fromNeighbour, from).factor) :+ fromCluster
         val resultArray = new Array[Double](domainSize)
         val numFactors: Int = factors.size
         val product = new Array[Double](numFactors)
@@ -128,7 +138,7 @@ extends InfAlg with Iterator[InfAlg] {
           if(neighbours(i) == to)
             factorsToMultiply(i) = fromCluster
           else
-            factorsToMultiply(i) = messages((neighbours(i),from)).factor
+            factorsToMultiply(i) = lookUpMessage(neighbours(i),from).factor
           i += 1
         }
         FastFactor.multiplyRetain(ring)(domains)(factorsToMultiply, cg.sepsets(edge)).values
@@ -163,13 +173,13 @@ extends InfAlg with Iterator[InfAlg] {
       var edgeIndex = 0
       while(edgeIndex < randomOrder.length){
         val edge@(i,j) = randomOrder(edgeIndex)
-        val lastUpdate: Long = messages(edge).lastUpdate
+        val lastUpdate: Long = lookUpMessage(i,j).lastUpdate
         var needsUpdate = false
         val incomingNeighbours = cg.neighbours(i)
         var IneighboursIndex = 0
         while(!needsUpdate && IneighboursIndex < incomingNeighbours.length){
           val Ineighbour: Int = incomingNeighbours(IneighboursIndex)
-          val foundUpdateReason = ((Ineighbour != i) && messages((Ineighbour, i)).lastUpdate >= lastUpdate)
+          val foundUpdateReason = (Ineighbour != i) && lookUpMessage(Ineighbour, i).lastUpdate >= lastUpdate
           if(foundUpdateReason)
             logger.finer(f"updating $i->$j because of $Ineighbour->$i")
           needsUpdate = foundUpdateReason
@@ -203,7 +213,7 @@ extends InfAlg with Iterator[InfAlg] {
   }
 
   def clusterBelief(ci: Int): FastFactor = clusterBeliefCache.getOrElseUpdate(ci,FastFactor.multiplyRetain(ring)(domains)(
-    factors = cg.neighbours(ci).map(from => messages((from,ci)).factor) :+ cg.clusterFactors(ci),
+    factors = cg.neighbours(ci).map(from => lookUpMessage(from,ci).factor) :+ cg.clusterFactors(ci),
     cg.clusterFactors(ci).variables).normalize(ring))
 
   def variableBelief(vi: Int): FastFactor = clusterBelief(singleVariableClusters(vi))
@@ -274,7 +284,9 @@ extends InfAlg with Iterator[InfAlg] {
   def graphviz: String = {
     "digraph {\n" +
       cg.clusterFactors.zipWithIndex.map{case (f,i) => f"""$i [label="${f.toStringShort}"]"""}.mkString("\n") + "\n" +
-      messages.map{case ((src,sink),msg) => f"""$src -> $sink [label="${msg.factor.toStringShort} : ${msg.lastUpdate}"]"""}.mkString("\n") + "\n" +
+      cg.sepsets.map(ss => ss._1 -> lookUpMessage(ss._1._1,ss._1._2))
+        .map{case ((src,sink),msg) => f"""$src -> $sink [label="${msg.factor.toStringShort} : ${msg.lastUpdate}"]"""}
+        .mkString("\n") + "\n" +
       "}"
   }
 }
