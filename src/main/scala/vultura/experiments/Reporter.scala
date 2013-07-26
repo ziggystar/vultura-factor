@@ -5,7 +5,7 @@ package vultura.experiments
  * @since 6/16/13
  */
 
-
+@deprecated("will be moved to separate library")
 trait Reporter[-A]{ outer =>
   def header: String = prefix + colNames.mkString(separator)
   def buildRow(a: A): String = prefix + eval(a).mkString(separator)

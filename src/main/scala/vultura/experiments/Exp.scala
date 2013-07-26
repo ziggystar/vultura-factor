@@ -8,7 +8,7 @@ import scala.collection.generic.FilterMonadic
  * @author Thomas Geier
  * @since 6/21/13
  */
-
+@deprecated("will be moved to separate library")
 trait Exp[B] { outer =>
   protected def generator: Iterable[(B,Reporter[B])]
 

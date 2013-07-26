@@ -2,7 +2,7 @@ name := "vultura.util"
 
 organization := "de.uni-ulm"
 
-version := "13.2-SNAPSHOT"
+version := "13.3"
 
 scalaVersion := "2.10.1"
 

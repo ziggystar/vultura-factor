@@ -11,7 +11,6 @@ import vultura.factors._
  * @author Thomas Geier
  * @since 03.02.12
  */
-
 class CNFasBIFunTest extends Specification {
   def is: Fragments =
   {variables('x: CNF.Clause) ===(Array(0))} ^

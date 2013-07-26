@@ -6,7 +6,7 @@ import Reporter._
  * @author Thomas Geier
  * @since 6/16/13
  */
-
+@deprecated("deprecated, use Exp")
 trait Experiment[A]{
   def iterator: Iterator[(A,Reporter[A])]
 
