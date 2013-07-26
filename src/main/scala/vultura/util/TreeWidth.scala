@@ -1,9 +1,8 @@
 package vultura.util
 
-import vultura.graph.{Graph, GraphOps}
 import scalaz._
 import Scalaz._
-import xml.{NodeSeq, Elem}
+import scalaz.Tree._
 import annotation.tailrec
 import scala.util.Random
 import java.util
@@ -145,9 +144,9 @@ object TreeWidth {
       }
       //do we have to pocess the same node again, because we pulled up some children?
       if(changed)
-        partialFoldTree(Node(newA,newChildren.toStream))(join)
+        partialFoldTree(node(newA,newChildren.toStream))(join)
       else
-        Node(newA,newChildren.map(partialFoldTree(_)(join)).toStream)
+        node(newA,newChildren.map(partialFoldTree(_)(join)).toStream)
     }
   }
 
@@ -232,141 +231,6 @@ object TreeWidth {
     mdo(cliques zip leafs,vertices zip neighbours).map(_.map{case (vars,as) => (bs2Iterator(vars).toSet,as)})
   }
 
-  def minDegreeJunctionTreesCompressed[A](_cliques: IndexedSeq[(Set[Int],A)]): (Seq[Tree[(Set[Int],Seq[A])]],Int) = {
-    //convert the scala sets to BitSets
-    val cliques = _cliques.map(c => intSet2BS(c._1))
-    //this will be the initial trees; those bitsets are not supposed to be mutated
-    //the second tuple entry is the singleton seq of "factors" (As)
-    val leafs: IndexedSeq[Tree[(util.BitSet, Seq[A])]] =
-      cliques.map(_.clone.asInstanceOf[util.BitSet]).zip(_cliques.map(c => Seq(c._2))).map(leaf(_))
-
-    val vertices: IndexedSeq[Int] = {
-      val bs = new util.BitSet
-      cliques foreach (bs or _)
-      bs2Iterator(bs).toIndexedSeq
-    }
-
-    val neighbours: IndexedSeq[util.BitSet] = vertices map {v =>
-      val bs = new util.BitSet
-      cliques filter (_ get v) foreach (bs or _)
-      bs
-    }
-
-    /*
-    - warning: mutability is used in here
-    - the produced tree still needs to be compressed
-
-    (*) The algorithm keeps track of the neighbours of every edge using the second parameter. These bitsets are mutated
-    after each elimination step (remove the eliminated vertex and add new neighbours if the node was
-    part of the elimination clique).
-
-    the constructed tree has all cliques only at the leafs and empty inner nodes.
-     */
-    @tailrec
-    def mdo(cliques: IndexedSeq[(util.BitSet,Tree[(util.BitSet,Seq[A])])],
-            vertsWithN: Seq[(Int,util.BitSet)],
-            tw: Int = 0): (Seq[Tree[(util.BitSet,Seq[A])]],Int) = {
-      if(vertsWithN.isEmpty){
-        //all cliques should be empty now; number of final cliques equals number of components of graph
-        assert(cliques.forall(_._1.isEmpty))
-        (cliques.map(_._2),tw)
-      }
-      else {
-        val (elimV: Int,elimNeighbours: util.BitSet) = vertsWithN minBy (_._2.cardinality)
-        val (collectedCliques, remainingCliques) = cliques partition (_._1 get elimV)
-        //combine the bitset and the trees; for the tree simply take the new elimination clique as root and the trees of
-        //all eliminated cliques as children
-        val elimTuple@(elimClique, _) = {
-          val bs = new util.BitSet
-          collectedCliques foreach (bs or _._1)
-          val bsForTree = new util.BitSet
-          bsForTree.or(bs)
-          //remove the eliminated vertex after making the copy of the clique for the junciton tree
-          bs.clear(elimV)
-          val newTree: Tree[(util.BitSet,Seq[A])] =
-            node((bsForTree,Seq()), collectedCliques.map(_._2).toStream)
-          (bs,newTree)
-        }
-
-        val newCliques = remainingCliques :+ elimTuple
-
-        //update the neighbour lookup
-        val newVwithN = vertsWithN filterNot (_._1 == elimV)
-        //update the bitsets (see (*) in comment
-        newVwithN.foreach{ case (v,ns) =>
-          if (ns.get(elimV)){
-            ns.or(elimNeighbours)
-            ns.clear(elimV)
-          }
-        }
-        //recurse
-        mdo(newCliques, newVwithN, tw max elimClique.cardinality)
-      }
-    }
-
-    //the tree we obtain has all cliques (the `A`s) at the leafs
-    val (uncompressedJTs,tw) = mdo(cliques zip leafs,vertices zip neighbours) :-> ((_:Int) - 1)
-
-    /** Whether one BitSet is a super set of another one. */
-    def subsumes(b1: util.BitSet, b2: util.BitSet): Boolean = {
-      val clone = b2.clone.asInstanceOf[util.BitSet]
-      clone.andNot(b1)
-      clone.isEmpty
-    }
-
-    /** Transform a tree with a bottom-up traversal.
-     * @param tree The tree to transform.
-     * @param f Takes the label of a node and the already transformed sub-trees and generates a new tree.
-     */
-    def scanUp[S,T](tree: Tree[S])(f:(S,Stream[Tree[T]]) => Tree[T]): Tree[T] =
-      f(tree.rootLabel, tree.subForest.map(scanUp(_)(f)))
-
-    //we apply two optimizations to the tree
-    //first, we pull a child up, if its scope is a subset of its parents scope
-    def pullUp(tree: Tree[(util.BitSet,Seq[A])]): Tree[(util.BitSet,Seq[A])] = {
-      //if we pull up a processed child, we can be sure that we cannot pull the child's children up, because:
-      //if a childchild is a subset of the child, it would have been pulled up
-      //if a childchild is not a subset of the child, it has to contain a variable that's not in the child; this variable
-      // cannot be in the parent because of the running intersection property and thus we
-      // cannot pull the childchild into the parent. qed
-      scanUp[(util.BitSet,Seq[A]),(util.BitSet,Seq[A])](tree){ case ((bs,as),processedChildren) =>
-        val (toPull,toLeave) = processedChildren.partition(child => subsumes(bs,child.rootLabel._1))
-        node((bs,as ++ toPull.map(_.rootLabel._2).flatten),toLeave ++ toPull.flatMap(_.subForest))
-      }
-    }
-    val pulledUpJTs: Seq[Tree[(util.BitSet,Seq[A])]] = uncompressedJTs.map(pullUp)
-
-    implicit val bitSetMonoid: Monoid[util.BitSet] = new Monoid[util.BitSet]{
-      def append(s1: util.BitSet, s2: => util.BitSet): util.BitSet = {
-        val result = new util.BitSet
-        result.or(s1)
-        result.or(s2)
-        result
-      }
-      val zero: util.BitSet = new util.BitSet
-    }
-
-    //second, we push parents down into their child if they only have one child.
-    //In this constellation, the parent's scope is a subset of the child's scope.
-    def pushDown(tree: Tree[(util.BitSet,Seq[A])]): Tree[(util.BitSet,Seq[A])] =
-      if(tree.subForest.size == 1 && subsumes(tree.subForest.head.rootLabel._1,tree.rootLabel._1))
-        pushDown(node(tree.subForest.head.rootLabel |+| tree.rootLabel, tree.subForest.head.subForest))
-      else
-        node(tree.rootLabel, tree.subForest.map(pushDown))
-
-    val pushedDownJTs: Seq[Tree[(util.BitSet,Seq[A])]] = pulledUpJTs.map(pushDown)
-
-//    println(uncompressedJTs.map(_.map(_._1.toString).drawTree).mkString("\n"))
-//    assert(pushedDownJTs == pushedDownJTs.map(pullUp), "not idempotent with pull up:\n" + pushedDownJTs.map(_.map(_._1.toString).drawTree).mkString("\n"))
-//    assert(pushedDownJTs == pushedDownJTs.map(pushDown), "not idempotent with push down")
-
-    //turn the BitSets into scala sets
-    val resultJT: Seq[Tree[(Set[Int], Seq[A])]] =
-      pushedDownJTs.map(jt => jt.map(treeNode => (bs2Iterator(treeNode._1).toSet, treeNode._2)))
-
-    (resultJT,tw)
-  }
-
   /** Checks the junctiontreedness of the arguments. You need a working equals on the `A`s.
    * @return Some error message or None if everything is fine.
    */
@@ -414,19 +278,7 @@ object TreeWidth {
 
   def minDegreeOrdering(cliques: Seq[Set[Int]]): List[Int] = minDegreeOrderingAndWidth(cliques.toIndexedSeq)._1
 
-  def libtw(_cliques: Seq[Set[Int]]): Int = {
-    val cls: Seq[util.BitSet] = _cliques map intSet2BS
-    implicit val cls2graph = new Graph[Seq[util.BitSet],Int] {
-      def nodes(g: Seq[util.BitSet]): Set[Int] = {
-        val bs = new util.BitSet
-        g foreach (bs or _)
-        bs2Iterator(bs).toSet
-      }
-
-      def adjacent(g: Seq[util.BitSet], n1: Int, n2: Int): Boolean = g.exists(c => c.get(n1) && c.get(n2))
-    }
-    GraphOps.treeWidth(cls)
-  }
+  import xml.{NodeSeq, Elem}
 
   def treeAsGraphML[A](tree: Tree[A])(elemContent: A => NodeSeq = (_: A) => NodeSeq.Empty): Elem = {
     val index = tree.flatten.zipWithIndex.toMap.mapValues("n" + _)

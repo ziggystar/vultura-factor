@@ -2,15 +2,15 @@ name := "vultura.util"
 
 organization := "de.uni-ulm"
 
-version := "13.3"
+version := "14-SNAPSHOT"
 
-scalaVersion := "2.10.1"
+scalaVersion := "2.10.2"
 
 //specs2 dependency
-libraryDependencies += "org.specs2" % "specs2_2.10" % "1.14" % "test"
+libraryDependencies += "org.specs2" % "specs2_2.10" % "2.1" % "test"
 
 //scalaz
-libraryDependencies += "org.scalaz" % "scalaz-core_2.10" % "6.0.4"
+libraryDependencies += "org.scalaz" % "scalaz-core_2.10" % "7.0.2"
 
 libraryDependencies += "net.sf.trove4j" % "trove4j" % "3.0.3"
 

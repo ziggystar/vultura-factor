@@ -10,8 +10,9 @@ import vultura.util.TreeWidth
 package object fastfactors {
   def veJunctionTree(p: Problem): Double = {
     import TreeWidth._
-    import scalaz._
-    import Scalaz._
+    import scalaz.Tree
+    import scalaz.Tree._
+
     val Problem(problem: IndexedSeq[FastFactor], domains: Array[Int], ring: RingZ[Double]) = p
     val trees: Seq[Tree[(Set[Int], Seq[FastFactor])]] = compactJTrees(minDegreeJTs(problem.map(f => f.variables.toSet -> f)))
     def veR(tree: Tree[(Set[Int], Seq[FastFactor])]): (Set[Int], Seq[FastFactor]) = tree match {

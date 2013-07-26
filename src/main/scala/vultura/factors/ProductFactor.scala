@@ -123,6 +123,7 @@ class ProductFactor[T,R](_factors: Seq[T],
    *
    * @return A list of upwardly calibrated junction trees together with their partition function. */
   def upwardCalibratedTrees(sumMonoid: Monoid[R]): Seq[(Tree[TableFactor[R]],R)] = {
+    import scalaz.Tree._
     /** marginalize everything except the stuff in variablesOfInterest.
      * @return First is the calibrated tree, second is the upward message from the root.
      */
@@ -141,7 +142,7 @@ class ProductFactor[T,R](_factors: Seq[T],
   }
 
   lazy val junctionTrees: Seq[Tree[(Set[Int], Seq[T])]] =
-    TreeWidth.minDegreeJunctionTreesCompressed(this.factors.map(f => (vf.variables(f).toSet, f)))._1
+    TreeWidth.compactJTrees(TreeWidth.minDegreeJTs(this.factors.map(f => (vf.variables(f).toSet, f))))
 
   def minDegreeTreewidth: Int = TreeWidth.minDegreeOrderingAndWidth(this.factors.map(vf.variables(_).toSet))._2
 
@@ -159,8 +160,6 @@ class ProductFactor[T,R](_factors: Seq[T],
       ProductFactor(unaffected :+ tfIsT(newFactor),productMonoid).marginalizeOutVariables(variables - variable, sumMonoid)
     }
   }
-
-
 }
 
 object ProductFactor {

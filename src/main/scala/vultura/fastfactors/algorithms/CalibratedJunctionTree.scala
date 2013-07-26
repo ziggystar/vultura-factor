@@ -4,6 +4,7 @@ import vultura.fastfactors.{RingZ, LogD, FastFactor, Problem}
 import vultura.util.TreeWidth._
 import scalaz._
 import Scalaz._
+import scalaz.Tree._
 import scala.collection.mutable
 
 /**
