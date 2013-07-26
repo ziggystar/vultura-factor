@@ -20,7 +20,7 @@ libraryDependencies += "org.rogach" % "scallop_2.10" % "0.9.2"
 //logging
 libraryDependencies += "com.dongxiguo" % "zero-log_2.10" % "0.3.3"
 
-publishMavenStyle := false
+publishMavenStyle := true
 
 publishTo <<= (version) { version: String =>
   val repoInfo = ( "tgeier releases" -> "/media/SFB-Space/SambaLDAP/HOMES/tgeier/public_html/mvn" )
