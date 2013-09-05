@@ -2,7 +2,7 @@ name := "vultura.util"
 
 organization := "de.uni-ulm"
 
-version := "14"
+version := "15-SNAPSHOT"
 
 scalaVersion := "2.10.2"
 
@@ -19,6 +19,9 @@ libraryDependencies += "org.rogach" % "scallop_2.10" % "0.9.2"
 
 //logging
 libraryDependencies += "com.dongxiguo" % "zero-log_2.10" % "0.3.3"
+
+//scala-graph
+libraryDependencies += "com.assembla.scala-incubator" % "graph-core_2.10" % "1.6.1"
 
 publishMavenStyle := true
 

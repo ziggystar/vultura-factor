@@ -41,6 +41,8 @@ case class Problem(factors: IndexedSeq[FastFactor],domains: Array[Int],ring: Rin
     case Problem(oFactors, oDomains, oRing) => factors == oFactors && domains.deep == oDomains.deep && ring == oRing
     case _ => false
   }
+
+  lazy val hasDuplicateFactors = factors.size != factors.toSet.size
 }
 
 object Problem{
