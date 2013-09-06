@@ -5,6 +5,7 @@ import vultura.factors.uai
 import scala.util.Random
 import vultura.util.TreeWidth._
 import scalaz.Tree
+import java.io._
 
 /**
  * Created by IntelliJ IDEA.
@@ -43,24 +44,47 @@ case class Problem(factors: IndexedSeq[FastFactor],domains: Array[Int],ring: Rin
   }
 
   lazy val hasDuplicateFactors = factors.size != factors.toSet.size
+
+  def toRing(newRing: RingZ[Double]): Problem = Problem(factors.map(f => newRing.encode(ring.decode(f))),domains,newRing)
 }
 
 object Problem{
-  def fromUaiString(s: String): Problem = {
-    val inProblem =  uai.parseUAIMarkov(s)
+  import resource._
 
-    val domains: Array[Int] = {
-      val varDomainMap: Seq[(Int, Int)] =
-        inProblem.flatMap(f => f.variables.zip(f.domains.map(_.size)))
-      assert(varDomainMap.toMap.size == varDomainMap.distinct.size, "differing variable domains")
-      val maxvar = varDomainMap.map(_._1).max
-      (0 to maxvar map varDomainMap.toMap.withDefaultValue(0))(collection.breakOut)
-    }
+  def fromUaiString(s: String): Problem = parseUAIProblem(new StringReader(s)).right.get
+  def loadUaiFile(s: String): Either[String,Problem] = loadUaiFile(new File(s))
+  def loadUaiFile(f: File): Either[String,Problem] =
+    (for(reader <- managed(new FileReader(f))) yield parseUAIProblem(reader))
+      .either.fold(err => Left(err.mkString("\n")),identity)
 
-    val ff: IndexedSeq[FastFactor] = inProblem
-        .toIndexedSeq
-        .map(f => FastFactor.orderIfNecessary(f.variables,f.denseData,domains))
-        .map{ case FastFactor(vars, values) => FastFactor(vars, values)}
-    Problem(ff,domains,NormalD)
+  def parseUAIProblem(in: Reader): Either[String,Problem] = {
+    import scalaz._
+    val tokenStream = new BufferedReader(in)
+
+    val lines = Iterator.continually(tokenStream.readLine)
+      .takeWhile(_ != null)
+
+    val tokens: Iterator[String] = lines
+      .flatMap(_.split(Array(' ','\t','\r')))
+      .filterNot(_.isEmpty)
+
+    //first token must be 'MARKOV'
+    val asVal: Validation[String, Problem] = for{
+      _ <- if(tokens.next().toUpperCase.matches("MARKOV")) Success() else Failure("file must begin with 'MARKOV'")
+      numVars = tokens.next().toInt
+      domains: Array[Int] = Array.fill(numVars)(tokens.next().toInt)
+      numFactors = tokens.next().toInt
+      factorVars: Seq[Array[Int]] = Seq.fill(numFactors){
+        val nv = tokens.next().toInt
+        Array.fill(nv)(tokens.next().toInt)
+      }
+      factorValues: Seq[Array[Double]] = Seq.fill(numFactors){
+        val nv = tokens.next().toInt
+        Array.fill(nv)(tokens.next().toDouble)
+      }
+      factors = (factorVars,factorValues).zipped.map{case (vars,values) => FastFactor.apply(vars,values)}
+    } yield Problem(factors.toIndexedSeq,domains,NormalD)
+
+    asVal.toEither
   }
 }
