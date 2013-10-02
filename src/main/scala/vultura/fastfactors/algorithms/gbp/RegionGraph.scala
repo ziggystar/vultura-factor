@@ -2,9 +2,10 @@ package vultura.fastfactors.algorithms.gbp
 
 import vultura.fastfactors.{Problem, FastFactor}
 import scalax.collection.Graph
-import scala.collection.immutable.Iterable
 import scalax.collection.GraphPredef._
 import scalax.collection.GraphEdge._
+import vultura.util.SSet
+import scala.util.Random
 
 case class Region(cr: Double, variables: Set[Int], factors: Set[FastFactor]){
   /** @return true if the union of factor scopes is a subset of the variables. */
@@ -55,6 +56,12 @@ case class RegionGraph protected(problem: Problem, graph: Graph[Region, DiEdge])
   def variableCount(variable: Int): Double = (for( Region(cr,vs,_) <- graph.nodes.toOuterNodes if vs.contains(variable) ) yield cr).sum
   def variableConnectedness(variable: Int): Boolean = (graph --! graph.nodes.filterNot(_.variables.contains(variable))).isConnected
 
+  /** @return This RegionGraph with the counting numbers calculated correctly. */
+  def calculateCountingNumbers: RegionGraph = {
+    println("calculating counting numbers is not implemented !!!")
+    this
+  }
+
   def toDot: String = {
     val nodeId: Map[graph.NodeT, String] = graph.nodes.zipWithIndex.toMap.mapValues("n" + _)
     val factorId = problem.factors.zipWithIndex.toMap
@@ -97,25 +104,39 @@ object RegionGraph{
   }
 
   /** See (Koller et Friedman, 2009,p 423). */
-  def saturatedRG(problem: Problem, initialRegions: Set[Set[Int]]): RegionGraph = {
-    require(initialRegions.flatten == problem.variables.toSet)
-    require(false,"there must be no subset relation between any initial region")
+  def saturatedRG(problem: Problem, _initialRegions: Iterable[(Set[Int],Iterable[FastFactor])]): RegionGraph = {
+    require(_initialRegions.map(_._1).flatten.toSet.subsetOf(problem.variables.toSet))
+    require(_initialRegions.map(_._2).flatten.toSet == problem.factors.toSet)
 
     def allIntersections(rs: Set[Set[Int]]): Set[Set[Int]] = for(s1 <- rs; s2 <- rs) yield s1 intersect s2
     def validNewRegions(rs: Set[Set[Int]]): Set[Set[Int]] = allIntersections(rs)
       .filterNot(_.isEmpty) //remove empty intersections
       .filterNot(succ => rs.exists(pred => succ.subsetOf(pred))) //remove subsets of old regions
-    val allRegions = closure(initialRegions)(validNewRegions)
 
-    val edges: Set[DiEdge[Set[Int]]] = for{
+    val initialRegions = _initialRegions.map(_._1).toSet
+    val regionToFactor = _initialRegions.toMap.mapValues(_.toSet)
+
+    val allSets = setClosure(initialRegions)(validNewRegions)
+    val allRegions = allSets.map(vars => Region(1d,vars,regionToFactor.getOrElse(vars,Set())))
+
+    val edges: Set[DiEdge[Region]] = for{
       r1 <- allRegions
-      r2 <- allRegions if (r1 != r2) && r2.subsetOf(r1) && !allRegions.exists(r3 => r2.subsetOf(r3) && r3.subsetOf(r1))
+      r2 <- allRegions if (r1 != r2) && r2.variables.subsetOf(r1.variables) && !allRegions.exists(r3 => r2.variables.subsetOf(r3.variables) && r3.variables.subsetOf(r1.variables))
     } yield r1 ~> r2
 
-    ???
+    RegionGraph(problem, Graph.from(allRegions, edges)).calculateCountingNumbers
   }
 
-  def closure[A](init: Set[A])(f: Set[A] => Set[A]): Set[A] = Iterator.iterate((init,true)){
+  def saturatedRG(problem: Problem, random: Random): RegionGraph = {
+    val factorCliques = problem.factors.map(_.variables.toSet).toSet
+    val regions = new SSet(factorCliques).maximalSets
+    val regionsSSet = new SSet(regions)
+    import vultura.util._
+    val factorRegions: Map[Set[Int], IndexedSeq[FastFactor]] = problem.factors.groupBy(f => regionsSSet.superSetsOf(f.variables.toSet).pickRandom(random))
+    saturatedRG(problem,factorRegions)
+  }
+
+  def setClosure[A](init: Set[A])(f: Set[A] => Set[A]): Set[A] = Iterator.iterate((init,true)){
     case x@(acc,false) => x
     case (acc,true) => {
       val add = f(acc).filterNot(acc)

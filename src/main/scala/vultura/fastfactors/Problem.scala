@@ -1,7 +1,6 @@
 package vultura.fastfactors
 
 import scala.collection.mutable
-import vultura.factors.uai
 import scala.util.Random
 import vultura.util.TreeWidth._
 import scalaz.Tree
