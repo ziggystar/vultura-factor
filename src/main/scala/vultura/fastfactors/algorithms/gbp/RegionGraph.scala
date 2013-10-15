@@ -108,20 +108,18 @@ object RegionGraph{
     require(_initialRegions.map(_._1).flatten.toSet.subsetOf(problem.variables.toSet))
     require(_initialRegions.map(_._2).flatten.toSet == problem.factors.toSet)
 
-    def allIntersections(rs: Set[Set[Int]]): Set[Set[Int]] = for(s1 <- rs; s2 <- rs) yield s1 intersect s2
-    def validNewRegions(rs: Set[Set[Int]]): Set[Set[Int]] = allIntersections(rs)
-      .filterNot(_.isEmpty) //remove empty intersections
-      .filterNot(succ => rs.exists(pred => succ.subsetOf(pred))) //remove subsets of old regions
+    def nonemptyIntersections(rs: Set[Set[Int]]): Set[Set[Int]] =
+      for(s1 <- rs; s2 <- rs; intersect = s1 intersect s2 if !intersect.isEmpty) yield intersect
 
     val initialRegions = _initialRegions.map(_._1).toSet
     val regionToFactor = _initialRegions.toMap.mapValues(_.toSet)
 
-    val allSets = setClosure(initialRegions)(validNewRegions)
+    val allSets = setClosure(initialRegions)(nonemptyIntersections)
     val allRegions = allSets.map(vars => Region(1d,vars,regionToFactor.getOrElse(vars,Set())))
 
     val edges: Set[DiEdge[Region]] = for{
       r1 <- allRegions
-      r2 <- allRegions if (r1 != r2) && r2.variables.subsetOf(r1.variables) && !allRegions.exists(r3 => r2.variables.subsetOf(r3.variables) && r3.variables.subsetOf(r1.variables))
+      r2 <- allRegions if (r1 != r2) && r2.variables.subsetOf(r1.variables) && !allRegions.exists(r3 => r1 != r3 && r2 != r3 && r2.variables.subsetOf(r3.variables) && r3.variables.subsetOf(r1.variables))
     } yield r1 ~> r2
 
     RegionGraph(problem, Graph.from(allRegions, edges)).calculateCountingNumbers
@@ -142,5 +140,5 @@ object RegionGraph{
       val add = f(acc).filterNot(acc)
       (acc ++ add,!add.isEmpty)
     }
-  }.dropWhile(!_._2).next._1
+  }.dropWhile(_._2).next._1
 }

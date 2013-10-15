@@ -56,6 +56,7 @@ object Problem{
     (for(reader <- managed(new FileReader(f))) yield parseUAIProblem(reader))
       .either.fold(err => Left(err.mkString("\n")),identity)
 
+  def parseUAIProblem(in: InputStream): Either[String, Problem] = parseUAIProblem(new InputStreamReader(in))
   def parseUAIProblem(in: Reader): Either[String,Problem] = {
     import scalaz._
     val tokenStream = new BufferedReader(in)
@@ -81,7 +82,7 @@ object Problem{
         val nv = tokens.next().toInt
         Array.fill(nv)(tokens.next().toDouble)
       }
-      factors = (factorVars,factorValues).zipped.map{case (vars,values) => FastFactor.apply(vars,values)}
+      factors = (factorVars,factorValues).zipped.map{case (vars,values) => FastFactor.orderIfNecessary(vars,values,domains)}
     } yield Problem(factors.toIndexedSeq,domains,NormalD)
 
     asVal.toEither
