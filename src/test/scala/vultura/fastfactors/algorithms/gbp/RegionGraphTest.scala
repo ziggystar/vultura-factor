@@ -2,6 +2,8 @@ package vultura.fastfactors.algorithms.gbp
 
 import org.specs2._
 import org.specs2.specification.Fragments
+import vultura.fastfactors.Problem
+import scala.util.Random
 
 /**
  * Created by IntelliJ IDEA.
@@ -9,6 +11,13 @@ import org.specs2.specification.Fragments
  * Date: 9/5/13
  */
 class RegionGraphTest extends Specification {
+  def loadProblem(path: String) = Problem.parseUAIProblem(ClassLoader.getSystemResourceAsStream(path)).right.get
+  val familyProblem = loadProblem("uai/examples/Family2Dominant.1.5loci.uai")
+  val grid4 = loadProblem("uai/examples/grid4x4.uai")
+
   def is: Fragments =
-    RegionGraph.setClosure(Set(3,7))(xs => for(x <- xs;y <- xs; z = x - y if z > 0) yield z) === Set(3,7,4,1,6,2,5)
+    "setClosure method" ! (RegionGraph.setClosure(Set(3,7))(xs => for(x <- xs;y <- xs; z = x - y if z > 0) yield z) === Set(3,7,4,1,6,2,5)) ^
+    "saturated region graph construction" ^
+      "grid 4x4" ! (RegionGraph.saturatedRG(grid4,new Random(0)).issues === Seq())^
+      "family problem" ! (RegionGraph.saturatedRG(familyProblem,new Random(0)).issues === Seq())
 }

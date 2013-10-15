@@ -6,6 +6,7 @@ import scalax.collection.GraphPredef._
 import scalax.collection.GraphEdge._
 import vultura.util.SSet
 import scala.util.Random
+import scalax.collection.GraphTraversal.{Predecessors, Direction, Successors}
 
 case class Region(cr: Double, variables: Set[Int], factors: Set[FastFactor]){
   /** @return true if the union of factor scopes is a subset of the variables. */
@@ -26,48 +27,43 @@ object Region{
   }
 }
 
-/**
- * Encodes a region graph.
- */
-case class RegionGraph protected(problem: Problem, graph: Graph[Region, DiEdge]) {
-  def checks: Seq[(Boolean,String)] = Seq(
-    (!problem.hasDuplicateFactors, "the problem contains duplicate factors"),
-    (problem.variables.forall(v => math.abs(variableCount(v) - 1) < 1e-10), "variable counting numbers don't add to one"),
-    (problem.factors.forall(f => math.abs(factorCount(f) - 1) < 1e-10), "factor counting numbers don't add to one"),
-    (problem.factors.forall(factorConnectedness), "induced subgraph is not connected for each factor"),
-    (problem.variables.forall(variableConnectedness), "induced subgraph is not connected for each variable"),
-    (graph.edges.map(_.toEdgeIn).forall{ edge =>
-      val (Region(_,hiVs,hiFs), Region(_,loVs,loFs)) = (edge.from,edge.to)
-      loVs.subsetOf(hiVs) && loFs.subsetOf(hiFs) },
-      "child region is no subset of parent region for some edge"),
-    (graph.nodes.forall(_.hasValidScope), "there exists a region not encompassing its factors scopes"),
-    (graph.isAcyclic, "graph has a cycle")
+trait RegionGraph {
+  def problem: Problem
+
+  def regions: Set[Region]
+  def edges: Set[(Region,Region)]
+  def hyperEdges: Map[Region,Set[Region]] =
+    regions.map(_ -> Set[Region]()).toMap ++
+      edges.groupBy(_._2).map{case (k,vs) => k -> vs.map(_._2).toSet}
+
+  def variableCount(v: Int): Double
+  def factorCount(f: FastFactor): Double
+  /** @return true if subgraph induced by containing given factor is connected. */
+  def factorConnectedness(f: FastFactor): Boolean
+  /** @return true if subgraph induced by containing given variable is connected. */
+  def variableConnectedness(variable: Int): Boolean
+  def isAcyclic: Boolean = vultura.util.transitiveClosure(hyperEdges).forall{case (src,dsts) => dsts.forall(_ != src)}
+
+  def checks: Seq[Option[String]] = Seq(
+    if(problem.hasDuplicateFactors) Some("the problem contains duplicate factors") else None,
+    problem.variables.find(v => math.abs(variableCount(v) - 1) > 1e-10).map(v => "variable counting numbers don't add to one for variable " + v),
+    problem.factors.find(f => math.abs(factorCount(f) - 1) > 1e-10).map("factor counting numbers don't add to one for factor " + _),
+    problem.factors.find(!factorConnectedness(_)).map("induced subgraph is not connected for each factor " + _),
+    problem.variables.find(!variableConnectedness(_)).map("induced subgraph is not connected for variable " + _),
+    edges.find{ case (Region(_,hiVs,hiFs), Region(_,loVs,loFs)) =>
+      !(loVs.subsetOf(hiVs) && loFs.subsetOf(hiFs)) }.map("child region is no subset of parent region for edge " + _),
+    regions.find(!_.hasValidScope).map("there exists a region not encompassing its factors scopes: " + _),
+    Some("graph has a cycle").filter(_ => !isAcyclic)
   )
 
-  def issues: Seq[String] = checks.foldLeft(Nil: List[String]){
-    case (acc,(false,_)) => acc
-    case (acc,(true,msg)) => acc :+ msg
-  }
-
-  def isValid: Boolean = issues.isEmpty
-
-  def factorCount(f: FastFactor): Double = (for( Region(cr,_,fs) <- graph.nodes.toOuterNodes if fs.contains(f) ) yield cr).sum
-  def factorConnectedness(f: FastFactor): Boolean = (graph --! graph.nodes.filterNot(_.factors.contains(f))).isConnected
-  def variableCount(variable: Int): Double = (for( Region(cr,vs,_) <- graph.nodes.toOuterNodes if vs.contains(variable) ) yield cr).sum
-  def variableConnectedness(variable: Int): Boolean = (graph --! graph.nodes.filterNot(_.variables.contains(variable))).isConnected
-
-  /** @return This RegionGraph with the counting numbers calculated correctly. */
-  def calculateCountingNumbers: RegionGraph = {
-    println("calculating counting numbers is not implemented !!!")
-    this
-  }
+  def issues: Seq[String] = checks.flatten
 
   def toDot: String = {
-    val nodeId: Map[graph.NodeT, String] = graph.nodes.zipWithIndex.toMap.mapValues("n" + _)
+    val nodeId: Map[Region, String] = regions.zipWithIndex.toMap.mapValues("n" + _)
     val factorId = problem.factors.zipWithIndex.toMap
-    def nodeLabel(n: graph.NodeT): String = (n.variables ++ n.factors.map(f => "f" + factorId(f))).mkString(",")
-    val nodeString = graph.nodes.map(n => f"""${nodeId(n)} [label = "${nodeLabel(n)}"];""").mkString("\n")
-    val edgeString = graph.edges.map(e => f"${nodeId(e.from)} -> ${nodeId(e.to)};").mkString("\n")
+    def nodeLabel(n: Region): String = (n.variables ++ n.factors.map(f => "f" + factorId(f))).mkString(",")
+    val nodeString = regions.map(n => f"""${nodeId(n)} [label = "${nodeLabel(n)}"];""").mkString("\n")
+    val edgeString = edges.map{case (from,to) => f"${nodeId(from)} -> ${nodeId(to)};"}.mkString("\n")
 
    f"""digraph RegionGraph {
       | rankdir = TB;
@@ -76,6 +72,48 @@ case class RegionGraph protected(problem: Problem, graph: Graph[Region, DiEdge])
       |}
     """.stripMargin
   }
+}
+/**
+ * Encodes a region graph.
+ */
+case class RegionGraphG protected(problem: Problem, graph: Graph[Region, DiEdge]) extends RegionGraph{
+
+
+  def isValid: Boolean = issues.isEmpty
+
+  def factorCount(f: FastFactor): Double = factorSubgraph(f).nodes.toOuterNodes.toSeq.map(_.cr).sum
+  def factorSubgraph(f: FastFactor): Graph[Region, DiEdge] = (graph --! graph.nodes.filterNot(_.factors.contains(f)))
+  def factorConnectedness(f: FastFactor): Boolean = factorSubgraph(f).isConnected
+  def variableSubgraph(variable: Int): Graph[Region, DiEdge] = (graph --! graph.nodes.filterNot(_.variables.contains(variable)))
+  def variableCount(variable: Int): Double = variableSubgraph(variable).nodes.toOuterNodes.toSeq.map(_.cr).sum
+
+  def variableConnectedness(variable: Int): Boolean = variableSubgraph(variable).isConnected
+
+  /** @return This RegionGraph with the counting numbers calculated correctly. */
+  def calculateCountingNumbers: RegionGraph = {
+    val mapping: Map[Graph[Region, DiEdge]#NodeT, Double] = Iterator.iterate(Map[Graph[Region, DiEdge]#NodeT, Double]() -> true){
+      case (numbering,true) => {
+        val newEntries = for {
+          unnumberedNode <- graph.nodes if (!numbering.contains(unnumberedNode))
+          newCR <- fuckScalaGraphTraverse(unnumberedNode)(Predecessors).toSeq.map(numbering.get).foldLeft(Some(0d): Option[Double]){case (acc,next) => acc.flatMap(a => next.map(a + _))}
+        } yield unnumberedNode -> newCR
+        (numbering ++ newEntries, !newEntries.isEmpty)
+      }
+      case x@(n,false) => x
+    }.dropWhile(_._2).next()._1
+    assert(mapping.size == graph.nodes.size)
+    def mapNode(n: Graph[Region, DiEdge]#NodeT): Region = Region(cr=mapping(n),variables=n.variables,factors = n.factors)
+    Graph.from(graph.nodes.map(mapNode),graph.edges.map{case a ~> b => mapNode(a) ~> mapNode(b)})
+  }
+
+  def fuckScalaGraphTraverse[N <: graph.NodeT](node: N)(direction: Direction = Successors) = {
+    val builder = Seq.newBuilder[graph.NodeT]
+    node.traverse(direction)(
+      nodeVisitor =  n => builder += n
+    )
+    builder.result()
+  }
+
 }
 
 object RegionGraph{
@@ -119,7 +157,7 @@ object RegionGraph{
 
     val edges: Set[DiEdge[Region]] = for{
       r1 <- allRegions
-      r2 <- allRegions if (r1 != r2) && r2.variables.subsetOf(r1.variables) && !allRegions.exists(r3 => r1 != r3 && r2 != r3 && r2.variables.subsetOf(r3.variables) && r3.variables.subsetOf(r1.variables))
+      r2 <- allRegions if (r1 != r2) && r2.variables.subsetOf(r1.variables) && !allRegions.exists(r3 => r1 != r3 && r2 != r3 &&  r2.variables.subsetOf(r3.variables) && r3.variables.subsetOf(r1.variables))
     } yield r1 ~> r2
 
     RegionGraph(problem, Graph.from(allRegions, edges)).calculateCountingNumbers
