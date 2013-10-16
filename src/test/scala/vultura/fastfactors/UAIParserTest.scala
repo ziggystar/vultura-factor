@@ -22,6 +22,6 @@ class UAIParserTest extends Specification {
                           |uai/examples/grid10x10.f2.wrap.uai""".stripMargin.split("\n").toSeq
   def is: Fragments =
     "parse all example uai files" ! (exampleProblems must contain((p: String) => {
-      Problem.parseUAIProblem(ClassLoader.getSystemResourceAsStream(p)).aka(p) must throwAn[Exception].not
+      f"$p is ok" ==> ({Problem.parseUAIProblem(ClassLoader.getSystemResourceAsStream(p)); p} must not (throwAn[Exception]))
     }).forall)
 }
