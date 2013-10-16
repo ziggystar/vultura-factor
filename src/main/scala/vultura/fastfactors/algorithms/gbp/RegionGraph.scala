@@ -1,12 +1,9 @@
 package vultura.fastfactors.algorithms.gbp
 
 import vultura.fastfactors.{Problem, FastFactor}
-import scalax.collection.Graph
-import scalax.collection.GraphPredef._
-import scalax.collection.GraphEdge._
 import vultura.util.SSet
 import scala.util.Random
-import scalax.collection.GraphTraversal.{Predecessors, Direction, Successors}
+import vultura.util.graph.{EdgeMapDiGraph, EdgeBiMapDiGraph}
 
 case class Region(cr: Double, variables: Set[Int], factors: Set[FastFactor]){
   /** @return true if the union of factor scopes is a subset of the variables. */
@@ -36,24 +33,28 @@ trait RegionGraph {
     regions.map(_ -> Set[Region]()).toMap ++
       edges.groupBy(_._2).map{case (k,vs) => k -> vs.map(_._2).toSet}
 
+  def calculateCountingNumbers: RegionGraph
+
   def variableCount(v: Int): Double
   def factorCount(f: FastFactor): Double
   /** @return true if subgraph induced by containing given factor is connected. */
   def factorConnectedness(f: FastFactor): Boolean
   /** @return true if subgraph induced by containing given variable is connected. */
   def variableConnectedness(variable: Int): Boolean
-  def isAcyclic: Boolean = vultura.util.transitiveClosure(hyperEdges).forall{case (src,dsts) => dsts.forall(_ != src)}
 
   def checks: Seq[Option[String]] = Seq(
     if(problem.hasDuplicateFactors) Some("the problem contains duplicate factors") else None,
     problem.variables.find(v => math.abs(variableCount(v) - 1) > 1e-10).map(v => "variable counting numbers don't add to one for variable " + v),
     problem.factors.find(f => math.abs(factorCount(f) - 1) > 1e-10).map("factor counting numbers don't add to one for factor " + _),
     problem.factors.find(!factorConnectedness(_)).map("induced subgraph is not connected for each factor " + _),
-    problem.variables.find(!variableConnectedness(_)).map("induced subgraph is not connected for variable " + _),
+    problem.variables
+      .map(v => EdgeMapDiGraph(regions,edges).subgraph(_.variables.contains(v)))
+      .find(_.toBiMap.components.size > 1)
+      .map("induced subgraph is not connected for some variable: " + _),
     edges.find{ case (Region(_,hiVs,hiFs), Region(_,loVs,loFs)) =>
       !(loVs.subsetOf(hiVs) && loFs.subsetOf(hiFs)) }.map("child region is no subset of parent region for edge " + _),
     regions.find(!_.hasValidScope).map("there exists a region not encompassing its factors scopes: " + _),
-    Some("graph has a cycle").filter(_ => !isAcyclic)
+    EdgeMapDiGraph(regions,edges).findCycle.map("graph has a cycle: " +)
   )
 
   def issues: Seq[String] = checks.flatten
@@ -61,7 +62,7 @@ trait RegionGraph {
   def toDot: String = {
     val nodeId: Map[Region, String] = regions.zipWithIndex.toMap.mapValues("n" + _)
     val factorId = problem.factors.zipWithIndex.toMap
-    def nodeLabel(n: Region): String = (n.variables ++ n.factors.map(f => "f" + factorId(f))).mkString(",")
+    def nodeLabel(n: Region): String = f"[${n.cr}] ${(n.variables ++ n.factors.map(f => "f" + factorId(f))).mkString(",")}"
     val nodeString = regions.map(n => f"""${nodeId(n)} [label = "${nodeLabel(n)}"];""").mkString("\n")
     val edgeString = edges.map{case (from,to) => f"${nodeId(from)} -> ${nodeId(to)};"}.mkString("\n")
 
@@ -73,47 +74,33 @@ trait RegionGraph {
     """.stripMargin
   }
 }
-/**
- * Encodes a region graph.
- */
-case class RegionGraphG protected(problem: Problem, graph: Graph[Region, DiEdge]) extends RegionGraph{
 
+case class MapRegionGraph(problem: Problem, regions: Set[Region], edges: Set[(Region,Region)]) extends RegionGraph {
+  val forwardMap: Map[Region, Set[Region]] = EdgeMapDiGraph.calculateForwardMap(edges).withDefaultValue(Set[Region]())
+  val backwardMap: Map[Region,Set[Region]] = EdgeMapDiGraph.calculateBackwardMap(edges).withDefaultValue(Set[Region]())
 
-  def isValid: Boolean = issues.isEmpty
+  def variableCount(v: Int): Double = regions.filter(_.variables.contains(v)).toSeq.map(_.cr).sum
+  def factorCount(f: FastFactor): Double = regions.filter(_.factors.contains(f)).toSeq.map(_.cr).sum
+  /** @return true if subgraph induced by containing given factor is connected. */
+  def factorConnectedness(f: FastFactor): Boolean =
+    EdgeMapDiGraph(regions,forwardMap).subgraph(_.factors.contains(f)).toBiMap.components.size == 1
+  /** @return true if subgraph induced by containing given variable is connected. */
+  def variableConnectedness(variable: Int): Boolean =
+    EdgeMapDiGraph(regions,forwardMap).subgraph(_.variables.contains(variable)).toBiMap.components.size == 1
 
-  def factorCount(f: FastFactor): Double = factorSubgraph(f).nodes.toOuterNodes.toSeq.map(_.cr).sum
-  def factorSubgraph(f: FastFactor): Graph[Region, DiEdge] = (graph --! graph.nodes.filterNot(_.factors.contains(f)))
-  def factorConnectedness(f: FastFactor): Boolean = factorSubgraph(f).isConnected
-  def variableSubgraph(variable: Int): Graph[Region, DiEdge] = (graph --! graph.nodes.filterNot(_.variables.contains(variable)))
-  def variableCount(variable: Int): Double = variableSubgraph(variable).nodes.toOuterNodes.toSeq.map(_.cr).sum
-
-  def variableConnectedness(variable: Int): Boolean = variableSubgraph(variable).isConnected
-
-  /** @return This RegionGraph with the counting numbers calculated correctly. */
   def calculateCountingNumbers: RegionGraph = {
-    val mapping: Map[Graph[Region, DiEdge]#NodeT, Double] = Iterator.iterate(Map[Graph[Region, DiEdge]#NodeT, Double]() -> true){
-      case (numbering,true) => {
-        val newEntries = for {
-          unnumberedNode <- graph.nodes if (!numbering.contains(unnumberedNode))
-          newCR <- fuckScalaGraphTraverse(unnumberedNode)(Predecessors).toSeq.map(numbering.get).foldLeft(Some(0d): Option[Double]){case (acc,next) => acc.flatMap(a => next.map(a + _))}
-        } yield unnumberedNode -> newCR
-        (numbering ++ newEntries, !newEntries.isEmpty)
-      }
-      case x@(n,false) => x
-    }.dropWhile(_._2).next()._1
-    assert(mapping.size == graph.nodes.size)
-    def mapNode(n: Graph[Region, DiEdge]#NodeT): Region = Region(cr=mapping(n),variables=n.variables,factors = n.factors)
-    Graph.from(graph.nodes.map(mapNode),graph.edges.map{case a ~> b => mapNode(a) ~> mapNode(b)})
+    val backClosure = vultura.util.transitiveClosure(backwardMap)
+    def calcCR(mapping: Map[Region,Double]): Map[Region,Double] = {
+      val newMaps = for{
+        x <- mapping.keys
+        next <- forwardMap(x) if !mapping.contains(next) && backwardMap(next).forall(mapping.contains)
+      } yield next -> (1 - backClosure(next).toSeq.map(mapping).sum)
+      if(newMaps.isEmpty) mapping else calcCR(mapping ++ newMaps)
+    }
+    val crs = calcCR(regions.filterNot(r => forwardMap(r).isEmpty).map(_ -> 1d)(collection.breakOut))
+    def mapRegion(r: Region): Region = r.copy(cr=crs(r))
+    MapRegionGraph(problem,regions.map(mapRegion),edges.map{case (a,b) => (mapRegion(a),mapRegion(b))})
   }
-
-  def fuckScalaGraphTraverse[N <: graph.NodeT](node: N)(direction: Direction = Successors) = {
-    val builder = Seq.newBuilder[graph.NodeT]
-    node.traverse(direction)(
-      nodeVisitor =  n => builder += n
-    )
-    builder.result()
-  }
-
 }
 
 object RegionGraph{
@@ -130,15 +117,13 @@ object RegionGraph{
 
     val regions = variableRegions.values ++ factorRegions.values
 
-    val edges: Iterable[DiEdge[Region]] = for{
+    val edges: Iterable[(Region,Region)] = for{
       (f,fr) <- factorRegions
       v <- f.variables
       vr = variableRegions(v)
-    } yield fr ~> vr
+    } yield fr -> vr
 
-    val graph = Graph.from(regions,edges)
-
-    RegionGraph(problem,graph)
+    MapRegionGraph(problem,regions.toSet,edges.toSet)
   }
 
   /** See (Koller et Friedman, 2009,p 423). */
@@ -155,12 +140,12 @@ object RegionGraph{
     val allSets = setClosure(initialRegions)(nonemptyIntersections)
     val allRegions = allSets.map(vars => Region(1d,vars,regionToFactor.getOrElse(vars,Set())))
 
-    val edges: Set[DiEdge[Region]] = for{
+    val edges: Set[(Region,Region)] = for{
       r1 <- allRegions
       r2 <- allRegions if (r1 != r2) && r2.variables.subsetOf(r1.variables) && !allRegions.exists(r3 => r1 != r3 && r2 != r3 &&  r2.variables.subsetOf(r3.variables) && r3.variables.subsetOf(r1.variables))
-    } yield r1 ~> r2
+    } yield r1 -> r2
 
-    RegionGraph(problem, Graph.from(allRegions, edges)).calculateCountingNumbers
+    MapRegionGraph(problem, allRegions, edges).calculateCountingNumbers
   }
 
   def saturatedRG(problem: Problem, random: Random): RegionGraph = {
