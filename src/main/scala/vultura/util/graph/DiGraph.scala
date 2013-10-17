@@ -1,5 +1,7 @@
 package vultura.util.graph
 
+import scala.collection.immutable.Queue
+
 case class EdgeMapDiGraph[N](nodes: Set[N], diSuccessors: Map[N,Set[N]]){
   val diSuccDef = diSuccessors.withDefaultValue(Set())
   def edges: Set[(N,N)] = (for((src, dests) <- diSuccessors; dest <- dests) yield src -> dest)(collection.breakOut)
@@ -13,13 +15,13 @@ case class EdgeMapDiGraph[N](nodes: Set[N], diSuccessors: Map[N,Set[N]]){
   def isAcyclic = nodes.forall(n => !tranSuccessors(n).contains(n))
   def findCycle: Option[Seq[N]] = nodes.view.map(n => shortestPath(n,n)).collectFirst{case Some(cycle) => cycle}
   def shortestPath(start: N, goal: N): Option[Seq[N]] = {
-    def find(fringe: List[List[N]], closed: Set[N] = Set()): Option[List[N]] = fringe match {
-      case Nil => None
-      case (p@(g :: _)) :: _ if g == goal => Some(p.reverse)
-      case (exp@(next :: _)) :: rest if !closed(next) => find(rest ::: diSuccDef(next).toList.map(_ :: exp),closed + next)
-      case _ :: rest => find(rest,closed)
-    }
-    find(diSuccDef(start).toList.map(_ :: start :: Nil),Set(start))
+    def find(fringe: Queue[List[N]], closed: Set[N] = Set()): Option[List[N]] = if(fringe.isEmpty) None else
+      fringe.dequeue match {
+        case (p@(g :: _),_) if g == goal => Some(p.reverse) //found goal
+        case (exp@(next :: _), rest) if !closed(next) => find(rest enqueue diSuccDef(next).toList.map(_ :: exp),closed + next)
+        case (_,rest) => find(rest,closed)
+      }
+    find(Queue(diSuccDef(start).toSeq.map(_ :: start :: Nil):_*),Set(start))
   }
 
   def subgraph(p: N => Boolean): EdgeMapDiGraph[N] =
