@@ -82,7 +82,7 @@ object Problem{
         val nv = tokens.next().toInt
         Array.fill(nv)(tokens.next().toDouble)
       }
-      factors = (factorVars,factorValues).zipped.map{case (vars,values) => FastFactor.orderIfNecessary(vars,values,domains)}
+      factors = (factorVars,factorValues).zipped.map{case (vars,values) => FastFactor.orderIfNecessary(vars.reverse,values,domains)}
     } yield Problem(factors.toIndexedSeq,domains,NormalD)
 
     asVal.toEither
