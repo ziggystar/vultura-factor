@@ -13,7 +13,7 @@ import org.specs2.matcher.{MatchResult, Expectable, Matcher}
  * User: Thomas Geier
  * Date: 6/10/13
  */
-class BeliefPropagation$Test extends Specification {
+class BeliefPropagationTest extends Specification {
 
   val smallTreeProblem1 = generators.treeK(3,2,2,generators.expGauss(1),new Random(1))
   val treeProblem1 = generators.treeK(15,3,16,generators.expGauss(1),new Random(1))

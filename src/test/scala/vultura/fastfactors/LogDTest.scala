@@ -9,7 +9,7 @@ import Utils._
  * User: Thomas Geier
  * Date: 4/9/13
  */
-class LogD$Test extends Specification {
+class LogDTest extends Specification {
   import math.{log,exp}
 
   def is: Fragments =
