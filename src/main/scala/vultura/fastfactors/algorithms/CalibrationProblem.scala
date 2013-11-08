@@ -18,6 +18,23 @@ trait CalibrationProblem[A] {
   def targetNodes: Set[A]
   /** Each node has a set of problem-variables as its scope. */
   def nodeScope: Map[A,Set[Int]]
+
+  def toDot: String = {
+    val (normalized,map) = CalibrationProblem.normalizeNodes(this)
+    val revMap = map.map(_.swap)
+    val nodeStrings = normalized.nodes.map(id => f"""n$id [label="${revMap(id)}"];""")
+    val edgeStrings = for{
+      n <- normalized.nodes
+      (Right(parent),weight) <- normalized.parents(n)
+    } yield f"""n$parent -> n$n;"""
+
+    f"""digraph RegionGraph {
+        | rankdir = TB;
+        | ${nodeStrings.mkString("\n")}
+        | ${edgeStrings.mkString("\n")}
+        |}
+      """.stripMargin
+  }
 }
 
 object CalibrationProblem {
@@ -108,7 +125,8 @@ object CalibrationProblem {
   }
 }
 
-class RoundRobinCalibrator[A](_graph: CalibrationProblem[A], maxSteps: Int = 100, tol: Double = 1e-10, random: Random = new Random(0)){
+//TODO the schedule should always be the same with the same random seed
+class RoundRobinCalibrator[A](_graph: CalibrationProblem[A], maxSteps: Int = 10, tol: Double = 1e-10, random: Random = new Random(0)){
   val (graph,nodeMap) = CalibrationProblem.normalizeNodes(_graph)
 
   private val domains = graph.problem.domains
@@ -121,9 +139,10 @@ class RoundRobinCalibrator[A](_graph: CalibrationProblem[A], maxSteps: Int = 100
     IntMap(graph.nodes.map(n => n -> createFactor(n)).toSeq:_*)
   }
 
+  val schedule = graph.nodes
   for{
-    _ <- 1 to maxSteps
-    n <- graph.nodes
+    s <- 1 to maxSteps
+    n <- schedule
   }{
     updateNode(n)
   }
