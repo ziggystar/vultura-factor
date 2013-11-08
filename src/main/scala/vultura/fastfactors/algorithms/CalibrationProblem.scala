@@ -108,7 +108,7 @@ object CalibrationProblem {
   }
 }
 
-class Calibrator[A](_graph: CalibrationProblem[A], maxSteps: Int = 100, tol: Double = 1e-10, random: Random = new Random(0)){
+class RoundRobinCalibrator[A](_graph: CalibrationProblem[A], maxSteps: Int = 100, tol: Double = 1e-10, random: Random = new Random(0)){
   val (graph,nodeMap) = CalibrationProblem.normalizeNodes(_graph)
 
   private val domains = graph.problem.domains
