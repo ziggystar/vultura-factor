@@ -14,7 +14,7 @@ class CBP(val problem: Problem,
           val clampMethod: CBP.CLAMP_METHOD.Value = CBP.CLAMP_METHOD.CLAMP,
           val bpMaxiter: Int = 1000,
           val bpTol: Double = 1e-10,
-          private val random: Random) extends InfAlg with Iterator[InfAlg] {
+          private val random: Random) extends InfAlg with Iterator[CBP] {
   implicit val (logger, formatter, appender) = CBP.allLog
 
   val leafSelection: (Map[Map[Int,Int],BeliefPropagation], Random) => Map[Int,Int] = CBP.LEAF_SELECTION.apply(leafSel)
@@ -62,7 +62,7 @@ class CBP(val problem: Problem,
 
   def hasNext: Boolean = true
   private var firstRun = true
-  def next(): InfAlg = {
+  def next(): CBP = {
     if(!firstRun){
       run(1)
     }
@@ -96,10 +96,12 @@ class CBP(val problem: Problem,
   }
 
   /** @return Partition function in encoding specified by `ring`. */
-  def Z: Double = ring.sumA((queue.map(_._2.Z) ++ exactlySolved.map(_._2.Z))(collection.breakOut))
+  def Z: Double = ring.sumA(conditionedPRs)
 
   /** @return The entropy of the distribution over the condition. */
-  def conditionEntropy: Double = ring.entropy((queue.map(_._2.Z) ++ exactlySolved.map(_._2.Z))(collection.breakOut))
+  def conditionEntropy: Double = ring.entropy(ring.normalize(conditionedPRs))
+
+  def conditionedPRs: Array[Double] = (queue.map(_._2.Z) ++ exactlySolved.map(_._2.Z))(collection.breakOut)
 
   private val beliefCache = new mutable.HashMap[Int,FastFactor]
 
@@ -201,7 +203,7 @@ case class CBPConfig(leafSelection: CBP.LEAF_SELECTION.Value = CBP.LEAF_SELECTIO
                      clampMethod: CBP.CLAMP_METHOD.Value = CBP.CLAMP_METHOD.CLAMP,
                      bpMaxiter: Int = 1000,
                      bpTol: Double = 1e-15) extends AlgConfig {
-  def iterator(p: Problem, seed: Long): Iterator[InfAlg] = new CBP(
+  def iterator(p: Problem, seed: Long): CBP = new CBP(
     p,
     leafSelection,
     CBP.VARIABLE_SELECTION(variableSelection),

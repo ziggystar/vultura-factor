@@ -20,5 +20,6 @@ class CBPTest extends Specification {
   def is: Fragments =
   "deterministic behaviour" ^
     testDeterminsim(CBPConfig()) ^
-    testDeterminsim(CBPConfig(variableSelection = CBP.VARIABLE_SELECTION.LAST_UPDATE))
+    testDeterminsim(CBPConfig(variableSelection = CBP.VARIABLE_SELECTION.LAST_UPDATE)) ^
+  "entropy of conditions" ! (inferCBP(randomProblem).conditionEntropy must beLessThan[Double](10))
 }
