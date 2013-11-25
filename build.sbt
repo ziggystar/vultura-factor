@@ -10,9 +10,10 @@ version := "14.1"
 
 scalaVersion := "2.10.2"
 
-// ----------------- Scala libraries ---------------------------
 //specs2 dependency
-libraryDependencies += "org.specs2" % "specs2_2.10" % "2.1" % "test"
+libraryDependencies += "org.specs2" % "specs2_2.10" % "2.3.4" % "test"
+
+libraryDependencies += "org.scalacheck" % "scalacheck_2.10" % "1.11.0"
 
 //scalaz
 libraryDependencies += "org.scalaz" % "scalaz-core_2.10" % "7.0.2"
