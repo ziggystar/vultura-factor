@@ -3,7 +3,6 @@ package vultura.fastfactors.algorithms
 import vultura.fastfactors._
 import org.specs2.Specification
 import org.specs2.specification.Fragments
-import vultura.factors.uai
 import scala.util.Random
 
 /**
@@ -37,7 +36,7 @@ class WrongInferenceBug extends Specification {
   val result = 15.9299
 
   def is: Fragments =
-    (new CalibratedJunctionTree(problem).logZ must beCloseTo(result,1e-3)) ^
+    (CalibratedJunctionTree.logZ(problem) must beCloseTo(result,1e-3)) ^
     (math.log(vultura.fastfactors.variableElimination(problem)) must beCloseTo(result,1e-3)) ^
     "bp must infer correct result" ! (new BeliefPropagation(problem,new Random(0),1e-10,100).logZ must beCloseTo(result,1e-3))
 }

@@ -70,6 +70,7 @@ class CalibratedJunctionTree(val problem: Problem) extends InfAlg {
 }
 
 object CalibratedJunctionTree{
+  def logZ(p: Problem): Double = new CalibratedJunctionTree(p).logZ
   /** Discards the tree structure and returns calibrated cliques and the partition function for the tree. */
   def calibrate(tree: Tree[FastFactor], ring: RingZ[Double], domains: Array[Int]): (Tree[FastFactor], Double) = {
     val calTree: Tree[(FastFactor,Set[Int],FastFactor,FastFactor)] = calibrateTree(tree,ring, domains)

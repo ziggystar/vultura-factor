@@ -10,7 +10,7 @@ import Utils._
  * User: Thomas Geier
  * Date: 4/9/13
  */
-class LogD$Test extends Specification with ScalaCheck {
+class LogDTest extends Specification {
   import math.{log,exp}
 
   val distribution = Gen.containerOf[Vector,Double](Gen.posNum[Double])

@@ -9,7 +9,7 @@ import org.specs2.specification.Fragments
  * User: Thomas Geier
  * Date: 6/14/13
  */
-class package$Test extends Specification with matcher.ParserMatchers {
+class packageTest extends Specification with matcher.ParserMatchers {
   import GeneratorParser._
   val parsers = GeneratorParser
 

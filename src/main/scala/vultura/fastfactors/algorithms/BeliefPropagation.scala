@@ -3,7 +3,6 @@ package vultura.fastfactors.algorithms
 import scala.collection.mutable
 import scala.util.Random
 import vultura.fastfactors.{Problem, LogD, RingZ, FastFactor}
-import scala.collection.immutable.Iterable
 import gnu.trove.map.hash.TLongObjectHashMap
 
 /**

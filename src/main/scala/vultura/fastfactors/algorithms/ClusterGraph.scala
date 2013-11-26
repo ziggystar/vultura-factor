@@ -12,6 +12,6 @@ import vultura.fastfactors.FastFactor
 case class ClusterGraph(clusterFactors: IndexedSeq[FastFactor],
                          neighbours: Array[Array[Int]],
                          sepsets: Map[(Int,Int),Array[Int]]) {
-                            //assert(sepsets.keySet == neighbours.zipWithIndex.map{case (n,i) => n.map(i -> _)}(collection.breakOut))
-                            def edges: Iterable[(Int,Int)] = for((sinks,srcI) <- neighbours.zipWithIndex; sinkI <- sinks) yield (srcI,sinkI)
-                          }
+  //assert(sepsets.keySet == neighbours.zipWithIndex.map{case (n,i) => n.map(i -> _)}(collection.breakOut))
+  def edges: Iterable[(Int,Int)] = for((sinks,srcI) <- neighbours.zipWithIndex; sinkI <- sinks) yield (srcI,sinkI)
+}
