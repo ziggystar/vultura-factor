@@ -76,6 +76,14 @@ object FastFactor{
     def decode(f: FastFactor): FastFactor = f.copy(values=ring.decode(f.values))
   }
 
+  /** Sums the given factors element-wise. It's the ordinary sum of Double values. And all scopes have to be equal. */
+  def elementWiseSum(factors: IndexedSeq[FastFactor]): FastFactor = {
+    require(!factors.isEmpty, "cannot be called with empty argument")
+    val scope = factors.head.variables
+    require(factors.forall(_.variables.sameElements(scope)), "all scopes must be equal")
+    FastFactor(scope,Array.tabulate(factors.head.values.size)(i => factors.foldLeft(0d)(_ + _.values(i))))
+  }
+
   object AdditionIsEquality extends RingZ[Double]{
     def zero: Double = sys.error("operation not supported")
 
@@ -100,6 +108,8 @@ object FastFactor{
       require(fs.length == 1)
       fs(0)
     }
+
+    implicit def tag: ClassTag[Double] = implicitly[ClassTag[Double]]
   }
 
   /** @return a `FastFactor` with a max entropy distribution over the given variables. */
@@ -130,7 +140,6 @@ object FastFactor{
   }
 
   def multiply(ring: RingZ[Double])(domains: Array[Int])(factors: IndexedSeq[FastFactor]): FastFactor = {
-    assert(!factors.isEmpty)
     val variables = merge(factors.map(_.variables))
     val numValues = variables.map(domains).foldLeft(1)(_ * _)
     val values = new Array[Double](numValues)
@@ -332,7 +341,8 @@ object FastFactor{
   }
 
   /** Calculate KL divergence for two factors, given in normal representation. */
-  def kl(f1: FastFactor, f2: FastFactor): Double = {
+  def kl(f1: FastFactor, f2: FastFactor, ring: RingZ[Double]): Double = {
+    require(ring == NormalD)
     require(f1.values.length == f2.values.length)
     var result = 0d
     var i = 0
@@ -343,7 +353,8 @@ object FastFactor{
     result
   }
   /** Max diff for two factors, given in normal representation. */
-  def maxDiff(f1: FastFactor, f2: FastFactor): Double = {
+  def maxDiff(f1: FastFactor, f2: FastFactor, ring: RingZ[Double]): Double = {
+    require(ring == NormalD)
     require(f1.values.length == f2.values.length)
     var result = 0d
     var i = 0

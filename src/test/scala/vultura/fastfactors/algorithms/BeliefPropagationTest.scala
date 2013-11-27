@@ -27,16 +27,16 @@ class BeliefPropagationTest extends Specification {
       t
     )
   }
-  def haveCloseValuessAs(ref: FastFactor, tol: Double): Matcher[FastFactor] = new Matcher[FastFactor]{
+  def haveCloseValuesAs(ref: FastFactor, tol: Double): Matcher[FastFactor] = new Matcher[FastFactor]{
     def apply[S <: FastFactor](t: Expectable[S]): MatchResult[S] = result(
-      FastFactor.maxDiff(t.value,ref) < tol,
+      FastFactor.maxDiff(t.value,ref,NormalD) < tol,
       "has close marginals to " + ref,
-      "differs in some value by  " + FastFactor.maxDiff(t.value,ref),
+      "differs in some value by  " + FastFactor.maxDiff(t.value,ref,NormalD),
       t
     )
   }
   def beSimilarTo(ref: FastFactor, tol: Double): Matcher[FastFactor] =
-    haveSameStructureAs(ref) and haveCloseValuessAs(ref,tol)
+    haveSameStructureAs(ref) and haveCloseValuesAs(ref,tol)
 
   def bpInfer(problem: Problem, seed: Long = 1): BeliefPropagation = new BeliefPropagation(problem,new Random(seed),1e-10,100)
   def jtInfer(problem: Problem) = new CalibratedJunctionTree(problem)

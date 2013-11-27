@@ -162,7 +162,7 @@ object CBP {
 
     def maxentropy(bp: BeliefPropagation, random: Random): Int = {
       vultura.util.maxByMultiple(bp.problem.variables.toSeq)(
-        v => -1 * bp.problem.ring.entropy(bp.variableBelief(v).values)
+        v => bp.problem.ring.entropy(bp.variableBelief(v).values)
       ).pickRandom(random)
     }
 
