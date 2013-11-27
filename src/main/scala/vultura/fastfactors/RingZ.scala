@@ -1,5 +1,7 @@
 package vultura.fastfactors
 
+import scala.reflect.ClassTag
+
 /**
  * Type class describing ring properties of a type.
  */
@@ -92,7 +94,7 @@ object NormalD extends RingZ[Double]{
         e += a(i) * math.log(a(i))
       i += 1
     }
-    e
+    -e
   }
 }
 
@@ -175,7 +177,7 @@ object LogD extends RingZ[Double] {
   /** @return In normal representation (not log). */
   override def entropy(a: Array[Double]): Double = {
     val normalized = normalize(a)
-    normalized.foldLeft(0d){case (h, lnp) => h + math.exp(lnp) * lnp}
+    normalized.foldLeft(0d){case (h, lnp) => h - math.exp(lnp) * lnp}
   }
 
   /** @return In normal representation (not log). */
