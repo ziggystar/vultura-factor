@@ -80,6 +80,14 @@ package object generators {
     }
     Problem(factors.map(_._2)(collection.breakOut),domains,NormalD)
   }
+  /** Creates one factor for each variable. */
+  def factorized(numVariables: Int,
+                 domainSize: Int,
+                 fgen: FactorGenerator,
+                 random: Random): Problem = {
+    val domains = Array.fill(numVariables)(domainSize)
+    Problem(Array.tabulate(numVariables)(v => fgen(Array(v),domains,random)),domains,NormalD)
+  }
 
   def generateFromString(desc: String): Either[String,Long => Problem] = {
     import GeneratorParser._
