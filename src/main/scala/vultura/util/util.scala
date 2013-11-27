@@ -2,6 +2,7 @@ package vultura
 
 import scala.util.Random
 import collection.mutable.ArrayBuffer
+import scala.reflect.ClassTag
 
 /**
  * Utility functions.
@@ -124,6 +125,15 @@ package object util {
     def split(i: Int): Seq[Random] = {
       val seed = r.nextInt()
       (1 to i).map(n => new Random(seed + n))
+    }
+  }
+
+  implicit class MyRichMap[A,B](val m: Map[A,B]) extends AnyVal {
+    def toArrayMap(implicit intKeys: A <:< Int, ct: ClassTag[B]): Array[B] = {
+      val maxIndex = m.keys.map(intKeys).max
+      val result = new Array[B](maxIndex)
+      m.foreach{case (k,v) => result(k) = v}
+      result
     }
   }
 
