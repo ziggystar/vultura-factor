@@ -12,7 +12,13 @@ import java.io._
  * Date: 6/14/13
  */
 case class Problem(factors: IndexedSeq[FastFactor],domains: Array[Int],ring: RingZ[Double]){
+  lazy val factorsOfVariable: collection.Map[Int,IndexedSeq[FastFactor]] =
+    variables.map(v => v -> factors.filter(_.variables.contains(v)))(collection.breakOut): mutable.HashMap[Int, IndexedSeq[FastFactor]]
   lazy val variables: Set[Int] = (for (f <- factors; v <- f.variables) yield v)(collection.breakOut)
+
+  /** @return The set of all neighbouring variables for a given variable, excluding itself. */
+  lazy val neighboursOf: Map[Int,Set[Int]] =
+    variables.map(v => v -> (factorsOfVariable(v).flatMap(_.variables).toSet - v))(collection.breakOut)
 
   private lazy val degrees: mutable.HashMap[Int,Int] = new mutable.HashMap[Int,Int]
   def degreeOfVariable(v: Int): Int = degrees.getOrElseUpdate(v,factors.count(_.variables.contains(v)))
