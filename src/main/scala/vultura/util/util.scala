@@ -69,14 +69,14 @@ package object util {
 
   //convert nested sequences to AArray which provides the crossProduct function
   type AA[A] = Array[Array[A]]
-  implicit def seqseq2aa[T: ClassManifest](ss: Seq[Seq[T]]): AA[T] = ss.map(_.toArray).toArray
-  implicit def seqarray2aa[T: ClassManifest](sa: Seq[Array[T]]): AA[T] = sa.toArray
-  implicit def arraySeq2aa[T: ClassManifest](as: Array[Seq[T]]): AA[T] = as.map(_.toArray)
+  implicit def seqseq2aa[T: ClassTag](ss: Seq[Seq[T]]): AA[T] = ss.map(_.toArray).toArray
+  implicit def seqarray2aa[T: ClassTag](sa: Seq[Array[T]]): AA[T] = sa.toArray
+  implicit def arraySeq2aa[T: ClassTag](as: Array[Seq[T]]): AA[T] = as.map(_.toArray)
 
   /** Convenience method. */
-  def crossProduct[T: ClassManifest](aa: AA[T]) = new DomainCPI(aa)
+  def crossProduct[T: ClassTag](aa: AA[T]) = new DomainCPI(aa)
   /** Take a random element from each entry in aa. */
-  def randomAssignment[T: ClassManifest](aa: AA[T], random: Random): Array[T] = aa.map(a => a(random.nextInt(a.size)))
+  def randomAssignment[T: ClassTag](aa: AA[T], random: Random): Array[T] = aa.map(a => a(random.nextInt(a.size)))
   implicit def iteratorLast[A](it: Iterator[A]) = new {
     def last: A = {
       var elem = it.next()

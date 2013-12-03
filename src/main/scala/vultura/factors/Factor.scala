@@ -16,6 +16,7 @@ import vultura.util.{IntDomainCPI, Measure}
  * @since 30.01.12
  */
 
+@deprecated("use classes from package fastfactors instead", "15")
 sealed trait Factor[A,B] {
   def variables(f: A): Array[Int]
   def domains(f: A): Array[Array[Int]]

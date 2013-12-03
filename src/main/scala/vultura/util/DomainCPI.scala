@@ -1,9 +1,11 @@
 package vultura.util
 
+import scala.reflect.ClassTag
+
 /**In contrast to CrossProductIndexer, a DomainCPI allows to specify the domains explicitly, which therefore are not
  * restricted to be integer ranges starting with zero.
  */
-class DomainCPI[A: ClassManifest](val domains: AA[A],val lsbf: Boolean = true) extends IndexedSeq[Array[A]]{
+class DomainCPI[A: ClassTag](val domains: AA[A],val lsbf: Boolean = true) extends IndexedSeq[Array[A]]{
   val cpi = new CrossProductIndexer(domains.map(_.size),lsbf)
   def length: Int = cpi.length
   def apply(idx: Int): Array[A] = {
