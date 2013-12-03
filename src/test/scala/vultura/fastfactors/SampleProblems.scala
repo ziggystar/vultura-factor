@@ -14,7 +14,6 @@ object SampleProblems {
                           |uai/examples/grid4x4.uai}44.4495
                           |uai/examples/deer_rescaled_0034.K10.F1.25.model.uai
                           |uai/examples/or_chain_10.fg.uai
-                          |uai/examples/grid_tg.uai}22.8274
                           |uai/examples/network.uai
                           |uai/examples/smokers_10.uai
                           |uai/examples/GEOM30a_3.uai
