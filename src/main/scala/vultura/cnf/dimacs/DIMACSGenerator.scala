@@ -1,7 +1,6 @@
 package vultura.cnf.dimacs
 
 import util.Random
-import collection.mutable.HashSet
 import scala.collection.mutable
 
 object DIMACSGenerator {

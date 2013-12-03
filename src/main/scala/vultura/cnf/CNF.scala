@@ -3,7 +3,6 @@ package vultura.cnf
 import dimacs.DIMACSParser
 import java.io.File
 
-
 /**
  * A CNF representation that uses arrays of integers as clauses. Each variable is an integer and
  * if the high bit is set it's a negated atom.

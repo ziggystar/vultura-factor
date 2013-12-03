@@ -3,9 +3,8 @@ package vultura.tools
 import org.rogach.scallop.{ValueConverter, ScallopConf}
 import java.io._
 import org.rogach.scallop
-import vultura.factors.{uai, TableFactor}
 import vultura.fastfactors._
-import vultura.util.{Benchmark, TreeWidth}
+import vultura.util.Benchmark
 import scala.util.Random
 import vultura.fastfactors.Problem
 import vultura.util.IntDomainCPI
@@ -63,32 +62,17 @@ object uaiInfer {
   def main(args: Array[String]) {
     val config = new Config(args)
 
-    val inProblem: Seq[TableFactor[Double]] = uai.parseUAIMarkov(config.input())
-
-    val domains: Array[Int] = {
-      val varDomainMap: Seq[(Int, Int)] =
-        inProblem.flatMap(f => f.variables.zip(f.domains.map(_.size)))
-      assert(varDomainMap.toMap.size == varDomainMap.distinct.size, "differing variable domains")
-      val maxvar = varDomainMap.map(_._1).max
-      (0 to maxvar map varDomainMap.toMap.withDefaultValue(0))(collection.breakOut)
-    }
+    val inProblem: Problem = Problem.parseUAIProblem(config.input()).right.get
 
     val ring = if(config.useLog()) LogD else NormalD
 
-    logger.info(f"Loaded problem with ${inProblem.size} factors and ${inProblem.flatMap(_.variables).toSet.size} variables")
+    logger.info(f"Loaded problem with ${inProblem.factors.size} factors and ${inProblem.variables.size} variables")
 
-    val problem: IndexedSeq[FastFactor] = {
-      val preProblem = inProblem
-        .toIndexedSeq
-        .map(f => FastFactor.orderIfNecessary(f.variables,f.denseData,domains))
-        .map{ case FastFactor(vars, values) => FastFactor(vars, ring.encode(values))}
-      val simplified = simplifyFactorSet(preProblem,ring,domains)
-      logger.info(f"simplified ${preProblem.size} factors to ${simplified.size}")
-      simplified
-    }
+    val problem = simplifyProblem(inProblem)
+    logger.info(f"simplified ${inProblem.factors.size} factors to ${problem.factors.size}")
 
     val conditioningVariables: Seq[Int] = config.condition.get.map(_.split(",").toSeq.map(_.toInt)).getOrElse(Seq[Int]())
-    val cpi = new IntDomainCPI(conditioningVariables.map(domains).map(x => (0 until x).toArray).toArray)
+    val cpi = new IntDomainCPI(conditioningVariables.map(problem.domains).map(x => (0 until x).toArray).toArray)
     val random = new Random
 
     logger.info(f"running algorithm ${config.algorithm()}")
@@ -113,7 +97,7 @@ object uaiInfer {
 
     def calcCondZs: IndexedSeq[Double] = cpi.map{ assignment =>
       val cond = conditioningVariables.zip(assignment).toMap
-      val (conditionedProblem,conditionedDomain) = conditionProblem(problem,domains,cond)
+      val (conditionedProblem,conditionedDomain) = conditionProblem(problem.factors,problem.domains,cond)
       logger.fine(f"conditioning on assignment: ${assignment.mkString(":")}")
       infer(Problem(conditionedProblem,conditionedDomain,ring))
     }
@@ -167,15 +151,16 @@ object uaiInfer {
     foldR(graph)(graph.flatMap{case (src, sinks) => sinks.map(src -> _)}(collection.breakOut))
   }
 
-  def simplifyFactorSet(problem: IndexedSeq[FastFactor], ring: RingZ[Double], domains: Array[Int]): IndexedSeq[FastFactor] = {
-    val factorsOfvar: Map[Int,Set[FastFactor]] = dualBipartiteGraph(problem.map(f => f -> f.variables.toSet)(collection.breakOut))
-    val primalGraph: Map[FastFactor,Set[FastFactor]] = problem.map(f => f -> f.variables.flatMap(factorsOfvar).toSet)(collection.breakOut)
+  /** Multiplies factors into super-set factors. */
+  def simplifyProblem(p: Problem): Problem = {
+    val factorsOfvar: Map[Int,Set[FastFactor]] = dualBipartiteGraph(p.factors.map(f => f -> f.variables.toSet)(collection.breakOut))
+    val primalGraph: Map[FastFactor,Set[FastFactor]] = p.factors.map(f => f -> f.variables.flatMap(factorsOfvar).toSet)(collection.breakOut)
     val factorContraction: PartialFunction[(FastFactor,FastFactor),FastFactor] = {
       case (fa,fb) if fa.variables.toSet.subsetOf(fb.variables.toSet) || fb.variables.toSet.subsetOf(fa.variables.toSet) =>
-        FastFactor.multiply(ring)(domains)(IndexedSeq(fa,fb))
+        FastFactor.multiply(p.ring)(p.domains)(IndexedSeq(fa,fb))
     }
     val contractedGraph: Map[FastFactor, Set[FastFactor]] = partialFoldGraph(primalGraph)(factorContraction)
-    contractedGraph.keysIterator.toIndexedSeq
+    p.copy(factors=contractedGraph.keysIterator.toIndexedSeq)
   }
 
   def dualBipartiteGraph[A,B](g: Map[A,Iterable[B]]): Map[B,Set[A]] =

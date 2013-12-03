@@ -1,8 +1,5 @@
 package vultura.cnf.dsl
 
-import scalaz._
-import Scalaz._
-
 /**
  * A DSL for writing cnf formulas. Mainly for testing purposes.
  *
