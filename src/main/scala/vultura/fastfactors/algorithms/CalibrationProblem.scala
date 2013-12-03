@@ -153,7 +153,7 @@ class RoundRobinCalibrator[A](_graph: CalibrationProblem[A], maxSteps: Int = 10,
       case (Right(node),1d) => messages(node)
       case (_,x) => sys.error("Calibrator cannot handle weights different from 1: " + x)
     }
-    val result = FastFactor.multiplyRetain(ring)(domains)(incoming,messages(n).variables)
+    val result = FastFactor.multiplyRetain(ring)(domains)(incoming,messages(n).variables).normalize(ring)
     System.arraycopy(result.values,0,messages(n).values,0,result.values.size)
   }
 

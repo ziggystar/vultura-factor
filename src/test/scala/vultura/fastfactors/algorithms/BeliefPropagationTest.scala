@@ -13,30 +13,11 @@ import org.specs2.matcher.{MatchResult, Expectable, Matcher}
  * User: Thomas Geier
  * Date: 6/10/13
  */
-class BeliefPropagationTest extends Specification {
+class BeliefPropagationTest extends Specification with FastFactorSpecs {
 
   val smallTreeProblem1 = generators.treeK(3,2,2,generators.expGauss(1),new Random(1))
   val treeProblem1 = generators.treeK(15,3,16,generators.expGauss(1),new Random(1))
   val treeProblem2 = generators.treeK(15,3,2,generators.expGauss(1),new Random(1))
-
-  def haveSameStructureAs(ref: FastFactor): Matcher[FastFactor] = new Matcher[FastFactor]{
-    def apply[S <: FastFactor](t: Expectable[S]): MatchResult[S] = result(
-      ref.variables.deep == t.value.variables.deep && ref.values.size == t.value.values.size,
-      "has same structure as " + ref,
-      "differs in structure from " + ref,
-      t
-    )
-  }
-  def haveCloseValuesAs(ref: FastFactor, tol: Double): Matcher[FastFactor] = new Matcher[FastFactor]{
-    def apply[S <: FastFactor](t: Expectable[S]): MatchResult[S] = result(
-      FastFactor.maxDiff(t.value,ref,NormalD) < tol,
-      "has close marginals to " + ref,
-      "differs in some value by  " + FastFactor.maxDiff(t.value,ref,NormalD),
-      t
-    )
-  }
-  def beSimilarTo(ref: FastFactor, tol: Double): Matcher[FastFactor] =
-    haveSameStructureAs(ref) and haveCloseValuesAs(ref,tol)
 
   def bpInfer(problem: Problem, seed: Long = 1): BeliefPropagation = new BeliefPropagation(problem,new Random(seed),1e-10,100)
   def jtInfer(problem: Problem) = new CalibratedJunctionTree(problem)
