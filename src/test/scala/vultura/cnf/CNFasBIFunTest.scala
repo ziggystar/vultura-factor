@@ -13,7 +13,7 @@ import vultura.factors._
  */
 class CNFasBIFunTest extends Specification {
   def is: Fragments =
-  {variables('x: CNF.Clause) ===(Array(0))} ^
+  {variables('x: CNF.Clause) === Array(0)} ^
   {domains('x: CNF.Clause).deep === Array(Array(0,1)).deep} ^
   (variables('x v !'y: CNF.Clause).deep === Array(0,1).deep) ^
   (domains('x v !'y: CNF.Clause).deep === Array(Array(0,1),Array(0,1)).deep) ^

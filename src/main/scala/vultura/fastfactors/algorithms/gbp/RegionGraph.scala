@@ -68,8 +68,8 @@ trait RegionGraph {
 
    f"""digraph RegionGraph {
       | rankdir = TB;
-      | ${nodeString}
-      | ${edgeString}
+      | $nodeString
+      | $edgeString
       |}
     """.stripMargin
   }
@@ -163,5 +163,5 @@ object RegionGraph{
       val add = f(acc).filterNot(acc)
       (acc ++ add,!add.isEmpty)
     }
-  }.dropWhile(_._2).next._1
+  }.dropWhile(_._2).next()._1
 }

@@ -1,9 +1,9 @@
 package vultura.fastfactors.algorithms
 
-import scala.util.Random
-import vultura.fastfactors.{Problem, LogD, FastFactor}
-import vultura.util.seq2randomSeq
 import scala.collection.mutable
+import scala.util.Random
+import vultura.fastfactors.{Problem, FastFactor}
+import vultura.util.seq2randomSeq
 
 /**
  * Conditioned Belief Propagation.

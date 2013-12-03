@@ -176,7 +176,7 @@ package object util {
     val inverted = for (
       node <- nodes;
       successor <- directedGraph(node)
-    ) yield (successor -> node)
+    ) yield successor -> node
 
     inverted
       .groupBy(_._1) //Map[A,Set[(A,A)]]

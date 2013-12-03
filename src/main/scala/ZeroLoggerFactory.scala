@@ -61,7 +61,7 @@ object ZeroLoggerFactory {
       currentLine: CurrentLine,
       currentClass: CurrentClass,
       currentMethodNameOption: Option[CurrentMethodName]): Fastring = {
-      fast"${level.name}:$now: $message ${throwable}"
+      fast"${level.name}:$now: $message $throwable"
     }
 
     override final def format(
@@ -71,7 +71,7 @@ object ZeroLoggerFactory {
       currentLine: CurrentLine,
       currentClass: CurrentClass,
       currentMethodNameOption: Option[CurrentMethodName]): Fastring = {
-      fast"${level.name}:$now: ${throwable}"
+      fast"${level.name}:$now: $throwable"
     }
   }
 }

@@ -84,7 +84,7 @@ object uai2cnf {
         modeShare.sum / modeShare.size
       }
       outS.println("variables\tfactors\tlargestDomain\tmeanDomain\tdeterminism\tmeanModePercentage")
-      outS.println(f"${vars.size}\t${inProblem.size}\t${domsizes.max}\t${domsizes.sum / domsizes.size.toDouble}%.2f\t${numZeros}%.2f\t${mmp}%.2f")
+      outS.println(f"${vars.size}\t${inProblem.size}\t${domsizes.max}\t${domsizes.sum / domsizes.size.toDouble}%.2f\t$numZeros%.2f\t$mmp%.2f")
       System.exit(0)
     }
 
@@ -112,7 +112,7 @@ object uai2cnf {
     def shatterFactor(f: TableFactor[Double]): IndexedSeq[SingleValueFactor] = {
       val mode = f.data.groupBy(identity).toSeq.sortBy(_._2.size).filter(_._1 != 0d).last._1
       f.cpi.collect{
-        case assignment if(f.evaluate(assignment) != mode) =>
+        case assignment if f.evaluate(assignment) != mode =>
           SingleValueFactor(
             f.variables.zip(assignment).map(newVars),
             f.variables.map(_ => Array(0,1)),
@@ -133,7 +133,7 @@ object uai2cnf {
 
   def writeCNF[A : ({type L[X] = Factor[X,_]})#L](p: Seq[A],onlyDeterminism: Boolean = false): String = {
     import vultura.factors._
-    assert(onlyDeterminism == false, "not implemented yet")
+    assert(!onlyDeterminism, "not implemented yet")
     //map variables to their dimacs variable name
     val varMap: Map[Int, Int] = p.flatMap(variables(_)).distinct.toArray.zipWithIndex.map(t => (t._1,t._2 + 1)).toMap
     f"c this SAT instance represents the structure of a markov network\n" +

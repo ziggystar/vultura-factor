@@ -2,6 +2,7 @@ package vultura.cnf.dimacs
 
 import util.Random
 import collection.mutable.HashSet
+import scala.collection.mutable
 
 object DIMACSGenerator {
 
@@ -11,13 +12,13 @@ object DIMACSGenerator {
    * There are no duplicate atoms inside the clause. This also means that the clause is satisfiable on its own.
    */
   def generateClause(numVars: Int, numPosAtoms: Int, numNegAtoms: Int, rnd: Random): DimacsClause = {
-    val posAtoms = new HashSet[Int]
+    val posAtoms = new mutable.HashSet[Int]
     while (posAtoms.size < numPosAtoms) {
       val candidate = rnd.nextInt(numVars) + 1
       if (!posAtoms.contains(candidate)) posAtoms += candidate
     }
 
-    val negAtoms = new HashSet[Int]
+    val negAtoms = new mutable.HashSet[Int]
     while (negAtoms.size < numNegAtoms) {
       val candidate = rnd.nextInt(numVars) + 1
       if (!posAtoms.contains(candidate) && !negAtoms.contains(candidate)) negAtoms += candidate

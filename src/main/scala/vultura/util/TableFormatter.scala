@@ -38,7 +38,7 @@ object TableFormatter {
     ) yield max
 
     val fString = (sizeA +: colSizes).map("%%%ds".format(_)).mkString(" ")
-    val firstRow = fString.format(("" +: bs.map(pb(_))): _*)
+    val firstRow = fString.format("" +: bs.map(pb(_)): _*)
     val dataRows = as.map(a => fString.format(pa(a) +: bs.map(b => f(a, b)): _*))
     (firstRow +: dataRows).mkString("\n")
   }

@@ -34,14 +34,14 @@ case class CNF(clauses: IndexedSeq[CNF.Clause]){
 }
 
 object CNF {
+  /**If highest bit is set, it's a negated atom. */
+  type Clause = Array[Int]
+  val NEG_MASK: Int = 0x80000000
+
   /** Not used publicly. Just use an empty clause. */
   private val FalseClause: Clause = Array()
   val TrueClause: Clause = Array(0, 0 | NEG_MASK)
   val FalseCNF = CNF(IndexedSeq(FalseClause))
-
-  /**If highest bit is set, it's a negated atom. */
-  type Clause = Array[Int]
-  val NEG_MASK: Int = 0x80000000
 
   def plainAtoms(clause: Clause) = clause.filter(i => (CNF.NEG_MASK & i) != 0)
   def negatedAtoms(clause: Clause) = clause.filter(i => (CNF.NEG_MASK & i) == 0)

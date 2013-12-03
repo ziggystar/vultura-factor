@@ -69,16 +69,15 @@ object uai2uai {
         modeShare.sum / modeShare.size
       }
       outS.println("variables\tfactors\tlargestDomain\tmeanDomain\tdeterminism\tmeanModePercentage")
-      outS.println(f"${vars.size}\t${inProblem.size}\t${domsizes.max}\t${domsizes.sum / domsizes.size.toDouble}%.2f\t${numZeros}%.2f\t${mmp}%.2f")
+      outS.println(f"${vars.size}\t${inProblem.size}\t${domsizes.max}\t${domsizes.sum / domsizes.size.toDouble}%.2f\t$numZeros%.2f\t$mmp%.2f")
       System.exit(0)
     }
     val t = System.nanoTime()
     val outString: String = config.task() match {
-      case "compress" => {
+      case "compress" =>
         val subsets: Map[Set[Int], Set[Int]] = findSubsets(inProblem.map(_.variables.toSet))
         println(f"reduce ${inProblem.size}, of which are ${subsets.keySet.size} distinct  to ${subsets.values.toSet.size}")
         subsets.toString
-      }
     }
     println((System.nanoTime() - t).toDouble * 1e-9)
 
@@ -93,11 +92,11 @@ object uai2uai {
       val withIndex: Seq[(Set[Int], Int)] = plain.zipWithIndex
       vars.map(v => (for((vs,i) <- withIndex if vs contains v) yield i)(collection.breakOut):Set[Int])
     }
-    val mapping = plain.zipWithIndex.foldLeft(Map[Int,Int]()){ case (mapping,(ss,ci)) =>
+    val mapping = plain.zipWithIndex.foldLeft(Map[Int,Int]()){ case (acc,(ss,ci)) =>
       val subsumerIndices: Set[Int] = ss.map(transposed).reduce(_ intersect _)
       val subsumer = vultura.util.maxByMultiple(subsumerIndices.toSeq)(ci => plain(ci).size).sorted.last
       if(ci != subsumer) println(plain(ci) + " -> " + plain(subsumer))
-      mapping + (ci -> subsumer)
+      acc + (ci -> subsumer)
     }
     mapping.map{case (k,v) => plain(k) -> plain(v)}
   }
