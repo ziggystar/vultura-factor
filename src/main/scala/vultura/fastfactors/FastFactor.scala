@@ -1,6 +1,7 @@
 package vultura.fastfactors
 
 import scala.reflect.ClassTag
+import vultura.util.IntDomainCPI
 
 /**
  * Created by IntelliJ IDEA.
@@ -112,9 +113,25 @@ object FastFactor{
     implicit def tag: ClassTag[Double] = implicitly[ClassTag[Double]]
   }
 
-  /** @return a `FastFactor` with a max entropy distribution over the given variables. */
+  /**
+   * Builds a factor, adhering to a partial assignment to variables, spreading the remaining probability mass
+   * evenly across all allowed assignments.
+   * @param deterministic Adhere to these deterministic variable assignments.
+   * @return a `FastFactor` with a max entropy distribution over the given variables.
+   */
+  def deterministicMaxEntropy(variables: Array[Int], deterministic: Map[Int,Int], domains: Array[Int], ring: RingZ[Double]): FastFactor =
+    fromFunction(
+      variables,
+      domains,
+      assign => if(assign.zipWithIndex.exists{case (value,variable) => deterministic.get(variable).exists(_ != value)}) ring.zero else ring.one
+    ).normalize(ring)
+
+
   def maxEntropy(variables: Array[Int], domains: Array[Int], ring: RingZ[Double]): FastFactor =
     FastFactor(variables, ring.normalize(Array.fill(variables.foldLeft(1)(_ * domains(_)))(ring.one))).normalize(ring)
+
+  def fromFunction(variables: Array[Int], domains: Array[Int], f: Array[Int] => Double): FastFactor =
+    FastFactor(variables, new IntDomainCPI(domains.map(ds => (0 until ds).toArray)).map(f)(collection.breakOut))
 
   def orderIfNecessary(variables: Array[Int], values: Array[Double], domains: Array[Int]): FastFactor = {
     val ordered = variables.sorted

@@ -10,7 +10,7 @@ import Utils._
  * User: Thomas Geier
  * Date: 2/13/13
  */
-class FastFactorTest extends Specification {
+class FastFactorTest extends Specification with FastFactorMatchers {
 
   def incTest(reg: Array[Int], doms: Array[Int]): (Int, Seq[Int]) = (incrementCounter(reg,doms),reg.toSeq)
   def incTest2(reg: Array[Int], doms: Array[Int]): (Int, Seq[Int]) = (incrementCounter2(reg,doms),reg.toSeq)
@@ -56,5 +56,19 @@ class FastFactorTest extends Specification {
      "condition 3x3 factor" ^
       FF(VARS(0, 1), VALS(1, 2, 3, 4, 5, 6, 7, 8, 9)).condition(Map(0 -> 0), DOMS(3, 3)) === FF(VARS(1), VALS(1, 4, 7)) ^
       FF(VARS(0, 1), VALS(1, 2, 3, 4, 5, 6, 7, 8, 9)).condition(Map(0 -> 1), DOMS(3, 3)) === FF(VARS(1), VALS(2, 5, 8)) ^
-      FF(VARS(0, 1), VALS(1, 2, 3, 4, 5, 6, 7, 8, 9)).condition(Map(1 -> 1), DOMS(3, 3)) === FF(VARS(0), VALS(4, 5, 6))
+      FF(VARS(0, 1), VALS(1, 2, 3, 4, 5, 6, 7, 8, 9)).condition(Map(1 -> 1), DOMS(3, 3)) === FF(VARS(0), VALS(4, 5, 6)) ^
+     p^
+    p^
+    "building factors" ^
+      "deterministic max entropy factors" ^
+      "with empty condition" !
+        (FastFactor.deterministicMaxEntropy(Array(0),Map(),Array(2),NormalD) must haveValuesCloseTo(FF(VARS(0), VALS(0.5,0.5)))) ^
+      "irrelevant entries in condition shouldn't matter" !
+        (FastFactor.deterministicMaxEntropy(Array(0),Map(1 -> 1),Array(2),NormalD) must haveValuesCloseTo(FF(VARS(0), VALS(0.5,0.5)))) ^
+      "complete condition, one var" !
+        (FastFactor.deterministicMaxEntropy(Array(0),Map(0 -> 0),Array(2),NormalD) must haveValuesCloseTo(FF(VARS(0), VALS(1,0)))) ^
+      "complete condition, two vars" !
+        (FastFactor.deterministicMaxEntropy(Array(0,1),Map(0 -> 0,1 -> 0),Array(2,2),NormalD) must haveValuesCloseTo(FF(VARS(0,1), VALS(1,0,0,0)))) ^
+      "partial condition" !
+        (FastFactor.deterministicMaxEntropy(Array(0,1),Map(0 -> 0),Array(2,2),NormalD) must haveValuesCloseTo(FF(VARS(0), VALS(0.5,0,0.5,0))))
 }

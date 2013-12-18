@@ -4,14 +4,14 @@ import vultura.fastfactors.generators._
 import scala.util.Random
 import org.specs2._
 import org.specs2.specification.Fragments
-import vultura.fastfactors.{FastFactorSpecs, Problem}
+import vultura.fastfactors.{FastFactorMatchers, Problem}
 
 /**
  * Created by IntelliJ IDEA.
  * User: Thomas Geier
  * Date: 11/8/13
  */
-class RoundRobinCalibratorTest extends Specification with FastFactorSpecs {
+class RoundRobinCalibratorTest extends Specification with FastFactorMatchers {
   val maxEntProblem = grid(2,2,2,maxEntropy, new Random(0))
   val randomGrid = grid(3,3,2,expGauss(1),new Random(0))
   val maxEntCalibrated = new RoundRobinCalibrator(CalibrationProblem.betheCalibrationProblem(maxEntProblem))
