@@ -1,6 +1,6 @@
 package vultura.fastfactors.algorithms.conditioned
 
-import vultura.fastfactors.Problem
+import vultura.fastfactors.{FastFactor, Problem}
 import vultura.util.DomainCPI
 import scala.util.Random
 
@@ -17,18 +17,24 @@ case class SimpleScheme(problem: Problem, splits: Set[(Set[Int],Int)]) {
   require(splits.forall{case (scope, cv) => scope contains cv})
   require(splits.flatMap(_._1).subsetOf(problem.variables))
   require(splits.toSeq.map(_._2).size == splits.map(_._2).size, "duplicate conditioning variables")
+
+  val influencedVariables: Map[Int,Set[Int]] =
+    splits.groupBy(_._2).map{case(k,v) => k -> v.head._1}
+  val influencedFactors: Map[Int,IndexedSeq[FastFactor]] =
+    influencedVariables.map{case (k,vars) => k -> problem.factors.filter(_.variables.exists(vars))}
   
+  def influencesOf(vs: Set[Int]): Set[Int] = splits.filterNot(_._1.intersect(vs).isEmpty).map(_._2)
+  def influencesOf(v: Int): Set[Int] = influencesOf(Set(v))
+
   def allVariableAssignments(vs: Set[Int]): Set[Map[Int,Int]] =
     new DomainCPI(vs.toArray.map(allVariableAssignments).map(_.toArray)).map(_.foldLeft(Map[Int,Int]())(_ ++ _)).toSet
   
   def allVariableAssignments(v: Int): Set[Map[Int,Int]] = 
     (0 until problem.domains(v)).map(value => Map(v -> value))(collection.breakOut)
   
-  def conditionsOf(scope: Set[Int]): Set[Map[Int,Int]] = 
-    allVariableAssignments(splits.filterNot(_._1.intersect(scope).isEmpty).map(_._2))
+  def conditionsOf(scope: Set[Int]): Set[Map[Int,Int]] = allVariableAssignments(influencesOf(scope))
 
-  def conditionsOf(variable: Int): Set[Map[Int,Int]] =
-    allVariableAssignments(splits.filter(_._1.contains(variable)).map(_._2))
+  def conditionsOf(variable: Int): Set[Map[Int,Int]] = allVariableAssignments(influencesOf(variable))
 
   def compatibleNeighbourConditions(v: Int, cond: Map[Int,Int], neigh: Int): Set[Map[Int,Int]] =
     conditionsOf(neigh).filterNot(nc => contradiction(cond,nc))
