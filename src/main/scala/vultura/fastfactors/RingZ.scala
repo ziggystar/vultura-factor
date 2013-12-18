@@ -1,6 +1,7 @@
 package vultura.fastfactors
 
 import scala.reflect.ClassTag
+import scala.annotation.tailrec
 
 /**
  * Type class describing ring properties of a type.
@@ -96,6 +97,14 @@ object NormalD extends RingZ[Double]{
     }
     -e
   }
+
+  /** @return In normal representation (not log). */
+  @tailrec
+  final def expectationR(p: Array[Double], f: Array[Double], accZ: Double = 0d, i: Int = 0, acc: Double = 0): Double =
+    if(i < p.length) expectationR(p,f,accZ + p(i),i + 1, acc + p(i) * f(i)) else acc/accZ
+
+  /** @return In normal representation (not log). */
+  override def expectation(p: Array[Double], f: Array[Double]): Double = expectationR(p,f)
 }
 
 object LogD extends RingZ[Double] {
