@@ -92,10 +92,10 @@ object NormalD extends RingZ[Double]{
     var e = 0d
     while(i < a.length){
       if(a(i) != 0)
-        e += a(i) * math.log(a(i))
+        e -= a(i) * math.log(a(i))
       i += 1
     }
-    -e
+    e
   }
 
   /** @return In normal representation (not log). */
