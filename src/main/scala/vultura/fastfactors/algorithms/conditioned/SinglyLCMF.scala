@@ -3,6 +3,7 @@ package vultura.fastfactors.algorithms.conditioned
 import vultura.fastfactors._
 import scala.collection.mutable
 import vultura.fastfactors.algorithms.InfAlg
+import vultura.util.IntDomainCPI
 
 /** Just one set of variables gets conditioned. */
 class SinglyLCMF(problem: Problem, scheme: SimpleScheme, tol: Double = 1e-9, maxIterations: Int = 1000) extends InfAlg {
@@ -23,15 +24,15 @@ class SinglyLCMF(problem: Problem, scheme: SimpleScheme, tol: Double = 1e-9, max
     .withDefault(variable => FastFactor.maxEntropy(Array(variable),problem.domains,problem.ring))
 
   private val conditionedQs: mutable.Map[(Int,Condition),FastFactor] =
-    new mutable.HashMap[(Int,Condition),FastFactor]().withDefault{ case (variable, condition) =>
-      FastFactor.deterministicMaxEntropy(Array(variable),condition,problem.domains,problem.ring)
-    }
+    new mutable.HashMap[(Int,Condition),FastFactor]().withDefault((createInitialMarginal(_,_)).tupled)
+
+  /** Build the initial marginal belief for a given variable and condition .*/
+  def createInitialMarginal(variable: Int, condition: Condition): FastFactor =
+    FastFactor.deterministicMaxEntropy(Array(variable), condition, problem.domains, problem.ring)
 
   private var iterations: Int = 0
 
-  trait Parameter{
-    def effect: Set[Parameter]
-  }
+  sealed trait Parameter{ def effect: Set[Parameter]}
   case class Marginal(variable: Int, condition: Condition) extends Parameter{
     val effect: Set[Parameter] = for{
       n <- problem.neighboursOf(variable)
@@ -48,15 +49,17 @@ class SinglyLCMF(problem: Problem, scheme: SimpleScheme, tol: Double = 1e-9, max
 
   private val uncalibrated: mutable.Queue[Parameter] = {
     val weightParams = scheme.splits.map(_._2).map(Weight)
-    val marginalParams: Set[SinglyLCMF.this.type#Marginal] = for {
-      (influencedVars, condVar) <- scheme.splits
-      influenced <- influencedVars
-      conditionValue <- 0 until problem.domains(condVar)
-    } yield Marginal(influenced, Map(condVar -> conditionValue))
+    val marginalParams: Set[Marginal] = for {
+      v <- problem.variables
+      condVars = scheme.influencesOf(v)
+      condition <- IntDomainCPI(condVars.toArray.map(problem.domains).map(Array.range(0,_)))
+        .map(assign => condVars.zip(assign).toMap)
+    } yield Marginal(v, condition)
 
     mutable.Queue[Parameter]((marginalParams ++ weightParams).toSeq:_*)
   }
 
+  calibrate(tol,maxIterations)
 
   /**
    * Forms the linear combination of the conditioned marginals.
@@ -95,17 +98,15 @@ class SinglyLCMF(problem: Problem, scheme: SimpleScheme, tol: Double = 1e-9, max
   def computeConditionWeights(variable: Int): FastFactor = {
     require(scheme.splits.exists(_._2 == variable), "argument must be a condition-variable")
     def logZOfCondition(cond: Condition): Double = {
-      val entropies = scheme.influencedVariables(variable).map(v => NormalD.entropy(getMarginal(v,cond).values)).sum
-      val logExpect = scheme.influencedFactors(variable).map(factor =>
-        NormalD.expectation(createQDistribution(factor.variables,cond).values,factor.values.map(math.log))
-      ).sum
-      logExpect + entropies
+      val entropies = scheme.influencedVariables(variable)
+        .collect{case v if v != variable => NormalD.entropy(getMarginal(v,cond).values)}
+      val logExpect = scheme.influencedFactors(variable)
+        .map(factor => NormalD.expectation(createQDistribution(factor.variables,cond).values,factor.values.map(math.log)))
+      logExpect.sum + entropies.sum
     }
-    val normalDistribution: Array[Double] = (
-      for (c <- 0 until problem.domains(variable))
-      yield math.exp(logZOfCondition(Map(variable -> c)))
-    )(collection.breakOut)
-    FastFactor(Array(variable),normalDistribution).normalize(NormalD)
+    FastFactor.fromFunction(Array(variable),problem.domains, {
+      case Array(c) => math.exp(logZOfCondition(Map(variable -> c)))
+    })
   }
 
   /** Update the weights for the conditions induced by a given variable.
@@ -158,4 +159,22 @@ class SinglyLCMF(problem: Problem, scheme: SimpleScheme, tol: Double = 1e-9, max
     }
     !uncalibrated.isEmpty
   }
+
+  def iteration: Int = iterations
+
+  /** @return marginal distribution of variable in encoding specified by `ring`. */
+  def variableBelief(vi: Int): FastFactor = getMarginal(vi,Map())
+
+  /** @return Partition function in encoding specified by `ring`. */
+  def Z: Double = {
+    val entropy = problem.variables.map(variableBelief).map(f => NormalD.entropy(f.values)).sum
+    val logExp = problem.factors
+      .map(f => FastFactor.multiplyRetain(NormalD)(problem.domains)(Array(createQDistribution(f.variables, Map()),f.map(math.log)),Array()))
+      .map(_.values(0))
+      .sum
+
+    math.exp(entropy + logExp)
+  }
+
+  def getProblem: Problem = problem
 }
