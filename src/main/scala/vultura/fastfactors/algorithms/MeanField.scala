@@ -36,18 +36,25 @@ class MeanField(problem: Problem, tol: Double = 1e-9, maxIter: Int = 10000) exte
    *        True if the variable distribution did change significantly (maxdiff larger than tol).
    */
   def updateVariable(v: Int): Boolean = {
-    val factorContribs: IndexedSeq[FastFactor] = for {
-      logFactor <- logFactors(v)
-      qdist = createQFactor(logFactor.variables.filterNot(_ == v))
-      expectedLog = FastFactor.multiplyRetain(NormalD)(problem.domains)(Array(logFactor, qdist), Array(v))
-    } yield expectedLog
-    val newDist: FastFactor = FastFactor.elementWiseSum(factorContribs).map(math.exp).normalize(NormalD)
+    val newDist: FastFactor = computeMarginal(v)
     val diff = FastFactor.maxDiff(q(v),newDist,NormalD)
     if(diff > tol){
       q.put(v,newDist)
       return true
     }
     false
+  }
+
+  /** Calculate the marginal distribution over a given variable, depending on the marginal distribution of
+    * the neighbouring variables. */
+  def computeMarginal(v: Int): FastFactor = {
+    val factorContribs: IndexedSeq[FastFactor] = for {
+      logFactor <- logFactors(v)
+      qdist = createQFactor(logFactor.variables.filterNot(_ == v))
+      expectedLog = FastFactor.multiplyRetain(NormalD)(problem.domains)(Array(logFactor, qdist), Array(v))
+    } yield expectedLog
+    val newDist: FastFactor = FastFactor.elementWiseSum(factorContribs).map(math.exp).normalize(NormalD)
+    newDist
   }
 
   /** Calibrates the problem with a round-robin schedule according to variable indices.
