@@ -17,7 +17,7 @@ class MeanField(problem: Problem, tol: Double = 1e-9, maxIter: Int = 10000) exte
   private val q: mutable.HashMap[Int,FastFactor] =
     problem.variables.map(v => v -> FastFactor.maxEntropy(Array(v),problem.domains,NormalD))(collection.breakOut)
 
-  private val uncalibrated: mutable.Queue[Int] = mutable.Queue[Int](problem.variables.toSeq:_*)
+  private val uncalibrated: mutable.Queue[Int] = mutable.Queue[Int](problem.variables.toSeq.sorted:_*)
 
   private var iterations: Int = 0
 

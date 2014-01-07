@@ -34,14 +34,14 @@ class SinglyLCMF(problem: Problem, scheme: SimpleScheme, tol: Double = 1e-9, max
 
   sealed trait Parameter{ def effect: Set[Parameter]}
   case class Marginal(variable: Int, condition: Condition) extends Parameter{
-    val effect: Set[Parameter] = for{
+    def effect: Set[Parameter] = for{
       n <- problem.neighboursOf(variable)
       cond <- scheme.conditionsOf(n) if cond.isCompatibleWith(condition)
-      eff <- Seq(Marginal(n,cond),Weight(cond.head._1))
+      eff <- Seq(Marginal(n,cond)) ++ cond.headOption.map{case (cv,_) => Seq(Weight(cv))}.getOrElse(Seq())
     } yield eff
   }
   case class Weight(variable: Int) extends Parameter {
-    val effect: Set[Parameter] = {
+    def effect: Set[Parameter] = {
       val influencedVariables = scheme.influencedVariables(variable)
       influencedVariables.flatMap(problem.neighboursOf).filterNot(influencedVariables).map(Marginal(_,Map()))
     }
@@ -49,8 +49,8 @@ class SinglyLCMF(problem: Problem, scheme: SimpleScheme, tol: Double = 1e-9, max
 
   private val uncalibrated: mutable.Queue[Parameter] = {
     val weightParams = scheme.splits.map(_._2).map(Weight)
-    val marginalParams: Set[Marginal] = for {
-      v <- problem.variables
+    val marginalParams: Seq[Marginal] = for {
+      v <- problem.variables.toSeq.sorted
       condVars = scheme.influencesOf(v)
       condition <- IntDomainCPI(condVars.toArray.map(problem.domains).map(Array.range(0,_)))
         .map(assign => condVars.zip(assign).toMap)
@@ -89,9 +89,13 @@ class SinglyLCMF(problem: Problem, scheme: SimpleScheme, tol: Double = 1e-9, max
   def createQDistribution(scope: Array[Int], condition: Condition): FastFactor = {
     //we could allow this, but let's see if it is used at all
     //it would result in a factor that includes a variable with domain different from problem.domain
-    require(condition.keySet.intersect(scope.toSet).isEmpty, "trying to build distribution over conditioned variable")
     val marginals: IndexedSeq[FastFactor] = scope.map(getMarginal(_,condition))
-    FastFactor.multiply(NormalD)(problem.domains)(marginals)
+    val conditionEnforcer: FastFactor = FastFactor.deterministicMaxEntropy(
+      condition.keys.filter(scope.contains).toArray,
+      condition,
+      problem.domains,
+      NormalD)
+    FastFactor.multiply(NormalD)(problem.domains)(marginals :+ conditionEnforcer)
   }
 
   /** Recalculate the distribution over the conditions induced by the given variable. */
@@ -167,13 +171,13 @@ class SinglyLCMF(problem: Problem, scheme: SimpleScheme, tol: Double = 1e-9, max
 
   /** @return Partition function in encoding specified by `ring`. */
   def Z: Double = {
-    val entropy = problem.variables.map(variableBelief).map(f => NormalD.entropy(f.values)).sum
+    val variableEntropy = problem.variables.map(variableBelief).map(f => NormalD.entropy(f.values)).sum
     val logExp = problem.factors
       .map(f => FastFactor.multiplyRetain(NormalD)(problem.domains)(Array(createQDistribution(f.variables, Map()),f.map(math.log)),Array()))
       .map(_.values(0))
       .sum
 
-    math.exp(entropy + logExp)
+    math.exp(variableEntropy + logExp)
   }
 
   def getProblem: Problem = problem
