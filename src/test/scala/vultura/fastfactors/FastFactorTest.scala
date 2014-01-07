@@ -60,6 +60,8 @@ class FastFactorTest extends Specification with FastFactorMatchers {
      p^
     p^
     "building factors" ^
+      "from function, not using all variables" !
+        (FastFactor.fromFunction(Array(0),Array(2,2),_ => 1d) === FastFactor(Array(0),Array(1d,1d)))
       "deterministic max entropy factors" ^
       "with empty condition" !
         (FastFactor.deterministicMaxEntropy(Array(0),Map(),Array(2),NormalD) must haveValuesCloseTo(FF(VARS(0), VALS(0.5,0.5)))) ^

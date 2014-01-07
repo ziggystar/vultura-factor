@@ -131,7 +131,7 @@ object FastFactor{
     FastFactor(variables, ring.normalize(Array.fill(variables.foldLeft(1)(_ * domains(_)))(ring.one))).normalize(ring)
 
   def fromFunction(variables: Array[Int], domains: Array[Int], f: Array[Int] => Double): FastFactor =
-    FastFactor(variables, new IntDomainCPI(domains.map(ds => (0 until ds).toArray)).map(f)(collection.breakOut))
+    FastFactor(variables, new IntDomainCPI(variables.map(v => Array.range(0,domains(v)))).map(f)(collection.breakOut))
 
   def orderIfNecessary(variables: Array[Int], values: Array[Double], domains: Array[Int]): FastFactor = {
     val ordered = variables.sorted
@@ -371,8 +371,8 @@ object FastFactor{
   }
   /** Max diff for two factors, given in normal representation. */
   def maxDiff(f1: FastFactor, f2: FastFactor, ring: RingZ[Double]): Double = {
-    require(ring == NormalD)
-    require(f1.values.length == f2.values.length)
+    require(ring == NormalD, "only use this in normal domain (for no good reason)")
+    require(f1.values.length == f2.values.length, "comparing factors of unequal length")
     var result = 0d
     var i = 0
     while(i < f1.values.length){
