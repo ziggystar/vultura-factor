@@ -26,7 +26,7 @@ extends InfAlg with Iterator[InfAlg] {
 
   //the messages are always guaranteed to be normalized
   class Message(val factor: FastFactor, var lastUpdate: Long = -1){
-    override def toString: String = f"${factor.toStringShort} ($lastUpdate)"
+    override def toString: String = f"${factor.toBriefString} ($lastUpdate)"
   }
 
   private val messageMap: TLongObjectHashMap[Message] = new TLongObjectHashMap[Message](cg.sepsets.size * 2)
@@ -282,9 +282,9 @@ extends InfAlg with Iterator[InfAlg] {
 
   def graphviz: String = {
     "digraph {\n" +
-      cg.clusterFactors.zipWithIndex.map{case (f,i) => f"""$i [label="${f.toStringShort}"]"""}.mkString("\n") + "\n" +
+      cg.clusterFactors.zipWithIndex.map{case (f,i) => f"""$i [label="${f.toBriefString}"]"""}.mkString("\n") + "\n" +
       cg.sepsets.map(ss => ss._1 -> lookUpMessage(ss._1._1,ss._1._2))
-        .map{case ((src,sink),msg) => f"""$src -> $sink [label="${msg.factor.toStringShort} : ${msg.lastUpdate}"]"""}
+        .map{case ((src,sink),msg) => f"""$src -> $sink [label="${msg.factor.toBriefString} : ${msg.lastUpdate}"]"""}
         .mkString("\n") + "\n" +
       "}"
   }

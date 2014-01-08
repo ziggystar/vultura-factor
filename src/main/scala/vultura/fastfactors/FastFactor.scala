@@ -67,7 +67,7 @@ case class FastFactor(variables: Array[Int], values: Array[Double]){
   }
 
   override def toString: String = f"FastFactor(VAR: ${variables.mkString(",")},VAL: ${values.mkString(",")})"
-  def toStringShort: String = f"${variables.mkString(",")} | ${values.map("%.2f".format(_)).mkString(",")}"
+  def toBriefString: String = f"${variables.mkString(",")} | ${values.map("%.2f".format(_)).mkString(",")}"
   def map(f: Double => Double): FastFactor = this.copy(values = values.map(f))
 }
 

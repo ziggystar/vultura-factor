@@ -40,6 +40,8 @@ object SafeD extends RingZ[Double]{
     if(ss.size == 1) ss(0) else sys.error("safe ring accepts only unit arrays")
   override def prodA(fs: Array[Double]): Double =
     if(fs.size == 1) fs(0) else sys.error("safe ring accepts only unit arrays")
+
+  override def toString: String = "no-op ring"
 }
 
 object NormalD extends RingZ[Double]{
@@ -105,6 +107,8 @@ object NormalD extends RingZ[Double]{
 
   /** @return In normal representation (not log). */
   override def expectation(p: Array[Double], f: Array[Double]): Double = expectationR(p,f)
+
+  override def toString: String = "normal domain"
 }
 
 object LogD extends RingZ[Double] {
@@ -197,4 +201,6 @@ object LogD extends RingZ[Double] {
 
   override def decode(p: Array[Double]): Array[Double] = p.map(math.exp)
   override def encode(p: Array[Double]): Array[Double] = p.map(math.log)
+
+  override def toString: String = "log domain"
 }

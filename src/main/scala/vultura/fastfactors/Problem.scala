@@ -51,6 +51,8 @@ case class Problem(factors: IndexedSeq[FastFactor],domains: Array[Int],ring: Rin
   lazy val hasDuplicateFactors = factors.size != factors.toSet.size
 
   def toRing(newRing: RingZ[Double]): Problem = Problem(factors.map(f => newRing.encode(ring.decode(f))),domains,newRing)
+
+  def toBriefString: String = f"(Problem: ${variables.size} variables, ${factors.size} factors, ring: $ring"
 }
 
 object Problem{

@@ -51,7 +51,7 @@ class CalibratedJunctionTree(val problem: Problem) extends InfAlg {
       uncalibratedTrees.map(CalibratedJunctionTree.calibrateTree(_,problem.ring, problem.domains))
 
     val nodes = calibratedTrees.flatMap(_.flatten.map{case (cliqueFactor,_,_,_) =>
-      f"""${nodeName(cliqueFactor)} [label="${cliqueFactor.toStringShort}"]"""
+      f"""${nodeName(cliqueFactor)} [label="${cliqueFactor.toBriefString}"]"""
     })
 
     val edges: Seq[((FastFactor, FastFactor), FastFactor)] =
@@ -59,7 +59,7 @@ class CalibratedJunctionTree(val problem: Problem) extends InfAlg {
         children.map{case Node((childFactor,_,up,down),_) => Seq((cliqueFactor -> childFactor,down),(childFactor -> cliqueFactor,up))
         }.flatten
       }.flatten).flatten
-    val edgeStrings = edges.map{case ((from,to),msg) => f"""${nodeName(from)} -> ${nodeName(to)} [label="${msg.toStringShort}"]"""}
+    val edgeStrings = edges.map{case ((from,to),msg) => f"""${nodeName(from)} -> ${nodeName(to)} [label="${msg.toBriefString}"]"""}
 
     "digraph CalibratedJunctionTree {\n" +
       nodes.mkString("\n") + "\n" +
