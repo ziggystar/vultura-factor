@@ -20,6 +20,7 @@ class SinglyLCMF(problem: Problem, scheme: SimpleScheme, tol: Double = 1e-9, max
     problem.variables.map(v => v -> logFactorsOf(v))(collection.breakOut)
   }
 
+  //the normalized distribution over the conditioning variables
   private val cWeights: mutable.Map[Int,FastFactor] = new mutable.HashMap[Int,FastFactor]()
     .withDefault(variable => FastFactor.maxEntropy(Array(variable),problem.domains,problem.ring))
 
@@ -27,8 +28,10 @@ class SinglyLCMF(problem: Problem, scheme: SimpleScheme, tol: Double = 1e-9, max
     new mutable.HashMap[(Int,Condition),FastFactor]().withDefault((createInitialMarginal(_,_)).tupled)
 
   /** Build the initial marginal belief for a given variable and condition .*/
-  def createInitialMarginal(variable: Int, condition: Condition): FastFactor =
+  def createInitialMarginal(variable: Int, condition: Condition): FastFactor = {
+    require(condition.keySet == scheme.influencesOf(variable))
     FastFactor.deterministicMaxEntropy(Array(variable), condition, problem.domains, problem.ring)
+  }
 
   private var iterations: Int = 0
 
@@ -71,12 +74,9 @@ class SinglyLCMF(problem: Problem, scheme: SimpleScheme, tol: Double = 1e-9, max
       case Seq() => conditionedQs((variable,Map()))
       //make the linear combination of marginals weighted by the condition weights
       case Seq(vc) if !condition.contains(vc) =>
-        val weights: Array[Double] = cWeights(vc).normalize(NormalD).values
-        val conditionedMarginals: IndexedSeq[FastFactor] =
-          (0 until problem.domains(vc)).map(value => conditionedQs((variable, Map(vc -> value))))
-        val weightedFactors =
-          weights.zip(conditionedMarginals).map{ case (weight,factor) => factor.map(_ * weight)}
-
+        val weightedFactors: IndexedSeq[FastFactor] =
+          for (value <- 0 until problem.domains(vc))
+          yield conditionedQs((variable, Map(vc -> value))).map(_ * getProbabilityOfCondition(Map(vc -> value)))
         weightedFactors.reduce[FastFactor]{case (f1,f2) =>
           FastFactor(f1.variables,f1.values.zip(f2.values).map{case (v1,v2) => v1 + v2})
         }
@@ -85,10 +85,11 @@ class SinglyLCMF(problem: Problem, scheme: SimpleScheme, tol: Double = 1e-9, max
       case _ => sys.error("more than one influencing variable found")
     }
   }
-  
+
+  def getProbabilityOfCondition(c: Condition): Double =
+    c.foldLeft(1d){case (p,(vc,value)) => cWeights(vc).values(value)}
+
   def createQDistribution(scope: Array[Int], condition: Condition): FastFactor = {
-    //we could allow this, but let's see if it is used at all
-    //it would result in a factor that includes a variable with domain different from problem.domain
     val marginals: IndexedSeq[FastFactor] = scope.map(getMarginal(_,condition))
     val conditionEnforcer: FastFactor = FastFactor.deterministicMaxEntropy(
       condition.keys.filter(scope.contains).toArray,
@@ -110,7 +111,7 @@ class SinglyLCMF(problem: Problem, scheme: SimpleScheme, tol: Double = 1e-9, max
     }
     FastFactor.fromFunction(Array(variable),problem.domains, {
       case Array(c) => math.exp(logZOfCondition(Map(variable -> c)))
-    })
+    }).normalize(NormalD)
   }
 
   /** Update the weights for the conditions induced by a given variable.
@@ -127,6 +128,9 @@ class SinglyLCMF(problem: Problem, scheme: SimpleScheme, tol: Double = 1e-9, max
 
   /** Calculate the marginal distribution for a given variable and condition. No side-effects. */
   def computeMarginal(variable: Int, condition: Condition): FastFactor = {
+    //TODO we shouldn't need this line, I think...
+    if(condition.contains(variable))
+      return FastFactor.deterministicMaxEntropy(Array(variable),condition,problem.domains,NormalD)
     val factorContribs: IndexedSeq[FastFactor] = for {
       logFactor <- logFactors(variable)
       qDist = createQDistribution(logFactor.variables.filterNot(_ == variable),condition)
@@ -171,14 +175,34 @@ class SinglyLCMF(problem: Problem, scheme: SimpleScheme, tol: Double = 1e-9, max
 
   /** @return Partition function in encoding specified by `ring`. */
   def Z: Double = {
-    val variableEntropy = problem.variables.map(variableBelief).map(f => NormalD.entropy(f.values)).sum
-    val logExp = problem.factors
-      .map(f => FastFactor.multiplyRetain(NormalD)(problem.domains)(Array(createQDistribution(f.variables, Map()),f.map(math.log)),Array()))
-      .map(_.values(0))
-      .sum
+    def logExpectation(f: FastFactor): Double = {
+      val conditionedExpectations =
+        for(condition <- scheme.conditionsOf(f.variables.toSet))
+        yield NormalD.expectation(createQDistribution(f.variables, condition).values, f.values.map(math.log)) * getProbabilityOfCondition(condition)
+      conditionedExpectations.sum
+    }
 
-    math.exp(variableEntropy + logExp)
+    def expectedVariableEntropy(v: Int): Double = {
+      val weightedEntropies =
+        for(condition <- scheme.conditionsOf(v))
+        yield NormalD.entropy(getMarginal(v,condition).values) * getProbabilityOfCondition(condition)
+      weightedEntropies.sum
+    }
+
+    val conditionEntropies = cWeights.map(x => NormalD.entropy(x._2.values)).sum
+    val logExp = problem.factors.map(logExpectation).sum
+    val variableEntropy = problem.variables.map(expectedVariableEntropy).sum
+
+    math.exp(variableEntropy + logExp + conditionEntropies)
   }
 
   def getProblem: Problem = problem
+
+  def verboseDescription: String = {
+    "SinglyLCMF\n" +
+    "Scheme:\n" +
+     scheme + "\n" +
+    "condition weights: \n\t" + cWeights.mkString("\n\t") + "\n" +
+    "marginals: \n\t" + conditionedQs.mkString("\n\t")
+  }
 }
