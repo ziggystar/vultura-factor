@@ -61,7 +61,7 @@ class FastFactorTest extends Specification with FastFactorMatchers {
     p^
     "building factors" ^
       "from function, not using all variables" !
-        (FastFactor.fromFunction(Array(0),Array(2,2),_ => 1d) === FastFactor(Array(0),Array(1d,1d)))
+        (FastFactor.fromFunction(Array(0),Array(2,2),_ => 1d) === FastFactor(Array(0),Array(1d,1d))) ^
       "deterministic max entropy factors" ^
       "with empty condition" !
         (FastFactor.deterministicMaxEntropy(Array(0),Map(),Array(2),NormalD) must haveValuesCloseTo(FF(VARS(0), VALS(0.5,0.5)))) ^
@@ -72,5 +72,7 @@ class FastFactorTest extends Specification with FastFactorMatchers {
       "complete condition, two vars" !
         (FastFactor.deterministicMaxEntropy(Array(0,1),Map(0 -> 0,1 -> 0),Array(2,2),NormalD) must haveValuesCloseTo(FF(VARS(0,1), VALS(1,0,0,0)))) ^
       "partial condition" !
-        (FastFactor.deterministicMaxEntropy(Array(0,1),Map(0 -> 0),Array(2,2),NormalD) must haveValuesCloseTo(FF(VARS(0), VALS(0.5,0,0.5,0))))
+        (FastFactor.deterministicMaxEntropy(Array(0,1),Map(0 -> 0),Array(2,2),NormalD) must haveValuesCloseTo(FF(VARS(0), VALS(0.5,0,0.5,0)))) ^
+      "some condition" !
+        (FastFactor.deterministicMaxEntropy(Array(1),Map(1->0),Array(2,2,2),NormalD) must haveValuesCloseTo(FF(VARS(1),VALS(1,0))))
 }

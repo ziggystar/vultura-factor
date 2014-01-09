@@ -123,7 +123,7 @@ object FastFactor{
     fromFunction(
       variables,
       domains,
-      assign => if(assign.zipWithIndex.exists{case (value,variable) => deterministic.get(variable).exists(_ != value)}) ring.zero else ring.one
+      assign => if(assign.zip(variables).exists{case (value,variable) => deterministic.get(variable).exists(_ != value)}) ring.zero else ring.one
     ).normalize(ring)
 
 
