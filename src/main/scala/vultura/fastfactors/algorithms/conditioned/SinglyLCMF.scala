@@ -189,42 +189,6 @@ class SinglyLCMF(problem: Problem, scheme: SimpleScheme, tol: Double = 1e-9, max
     math.exp(variableEntropy.sum + logExp.sum + conditionEntropies.sum)
   }
 
-  /** @return Break-down of contributions to free enery. */
-  def freeEnergyReport: String = {
-    val conditionEntropies = cWeights.toSeq
-      .sortBy(_._1)
-      .map { case (cv, dist) => cv -> NormalD.entropy(dist.values)}
-
-    val varEntropies = conditionedQs.toSeq
-      .sortBy(_._1._1)
-      .map{ case ((v, cond), f) => (v, cond) -> NormalD.entropy(f.values)}
-
-    val logExpectations = for{
-      f <- problem.factors
-      cond <- scheme.conditionsOf(f.variables.toSet)
-    } yield (f,cond) -> logExpectation(f,cond)
-    
-    val VEString = varEntropies.map {case ((v, cond),e) => f"$v/$cond:\t$e"}.mkString("\n")
-    val CEString = conditionEntropies.map{case (cv,e) => f"$cv:\t$e"}
-    val LEString = logExpectations.map{case ((f,cond),le) => f"${f.toBriefString}/$cond:\t$le"}.mkString("\n")
-
-    val varEntropySum: Double = varEntropies.map{case ((_,cond),e) => e * getProbabilityOfCondition(cond)}.sum
-    val logZ: Double = conditionEntropies.map(_._2).sum + varEntropySum + logExpectations.map(_._2).sum
-
-    f"""#SimplyLCMF free energy break-down
-      |log: $logZ normal: ${math.exp(logZ)}
-      |##Condition Entropies
-      |total: ${conditionEntropies.map(_._2).sum}
-      |$CEString
-      |##Variable Entropies
-      |total: $varEntropySum
-      |$VEString
-      |##Log-expectations of factors
-      |total: ${logExpectations.map(_._2).sum}
-      |$LEString
-    """.stripMargin
-  }
-
   /** @return The expectation of the factor's log-values, combining all compatible conditions. */
   def logExpectation(f: FastFactor, cond: Condition = Map()): Double = {
     val conditionedExpectations =
@@ -244,5 +208,41 @@ class SinglyLCMF(problem: Problem, scheme: SimpleScheme, tol: Double = 1e-9, max
      scheme + "\n" +
     "condition weights: \n\t" + cWeights.mkString("\n\t") + "\n" +
     "marginals: \n\t" + conditionedQs.mkString("\n\t")
+  }
+
+  /** @return Break-down of contributions to free enery. */
+  def freeEnergyReport: String = {
+    val conditionEntropies = cWeights.toSeq
+      .sortBy(_._1)
+      .map { case (cv, dist) => cv -> NormalD.entropy(dist.values)}
+
+    val varEntropies = conditionedQs.toSeq
+      .sortBy(_._1._1)
+      .map{ case ((v, cond), f) => (v, cond) -> NormalD.entropy(f.values)}
+
+    val logExpectations = for{
+      f <- problem.factors
+      cond <- scheme.conditionsOf(f.variables.toSet)
+    } yield (f,cond) -> logExpectation(f,cond)
+
+    val VEString = varEntropies.map {case ((v, cond),e) => f"$v/$cond:\t$e"}.mkString("\n")
+    val CEString = conditionEntropies.map{case (cv,e) => f"$cv:\t$e"}
+    val LEString = logExpectations.map{case ((f,cond),le) => f"${f.toBriefString}/$cond:\t$le"}.mkString("\n")
+
+    val varEntropySum: Double = varEntropies.map{case ((_,cond),e) => e * getProbabilityOfCondition(cond)}.sum
+    val logZ: Double = conditionEntropies.map(_._2).sum + varEntropySum + logExpectations.map(_._2).sum
+
+    f"""#SimplyLCMF free energy break-down
+      |log: $logZ normal: ${math.exp(logZ)}
+      |##Condition Entropies
+      |total: ${conditionEntropies.map(_._2).sum}
+      |$CEString
+      |##Variable Entropies
+      |total: $varEntropySum
+      |$VEString
+      |##Log-expectations of factors
+      |total: ${logExpectations.map(_._2).sum}
+      |$LEString
+    """.stripMargin
   }
 }

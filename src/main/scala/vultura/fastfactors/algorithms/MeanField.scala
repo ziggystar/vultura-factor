@@ -3,7 +3,6 @@ package vultura.fastfactors.algorithms
 import vultura.fastfactors._
 import scala.collection.mutable
 
-
 /**
  * Implements the Mean Field approximation algorithm.
  *
@@ -23,7 +22,7 @@ class MeanField(problem: Problem, tol: Double = 1e-9, maxIter: Int = 10000) exte
 
   /** The logarithmic factors of the problem adjacent to each variable. */
   val logFactors: Map[Int,IndexedSeq[FastFactor]] =
-    problem.variables.map(v => v -> problem.factorsOfVariable(v).map(ff => ff.copy(values=LogD.encode(ff.values))))(collection.breakOut)
+    problem.variables.map(v => v -> problem.factorsOfVariable(v).map(f => f.map(math.log)))(collection.breakOut)
 
   calibrate(tol,maxIter)
 
@@ -71,18 +70,19 @@ class MeanField(problem: Problem, tol: Double = 1e-9, maxIter: Int = 10000) exte
   }
 
   def getProblem: Problem = problem
+
   def iteration: Int = iterations
 
   /** @return Partition function in encoding specified by `ring`. */
   def Z: Double = {
-    val entropy = q.values.map(x => NormalD.entropy(x.values)).sum
-    val logExp = problem.factors
-      .map(f => FastFactor.multiplyRetain(NormalD)(problem.domains)(Array(createQFactor(f.variables),f.map(math.log)),Array()))
-      .map(_.values(0))
-      .sum
+    val entropies = q.values.map(x => NormalD.entropy(x.values))
+    val logExp = problem.factors.map(f => NormalD.expectation(createQFactor(f.variables).values,f.map(math.log).values))
 
-    math.exp(entropy + logExp)
+    math.exp(entropies.sum + logExp.sum)
   }
+
+  /** @return marginal distribution of variable in encoding specified by `ring`. */
+  def variableBelief(vi: Int): FastFactor = q(vi).copy()
 
   def freeEnergyReport: String = {
     val vEntrops: Seq[(Int, Double)] =
@@ -104,7 +104,4 @@ class MeanField(problem: Problem, tol: Double = 1e-9, maxIter: Int = 10000) exte
       |$logExpectationsStrings
     """.stripMargin
   }
-
-  /** @return marginal distribution of variable in encoding specified by `ring`. */
-  def variableBelief(vi: Int): FastFactor = q(vi).copy()
 }
