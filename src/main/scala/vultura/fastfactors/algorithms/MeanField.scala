@@ -84,6 +84,27 @@ class MeanField(problem: Problem, tol: Double = 1e-9, maxIter: Int = 10000) exte
     math.exp(entropy + logExp)
   }
 
+  def freeEnergyReport: String = {
+    val vEntrops: Seq[(Int, Double)] =
+      problem.variables.toSeq.sorted.map(v => v -> NormalD.entropy(q(v).values))
+    val logExpects: IndexedSeq[(FastFactor, Double)] =
+      problem.factors.map ( f => f -> NormalD.expectation(createQFactor(f.variables).values, f.values.map(math.log)))
+
+    val vEntropStrings = vEntrops.map{case (v,e) => f"$v:\t$e"}.mkString("\n")
+    val logExpectationsStrings = logExpects.map{ case (f,le) => f"${f.toBriefString}:\n\t$le"}.mkString("\n")
+
+    val logZ = vEntrops.map(_._2).sum + logExpects.map(_._2).sum
+    f"""#Mean-Field free energy break-down
+      |log: $logZ normal: ${math.exp(logZ)}
+      |##Variable Entropies
+      |Sum: ${vEntrops.map(_._2).sum}
+      |$vEntropStrings
+      |##Factor Log-Expectations
+      |Sum: ${logExpects.map(_._2).sum}
+      |$logExpectationsStrings
+    """.stripMargin
+  }
+
   /** @return marginal distribution of variable in encoding specified by `ring`. */
   def variableBelief(vi: Int): FastFactor = q(vi).copy()
 }

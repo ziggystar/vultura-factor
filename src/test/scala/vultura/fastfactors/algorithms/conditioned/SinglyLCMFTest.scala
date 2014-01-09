@@ -6,6 +6,7 @@ import scala.util.Random
 import vultura.fastfactors._
 import vultura.fastfactors.algorithms.MeanField
 import vultura.fastfactors.generators
+import org.specs2.matcher.{MatchResult, Expectable, Matcher}
 
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
@@ -29,15 +30,33 @@ class SinglyLCMFTest extends Specification with FastFactorMatchers {
   def directNeighbours(p: Problem, conditionVars: Set[Int]) =
     new SinglyLCMF(p, SimpleScheme(p,conditionVars.map(cv => (p.neighboursOf(cv) + cv) -> cv)))
 
+  def haveLargerZThanMF: Matcher[SinglyLCMF] = new Matcher[SinglyLCMF]{
+    def apply[S <: SinglyLCMF](t: Expectable[S]): MatchResult[S] = {
+      val mf: MeanField = new MeanField(t.value.getProblem)
+      result(
+        t.value.Z must be_>(mf.Z),
+        f"yields larger Z than mean field inference: ${t.value.Z} > ${mf.Z}",
+        f"has smaller Z than mean field inference: ${t.value.Z} < ${mf.Z}\n" +
+        mf.freeEnergyReport + "\n" +
+        t.value.freeEnergyReport,
+        t
+      )
+    }
+  }
+
   def is: Fragments =
     "create initial marginal for unconditioned problem" ! {
       unconditionedMF(singleVarProblem).createInitialMarginal(0,Map()) === FastFactor(Array(0),Array(0.5,0.5))
     } ^
     "inference on unconditioned problems" ^
-      "LCMF mean field is exact for factorized problems" ! (unconditionedMF(fourVarProblem) must haveExactZ()) ^
-      "unconditioned LCMF on single variable problem" ! (unconditionedMF(singleVarProblem) must haveExactZ()) ^
-      "yield same result as normal MF on small grid" ! (unconditionedMF(smallGrid).Z must beCloseTo(new MeanField(smallGrid).Z,1e-3)) ^
-      "yield same result as normal MF on medium grid" ! (unconditionedMF(mediumGrid).Z must beCloseTo(new MeanField(mediumGrid).Z,1e-3)) ^
+      "LCMF mean field is exact for factorized problems" !
+        (unconditionedMF(fourVarProblem) must haveExactZ()) ^
+      "unconditioned LCMF on single variable problem" !
+        (unconditionedMF(singleVarProblem) must haveExactZ()) ^
+      "yield same result as normal MF on small grid" !
+        (unconditionedMF(smallGrid).Z must beCloseTo(new MeanField(smallGrid).Z,1e-3)) ^
+      "yield same result as normal MF on medium grid" !
+        (unconditionedMF(mediumGrid).Z must beCloseTo(new MeanField(mediumGrid).Z,1e-2)) ^
     p^
     "inference on conditioned problems" ^
       "factored problems" ^
@@ -53,5 +72,22 @@ class SinglyLCMFTest extends Specification with FastFactorMatchers {
           directNeighbours(connectedTwoVarProblem,Set(0)) must
             haveExactZ().updateMessage(x => x + "\n"
               + directNeighbours(connectedTwoVarProblem,Set(0)).verboseDescription)) ^
-      "smallGrid (this is not really necessary)" ! (directNeighbours(smallGrid,Set(0)) must haveExactZ())
+      "smallGrid, conditioned compared to mean field" !
+        (directNeighbours(smallGrid,Set(0)) must haveLargerZThanMF) ^
+      "smallGrid, conditioned compared to mean field" !
+        (directNeighbours(smallGrid,Set(1)) must haveLargerZThanMF) ^
+      "smallGrid, conditioned compared to mean field" !
+        (directNeighbours(smallGrid,Set(2)) must haveLargerZThanMF) ^
+      "smallGrid, conditioned compared to mean field" !
+        (directNeighbours(smallGrid,Set(3)) must haveLargerZThanMF) ^
+      "mediumGrid conditioned compared to mean field" !
+        (directNeighbours(mediumGrid,Set(11,4)) must haveLargerZThanMF) ^
+      "mediumGrid conditioned compared to mean field" !
+        (directNeighbours(mediumGrid,Set(0,11)) must haveLargerZThanMF) ^
+      "mediumGrid conditioned compared to mean field" !
+        (directNeighbours(mediumGrid,Set(2,12)) must haveLargerZThanMF) ^
+      "mediumGrid conditioned compared to mean field" !
+        (directNeighbours(mediumGrid,Set(8)) must haveLargerZThanMF) ^
+      "mediumGrid conditioned compared to mean field" !
+        (directNeighbours(mediumGrid,Set(7)) must haveLargerZThanMF)
 }

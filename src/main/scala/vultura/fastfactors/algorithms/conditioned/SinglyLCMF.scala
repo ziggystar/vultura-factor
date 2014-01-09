@@ -105,8 +105,8 @@ class SinglyLCMF(problem: Problem, scheme: SimpleScheme, tol: Double = 1e-9, max
     def logZOfCondition(cond: Condition): Double = {
       val entropies = scheme.influencedVariables(variable)
         .collect{case v if v != variable => NormalD.entropy(getMarginal(v,cond).values)}
-      val logExpect = scheme.influencedFactors(variable)
-        .map(factor => NormalD.expectation(createQDistribution(factor.variables,cond).values,factor.values.map(math.log)))
+      val logExpect = scheme.influencedFactors(variable).map(factor =>
+        NormalD.expectation(createQDistribution(factor.variables,cond).values,factor.values.map(math.log)))
       logExpect.sum + entropies.sum
     }
     FastFactor.fromFunction(Array(variable),problem.domains, {
@@ -175,13 +175,6 @@ class SinglyLCMF(problem: Problem, scheme: SimpleScheme, tol: Double = 1e-9, max
 
   /** @return Partition function in encoding specified by `ring`. */
   def Z: Double = {
-    def logExpectation(f: FastFactor): Double = {
-      val conditionedExpectations =
-        for(condition <- scheme.conditionsOf(f.variables.toSet))
-        yield NormalD.expectation(createQDistribution(f.variables, condition).values, f.values.map(math.log)) * getProbabilityOfCondition(condition)
-      conditionedExpectations.sum
-    }
-
     def expectedVariableEntropy(v: Int): Double = {
       val weightedEntropies =
         for(condition <- scheme.conditionsOf(v))
@@ -189,11 +182,58 @@ class SinglyLCMF(problem: Problem, scheme: SimpleScheme, tol: Double = 1e-9, max
       weightedEntropies.sum
     }
 
-    val conditionEntropies = cWeights.map(x => NormalD.entropy(x._2.values)).sum
-    val logExp = problem.factors.map(logExpectation).sum
-    val variableEntropy = problem.variables.map(expectedVariableEntropy).sum
+    val conditionEntropies = cWeights.map(x => NormalD.entropy(x._2.values))
+    val logExp = problem.factors.map(logExpectation(_))
+    val variableEntropy = problem.variables.map(expectedVariableEntropy)
 
-    math.exp(variableEntropy + logExp + conditionEntropies)
+    math.exp(variableEntropy.sum + logExp.sum + conditionEntropies.sum)
+  }
+
+  /** @return Break-down of contributions to free enery. */
+  def freeEnergyReport: String = {
+    val conditionEntropies = cWeights.toSeq
+      .sortBy(_._1)
+      .map { case (cv, dist) => cv -> NormalD.entropy(dist.values)}
+
+    val varEntropies = conditionedQs.toSeq
+      .sortBy(_._1._1)
+      .map{ case ((v, cond), f) => (v, cond) -> NormalD.entropy(f.values)}
+
+    val logExpectations = for{
+      f <- problem.factors
+      cond <- scheme.conditionsOf(f.variables.toSet)
+    } yield (f,cond) -> logExpectation(f,cond)
+    
+    val VEString = varEntropies.map {case ((v, cond),e) => f"$v/$cond:\t$e"}.mkString("\n")
+    val CEString = conditionEntropies.map{case (cv,e) => f"$cv:\t$e"}
+    val LEString = logExpectations.map{case ((f,cond),le) => f"${f.toBriefString}/$cond:\t$le"}.mkString("\n")
+
+    val varEntropySum: Double = varEntropies.map{case ((_,cond),e) => e * getProbabilityOfCondition(cond)}.sum
+    val logZ: Double = conditionEntropies.map(_._2).sum + varEntropySum + logExpectations.map(_._2).sum
+
+    f"""#SimplyLCMF free energy break-down
+      |log: $logZ normal: ${math.exp(logZ)}
+      |##Condition Entropies
+      |total: ${conditionEntropies.map(_._2).sum}
+      |$CEString
+      |##Variable Entropies
+      |total: $varEntropySum
+      |$VEString
+      |##Log-expectations of factors
+      |total: ${logExpectations.map(_._2).sum}
+      |$LEString
+    """.stripMargin
+  }
+
+  /** @return The expectation of the factor's log-values, combining all compatible conditions. */
+  def logExpectation(f: FastFactor, cond: Condition = Map()): Double = {
+    val conditionedExpectations =
+      for (condition <- scheme.conditionsOf(f.variables.toSet) if condition.isCompatibleWith(cond))
+      yield
+        getProbabilityOfCondition(condition) *
+          NormalD.expectation(createQDistribution(f.variables, condition).values, f.values.map(math.log))
+
+    conditionedExpectations.sum
   }
 
   def getProblem: Problem = problem
