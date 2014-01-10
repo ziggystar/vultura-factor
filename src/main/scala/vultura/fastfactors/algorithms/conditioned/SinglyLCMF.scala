@@ -16,18 +16,31 @@ class SinglyLCMF(problem: Problem, scheme: SimpleScheme, tol: Double = 1e-9, max
   sealed trait Parameter{ def effect: Set[Parameter]}
   case class Marginal(variable: Int, condition: Condition) extends Parameter{
     def effect: Set[Parameter] = for{
-      n <- problem.neighboursOf(variable)
+      n <- problem.neighboursOf(variable) if !scheme.conditionVariables(n)
       cond <- scheme.conditionsOf(n) if cond.isCompatibleWith(condition)
       eff <- Seq(Marginal(n,cond)) ++ cond.headOption.map{case (cv,_) => Seq(Weight(cv))}.getOrElse(Seq())
     } yield eff
+
+    override def toString: String = f"b($variable|${printCondition(condition)})"
   }
   case class Weight(variable: Int) extends Parameter {
     def effect: Set[Parameter] = {
       val influencedVariables = scheme.influencedVariables(variable)
-      influencedVariables.flatMap(problem.neighboursOf).filterNot(influencedVariables).map(Marginal(_,Map()))
+      influencedVariables
+        .flatMap(problem.neighboursOf)
+        .filterNot(influencedVariables)
+        .map(Marginal(_,Map()))
     }
-  }
 
+    override def toString: String = f"c($variable)"
+  }
+  val allWeightParams: Seq[Weight] = scheme.conditionVariables.map(Weight)(collection.breakOut)
+  val allMarginalParams: Seq[Marginal] = for {
+    v <- problem.variables.toSeq.sorted if !scheme.conditionVariables(v)
+    condVars = scheme.influencesOf(v)
+    condition <- IntDomainCPI(condVars.toArray.map(problem.domains).map(Array.range(0,_)))
+      .map(assign => condVars.zip(assign).toMap)
+  } yield Marginal(v, condition)
 
   /* members for representation of the approximate distribution */
   /** The normalized distribution over the conditioning variables. */
@@ -44,17 +57,7 @@ class SinglyLCMF(problem: Problem, scheme: SimpleScheme, tol: Double = 1e-9, max
   private var iterations: Int = 0
 
   /** The queue holding the parameters to recalculate before possible convergence. */
-  private val uncalibrated: mutable.Queue[Parameter] = {
-    val weightParams = scheme.splits.map(_._2).map(Weight)
-    val marginalParams: Seq[Marginal] = for {
-      v <- problem.variables.toSeq.sorted
-      condVars = scheme.influencesOf(v)
-      condition <- IntDomainCPI(condVars.toArray.map(problem.domains).map(Array.range(0,_)))
-        .map(assign => condVars.zip(assign).toMap)
-    } yield Marginal(v, condition)
-
-    mutable.Queue[Parameter]((marginalParams ++ weightParams).toSeq:_*)
-  }
+  private val uncalibrated: mutable.Queue[Parameter] = mutable.Queue[Parameter](allMarginalParams ++ allWeightParams:_*)
 
   /* optimization members */
   /** The logarithmic factors of the problem adjacent to each variable. This is just a cache for
@@ -113,6 +116,7 @@ class SinglyLCMF(problem: Problem, scheme: SimpleScheme, tol: Double = 1e-9, max
   /** Recalculate the distribution over the conditions induced by the given variable. */
   def computeNewConditionWeights(variable: Int): FastFactor = {
     require(scheme.splits.exists(_._2 == variable), "argument must be a condition-variable")
+
     def logZOfCondition(cond: Condition): Double = {
       val entropies = scheme.influencedVariables(variable)
         .filterNot(variable ==)
@@ -127,9 +131,8 @@ class SinglyLCMF(problem: Problem, scheme: SimpleScheme, tol: Double = 1e-9, max
 
   /** Calculate the marginal distribution for a given variable and condition. No side-effects. */
   def computeNewMarginal(variable: Int, condition: Condition): FastFactor = {
-    //TODO we shouldn't need this line, I think...
-    if(condition.contains(variable))
-      return FastFactor.deterministicMaxEntropy(Array(variable),condition,problem.domains,NormalD)
+    require(!condition.contains(variable))
+
     val factorContribs: IndexedSeq[FastFactor] = for {
       logFactor <- logFactors(variable)
       qDist = estimatedDistribution(logFactor.variables.filterNot(_ == variable),condition)
@@ -255,6 +258,24 @@ class SinglyLCMF(problem: Problem, scheme: SimpleScheme, tol: Double = 1e-9, max
       |##Log-expectations of factors
       |total: ${logExpectations.map(_._2).sum}
       |$LEString
+    """.stripMargin
+  }
+  
+  def parameterDependencyGraph: String = {
+    //produce a string that encodes the condition and is allowed as part of a node name in graphiz
+    def cNN(c: Condition): String = c.map{case (k,v) => f"${k}x$v"}.mkString("S")
+    def pString(p: Parameter): String = p match {
+      case Marginal(v,c) => f"m${v}_${cNN(c)}"
+      case Weight(v) => f"w$v"
+    }
+    val weights = for{
+      w <- allWeightParams ++ allMarginalParams
+      succ <- w.effect
+    } yield f"\t${pString(w)} -> ${pString(succ)}"
+
+    f"""digraph LCMF-DepGraph{
+      |${weights.mkString(";\n")}
+      |}
     """.stripMargin
   }
 }

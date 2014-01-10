@@ -22,6 +22,7 @@ case class SimpleScheme(problem: Problem, splits: Set[(Set[Int],Int)]) {
     splits.groupBy(_._2).map{case(k,v) => k -> v.head._1}
   val influencedFactors: Map[Int,IndexedSeq[FastFactor]] =
     influencedVariables.map{case (k,vars) => k -> problem.factors.filter(_.variables.exists(vars))}
+  val conditionVariables: Set[Int] = splits.map(_._2)
   
   def influencesOf(vs: Set[Int]): Set[Int] = splits.filterNot(_._1.intersect(vs).isEmpty).map(_._2)
   def influencesOf(v: Int): Set[Int] = influencesOf(Set(v))
