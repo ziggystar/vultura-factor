@@ -44,6 +44,9 @@ class SinglyLCMFTest extends Specification with FastFactorMatchers {
     }
   }
 
+  def beRelativelyCloseTo(expected: Double, tol: Double = 1e-9): Matcher[Double] = (x: Double) =>
+    (math.abs(1- x/expected) < tol, f"is different from $expected by a factor of ${x/expected}")
+
   def is: Fragments =
     "create initial marginal for unconditioned problem" ! {
       unconditionedMF(singleVarProblem).createInitialMarginal(0,Map()) === FastFactor(Array(0),Array(0.5,0.5))
@@ -54,9 +57,9 @@ class SinglyLCMFTest extends Specification with FastFactorMatchers {
       "unconditioned LCMF on single variable problem" !
         (unconditionedMF(singleVarProblem) must haveExactZ()) ^
       "yield same result as normal MF on small grid" !
-        (unconditionedMF(smallGrid).Z must beCloseTo(new MeanField(smallGrid).Z,1e-3)) ^
+        (unconditionedMF(smallGrid).Z must beRelativelyCloseTo(new MeanField(smallGrid).Z)) ^
       "yield same result as normal MF on medium grid" !
-        (unconditionedMF(mediumGrid).Z must beCloseTo(new MeanField(mediumGrid).Z,1e-2)) ^
+        (unconditionedMF(mediumGrid).Z must beRelativelyCloseTo(new MeanField(mediumGrid).Z)) ^
     p^
     "inference on conditioned problems" ^
       "factored problems" ^
