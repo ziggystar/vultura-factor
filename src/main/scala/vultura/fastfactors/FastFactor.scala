@@ -236,7 +236,7 @@ object FastFactor{
     * @return The figure after which the overflow occurred. 0 means no overflow. */
 
   @inline
-  def incrementCounter(reg: Array[Int], domains: Array[Int]): Int = {
+  final def incrementCounter(reg: Array[Int], domains: Array[Int]): Int = {
     reg(0) += 1
     if(reg(0) != domains(0))
       return 0
@@ -254,7 +254,8 @@ object FastFactor{
   /** Does same as `incrementCounter`, but works for empty `reg` arrays. Is a bit slower.
     * @see incrementCounter
     */
-  def incrementCounter2(reg: Array[Int], domains: Array[Int]): Int = {
+  @inline
+  final def incrementCounter2(reg: Array[Int], domains: Array[Int]): Int = {
     var overflow = 0
     val size: Int = reg.length
     while(overflow < size){
@@ -342,12 +343,14 @@ object FastFactor{
     }
   }
 
+
+
   /**
    * @param is Array of indices into `factors`.
    * @return $\Prod_{i \in is} factors(i)
    */
   @inline
-  def mapMultiply(is: Array[Int],factors: Array[Int]): Int = {
+  final def mapMultiply(is: Array[Int],factors: Array[Int]): Int = {
     var product = 1
     var i = 0
     while(i < is.length){

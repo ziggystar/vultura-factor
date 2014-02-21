@@ -104,6 +104,7 @@ class SinglyLCMF(problem: Problem, scheme: SimpleScheme, tol: Double = 1e-9, max
       }
     }
 
+    //TODO is it correct to first make linear combination and then multiply, or do I have to first multiply? The same?
     val marginals: IndexedSeq[FastFactor] = scope.map(getMarginal(_,condition))
     val conditionEnforcer: FastFactor = FastFactor.deterministicMaxEntropy(
       condition.keys.filter(scope.contains).toArray,
@@ -262,7 +263,7 @@ class SinglyLCMF(problem: Problem, scheme: SimpleScheme, tol: Double = 1e-9, max
   }
   
   def parameterDependencyGraph: String = {
-    //produce a string that encodes the condition and is allowed as part of a node name in graphiz
+    //produce a string that encodes the condition and is allowed as part of a node name in graphviz
     def cNN(c: Condition): String = c.map{case (k,v) => f"${k}x$v"}.mkString("S")
     def pString(p: Parameter): String = p match {
       case Marginal(v,c) => f"m${v}_${cNN(c)}"

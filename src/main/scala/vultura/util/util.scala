@@ -118,6 +118,8 @@ package object util {
         val mean_s: Double = mean
         xs.map(implicitly[Numeric[A]].toDouble(_) - mean_s).map(x => x * x).sum / (xs.size - 1)
       }
+
+      def sd: Double = math.sqrt(variance)
     }
 
   /** Create several Random objects in a deterministic way from an initial one. */

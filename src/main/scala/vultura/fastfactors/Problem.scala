@@ -20,6 +20,9 @@ case class Problem(factors: IndexedSeq[FastFactor],domains: Array[Int],ring: Rin
   lazy val neighboursOf: Map[Int,Set[Int]] =
     variables.map(v => v -> (factorsOfVariable(v).flatMap(_.variables).toSet - v))(collection.breakOut)
 
+  def filter(p: FastFactor => Boolean): Problem = this.copy(factors=factors.filter(p))
+  def map(p: FastFactor => FastFactor): Problem = this.copy(factors=factors.map(p))
+
   private lazy val degrees: mutable.HashMap[Int,Int] = new mutable.HashMap[Int,Int]
   def degreeOfVariable(v: Int): Int = degrees.getOrElseUpdate(v,factors.count(_.variables.contains(v)))
   def uaiString: String = {
