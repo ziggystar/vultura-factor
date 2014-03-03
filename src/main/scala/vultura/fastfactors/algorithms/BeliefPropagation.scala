@@ -202,7 +202,6 @@ extends InfAlg with Iterator[InfAlg] {
     didConverge
   }
 
-
   def hasNext: Boolean = !didConverge
 
   def next(): InfAlg = {
@@ -218,6 +217,7 @@ extends InfAlg with Iterator[InfAlg] {
   def variableBelief(vi: Int): FastFactor = clusterBelief(singleVariableClusters(vi))
 
   var logZCache: Option[Double] = None
+
   override def logZ: Double = {
     if(logZCache.isDefined)
       logZCache.get
@@ -255,9 +255,9 @@ extends InfAlg with Iterator[InfAlg] {
       val variableEntropies = variableClusterIndices
         .map{vci => cg.neighbours(vci).size * entropy(ring.decode(clusterBelief(vci).values)) }
 
-      val clusterExpextationAndEntropySum: Double = clusterExpectationAndEntropy.sum
+      val clusterExpectationAndEntropySum: Double = clusterExpectationAndEntropy.sum
       val variableEntropySum: Double = variableEntropies.sum
-      val result = clusterExpextationAndEntropySum - variableEntropySum
+      val result = clusterExpectationAndEntropySum - variableEntropySum
       logZCache = Some(result)
       result
     }
@@ -289,7 +289,6 @@ extends InfAlg with Iterator[InfAlg] {
       "}"
   }
 }
-
 
 object BeliefPropagation{
   implicit val allLog@(logger, formatter, appender) = ZeroLoggerFactory.newLogger(this)
