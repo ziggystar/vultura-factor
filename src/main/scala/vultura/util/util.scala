@@ -195,4 +195,11 @@ package object util {
     }
     Some(builder.result())
   }
+
+  implicit class richSSet[A](val sset: Set[Set[A]]) extends AnyVal {
+    def isPairwiseDisjoint: Boolean = (for{
+      s1 <- sset
+      s2 <- sset if s1 != s2
+    } yield s1 intersect s2).forall(_.isEmpty)
+  }
 }
