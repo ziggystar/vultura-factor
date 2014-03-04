@@ -146,7 +146,7 @@ extends InfAlg with Iterator[InfAlg] {
     ring.normalizeInplace(newValues)
 
     //TODO: [performance] use sumProduct message directly and write to existing array?
-    val delta = maxDiff(oldMessage.factor.values,newValues)
+    val delta = vultura.util.maxDiff(oldMessage.factor.values,newValues)
     if(delta > tol){
       messageUpdates += 1
       //array copy
@@ -265,18 +265,6 @@ extends InfAlg with Iterator[InfAlg] {
 
   /** @return Partition function in encoding specified by `ring`. */
   def Z: Double = if(ring == LogD) logZ else ring.encode(Array(math.exp(logZ)))(0)
-
-  def maxDiff(as: Array[Double], bs: Array[Double]): Double = {
-    var i = 0
-    var max = Double.NegativeInfinity
-    while(i < as.length){
-      val newDelta: Double = math.abs(as(i) - bs(i))
-      if(newDelta > max)
-        max = newDelta
-      i += 1
-    }
-    max
-  }
 
   def iteration: Int = iterations
 

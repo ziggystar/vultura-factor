@@ -167,6 +167,19 @@ package object util {
     transitiveWalker.dropWhile(_._2).next()._1.withDefaultValue(Set[A]())
   }
 
+  /** @return The maximum of the absolute element-wise differences between the arrays. */
+  def maxDiff(as: Array[Double], bs: Array[Double]): Double = {
+    var i = 0
+    var max = Double.NegativeInfinity
+    while(i < as.length){
+      val newDelta: Double = math.abs(as(i) - bs(i))
+      if(newDelta > max)
+        max = newDelta
+      i += 1
+    }
+    max
+  }
+
   /**
    * Regarding `directedGraph` as a directed graph with edges going from the key to all of the members of
    * its value set, then we simply reverse all edges and return the result in the same format.
