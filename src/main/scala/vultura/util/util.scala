@@ -3,6 +3,8 @@ package vultura
 import scala.util.Random
 import collection.mutable.ArrayBuffer
 import scala.reflect.ClassTag
+import scala.collection.TraversableLike
+import scala.collection.generic.CanBuildFrom
 
 /**
  * Utility functions.
@@ -194,6 +196,11 @@ package object util {
       builder += elemb
     }
     Some(builder.result())
+  }
+
+  implicit class RichTraversable[A,R](val xs: TraversableLike[A,R]) extends AnyVal {
+    def groupByMap[B,That,C](by: A => B, f: A => C)(implicit ev: R <:< TraversableLike[A,R], bf: CanBuildFrom[R, C, That]): collection.immutable.Map[B,That] =
+      xs.groupBy(by).map{case (k,v) => k -> v.map(f)}
   }
 
   implicit class RichSSet[A](val sset: Set[Set[A]]) extends AnyVal {
