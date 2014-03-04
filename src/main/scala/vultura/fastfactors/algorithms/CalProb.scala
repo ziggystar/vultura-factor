@@ -2,7 +2,6 @@ package vultura.fastfactors.algorithms
 
 import scala.collection.mutable
 import vultura.util._
-import scala.reflect.ClassTag
 
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>

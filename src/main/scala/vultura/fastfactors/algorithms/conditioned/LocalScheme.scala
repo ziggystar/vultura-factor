@@ -37,6 +37,10 @@ sealed trait LScheme {
   }
 }
 
+object LScheme{
+  def empty: LScheme = DCon()
+}
+
 /** Corresponds to decomposable conjunction for d-dnnf. */
 case class DCon(subForest: Stream[LScheme]) extends LScheme {
   require((subForest.map(_.usedVariables).toSet: Set[Set[Int]]).isPairwiseDisjoint)
