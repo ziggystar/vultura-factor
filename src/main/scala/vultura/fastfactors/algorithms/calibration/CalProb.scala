@@ -30,8 +30,8 @@ class Calibrator(edges: Set[CEdge], tol: Double = 1e-9, maxSteps: Int = 1000){
 
   //when a node changes its state, this tells us which edges need to be recomputed
   val dependentEdges: Map[CEdge, IndexedSeq[CEdge]] = {
-    val broken: IndexedSeq[(CEdge, CEdge)] = (for(e <- edges; in <- e.input) yield in -> e)(collection.breakOut)
-    broken.groupByMap(by = _._1, f = _._2)
+    val broken: IndexedSeq[(CEdge, CEdge)] = for(e <- edgeList; in <- e.input) yield in -> e
+    broken.groupByMap(_._1,_._2).withDefaultValue(IndexedSeq())
   }
 
   private val state: mutable.Buffer[Any] = edgeList.map(_.create).toBuffer
@@ -43,7 +43,7 @@ class Calibrator(edges: Set[CEdge], tol: Double = 1e-9, maxSteps: Int = 1000){
 
   private var steps: Int = 0
 
-  private def nodeState(n: CEdge): n.TOut = state(edgeIndex(n)).asInstanceOf[n.TOut]
+  def nodeState(n: CEdge): n.TOut = state(edgeIndex(n)).asInstanceOf[n.TOut]
 
   calibrate()
 
