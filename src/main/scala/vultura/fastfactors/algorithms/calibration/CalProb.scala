@@ -64,7 +64,7 @@ class Calibrator(edges: Set[CEdge], tol: Double = 1e-9, maxSteps: Int = 1000){
   }
 
   def calibrate(): Unit = {
-    while(!dirtyEdges.isEmpty || steps >= maxSteps){
+    while(!dirtyEdges.isEmpty && steps < maxSteps){
       val (e,lastUpdate) = dirtyEdges.dequeue()
       if(lastUpdate > lastCalibrated(edgeIndex(e))) {
         //recompute
