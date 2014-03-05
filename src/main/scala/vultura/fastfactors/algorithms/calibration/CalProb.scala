@@ -1,4 +1,4 @@
-package vultura.fastfactors.algorithms
+package vultura.fastfactors.algorithms.calibration
 
 import scala.collection.mutable
 import vultura.util._

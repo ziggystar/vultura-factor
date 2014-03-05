@@ -1,9 +1,7 @@
-package vultura.fastfactors.algorithms
+package vultura.fastfactors.algorithms.calibration
 
 import org.specs2.Specification
 import org.specs2.specification.Fragments
-import scala.reflect.ClassTag
-import scala.collection.immutable
 
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
