@@ -1,0 +1,34 @@
+package vultura.fastfactors.algorithms.conditioned
+
+/**
+ * @author Thomas Geier <thomas.geier@uni-ulm.de>
+ */
+case class GScheme(lSchemes: Map[Int,LScheme] = Map().withDefaultValue(LScheme.empty)){
+  /** Create the conditions for a factor with the given scope.
+    * @return the conditions created by the product of the conditions of `vars`. */
+  def jointConditions(vars: Iterable[Int]): Seq[Condition] =
+    vars.toSeq.map(lSchemes).foldLeft(LScheme.empty)(_.multiply(_)).partialAssignments
+  /** @return The conditions for a given variable. */
+  def variableConditions(v: Int): Seq[Condition] = lSchemes(v).partialAssignments
+  /** Meant to compute the condition of a variable that is active for a given condition of an adjacent factor. */
+  def superCondition(v: Int, c: Condition): Condition = {
+    val singleAssignment = lSchemes(v).condition(c).partialAssignments
+    assert(singleAssignment.size == 1, "found more than one super condition for a variable")
+    singleAssignment.head
+  }
+  def subConditions(c: Condition, vars: Iterable[Int]): Seq[Condition] =
+    vars.toSeq.map(lSchemes).foldLeft(LScheme.empty)(_.multiply(_)).condition(c).partialAssignments
+
+  /** @param conditions
+    * @param given
+    * @return Computes the difference-conditions conditional on condition `given` for each variable. There is no entry for a variable,
+    *   if the difference vector is empty. */
+  def conditionalContributions(conditions: IndexedSeq[Condition], given: Condition): Seq[(Int,IndexedSeq[Set[Condition]])] =
+  for {
+    v <- lSchemes.keys.toSeq
+    vScheme = lSchemes(v).condition(given)
+    localConditions: IndexedSeq[Set[Map[Int, Int]]] = conditions.map(c => vScheme.condition(c).partialAssignments.toSet)
+    commonSubset = localConditions.reduce(_ intersect _)
+    diffList = localConditions.map(_ -- commonSubset) if diffList.exists(!_.isEmpty)
+  } yield v -> diffList
+}

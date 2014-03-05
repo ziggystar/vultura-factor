@@ -11,7 +11,7 @@ sealed trait LScheme {
 
   /** used decisions from partial assignment to strip off contradictory assignments.
     * - `!strip(pa).usedVariables.contains(pa.values)` holds. */
-  def strip(pa: Map[Int,Int]): LScheme
+  def condition(pa: Map[Int,Int]): LScheme
 
   /** Adds other to every leaf. */
   def multiply(other: LScheme): LScheme = this match {
@@ -39,6 +39,8 @@ sealed trait LScheme {
 
 object LScheme{
   def empty: LScheme = DCon()
+  /** The scheme that just splits the given variable. */
+  def split(v: Int, domains: Array[Int]): LScheme = DDis(v,(0 until domains(v)).map(_ -> empty)(collection.breakOut))
 }
 
 /** Corresponds to decomposable conjunction for d-dnnf. */
@@ -49,7 +51,7 @@ case class DCon(subForest: Stream[LScheme]) extends LScheme {
 
   /** used decisions from partial assignment to strip off contradictory assignments.
     * - `!strip(pa).usedVariables.contains(pa.values)` holds. */
-  override def strip(pa: Map[Int, Int]): LScheme = DCon(subForest.map(_.strip(pa)))
+  override def condition(pa: Map[Int, Int]): LScheme = DCon(subForest.map(_.condition(pa)))
 }
 object DCon{
   def apply(lss: LScheme*): DCon = DCon(lss.toStream)
@@ -64,8 +66,8 @@ case class DDis(variable: Int, assignments: Map[Int,LScheme]) extends LScheme {
 
   /** used decisions from partial assignment to strip off contradictory assignments.
     * - `!strip(pa).usedVariables.contains(pa.values)` holds. */
-  override def strip(pa: Map[Int, Int]): LScheme = pa.get(variable) match {
-    case Some(varAssignment) => assignments(varAssignment).strip(pa)
-    case None => copy(assignments = assignments.map{case (k,v) => k -> v.strip(pa)})
+  override def condition(pa: Map[Int, Int]): LScheme = pa.get(variable) match {
+    case Some(varAssignment) => DDis(variable,Map(varAssignment -> assignments(varAssignment).condition(pa)))
+    case None => copy(assignments = assignments.map{case (k,v) => k -> v.condition(pa)})
   }
 }
