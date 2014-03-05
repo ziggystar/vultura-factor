@@ -61,10 +61,12 @@ case class FastFactor(variables: Array[Int], values: Array[Double]){
 
   def normalize(ring: RingZ[Double]) = FastFactor(variables,ring.normalize(values))
 
-  override def equals(obj: Any): Boolean = obj.isInstanceOf[FastFactor] && {
-    val ff = obj.asInstanceOf[FastFactor]
-    variables.deep == ff.variables.deep && values.deep == ff.values.deep
+  override def equals(obj: Any): Boolean = obj match {
+    case ff: FastFactor => ff.eq(this) || (ff.variables.sameElements(variables) && ff.values.sameElements(values))
+    case _ => false
   }
+
+  override def hashCode(): Int = (variables.toSeq,values.toSeq).hashCode()
 
   override def toString: String = f"FastFactor(VAR: ${variables.mkString(",")},VAL: ${values.mkString(",")})"
   def toBriefString: String = f"${variables.mkString(",")} | ${values.map("%.2f".format(_)).mkString(",")}"
