@@ -55,41 +55,17 @@ class BP_Cal(p: Problem, tol: Double = 1e-7, runInitially: Int = 1000) extends I
   override lazy val logZ: Double = {
     val ring = p.ring
 
-      def expectation(p: Array[Double], f: Array[Double]): Double = {
-        var result = 0d
-        var i = 0
-        while(i < p.length){
-          if(p(i) != 0)
-            result += p(i) * f(i)
-          i += 1
-        }
-        require(!result.isNaN)
-        result
-      }
-      def entropy(ps: Array[Double]) = {
-        var result = 0d
-        var i = 0
-        while(i < ps.length){
-          if(ps(i) != 0)
-            result += ps(i) * math.log(ps(i))
-          i += 1
-        }
-        require(!result.isNaN)
-        -result
-      }
+    val factorExpectationAndEntropy = p.factors.map{f =>
+      val values: Array[Double] = factorBelief(f).values
+      ring.expectation(values,ring.decode(f.values).map(math.log)) + ring.entropy(values)
+    }
 
-      val factorExpectationAndEntropy = p.factors.map{f =>
-        val values: Array[Double] = factorBelief(f).values
-        expectation(ring.decode(values),ring.decode(f.values).map(math.log)) +
-            entropy(ring.decode(values))
-      }
+    val variableEntropies = p.variables.map(v => (p.factorsOfVariable(v).size - 1) * ring.entropy(variableBelief(v).values))
 
-      val variableEntropies = p.variables.map(v => (p.factorsOfVariable(v).size - 1) * entropy(ring.decode(variableBelief(v)).values))
-
-      val clusterExpectationAndEntropySum: Double = factorExpectationAndEntropy.sum
-      val variableEntropySum: Double = variableEntropies.sum
-      val result = clusterExpectationAndEntropySum - variableEntropySum
-      result
+    val clusterExpectationAndEntropySum: Double = factorExpectationAndEntropy.sum
+    val variableEntropySum: Double = variableEntropies.sum
+    val result = clusterExpectationAndEntropySum - variableEntropySum
+    result
   }
 
   override def getProblem: Problem = p
