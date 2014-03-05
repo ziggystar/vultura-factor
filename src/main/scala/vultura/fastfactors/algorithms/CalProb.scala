@@ -3,45 +3,38 @@ package vultura.fastfactors.algorithms
 import scala.collection.mutable
 import vultura.util._
 
-/**
- * @author Thomas Geier <thomas.geier@uni-ulm.de>
- */
-trait CalProb {
-  def edges: Set[CEdge]
-  def nodes: Set[CNode] = edges.flatMap(e => e.input :+ e.output)
-}
-
+/** A CEdge describes the functional dependency of a target node on a set of other nodes. Note that a CEdge
+  * describes both a directed hyper-edge *and* the target node.
+  */
 trait CEdge {
-  type TIn <: Any
+  /** Representation type of the node itself. */
   type TOut <: Any
-  def input: IndexedSeq[CNode{type R <: TIn}]
-  def output: CNode{type R = TOut}
+  /** Representation type of the independent nodes/edges. */
+  type ETIn <: CEdge
+  type TIn = ETIn#TOut
+  /** Create a (mutable???) representation of the initial value of this node. */
+  def create: TOut
+  /** @return the change between two values of this node. Zero means no change, lower means less change. */
+  def diff(r1: TOut, r2: TOut): Double
+  /** @return human readable representation of a value. */
+  def printValue(v: TOut): String = v.toString
+  /** The nodes this edge depends on. This must remain lazy. */
+  def input: IndexedSeq[ETIn]
+  /** Compute the value of this node given the values of the independent nodes. */
   def compute: IndexedSeq[TIn] => TOut
 }
 
-trait CNode {
-  /** The mutable representation type. Usually unboxed Arrays. */
-  type R <: Any
-  def create: R
-  def diff(r1: R, r2: R): Double
-  def printValue(v: R): String = v.toString
-}
-
-class Calibrator(problem: CalProb, tol: Double = 1e-9, maxSteps: Int = 1000){
-
-  val nodeList: IndexedSeq[CNode] = problem.nodes.toIndexedSeq
-  val edgeList: IndexedSeq[CEdge] = problem.edges.toIndexedSeq
+class Calibrator(edges: Set[CEdge], tol: Double = 1e-9, maxSteps: Int = 1000){
+  val edgeList: IndexedSeq[CEdge] = edges.toIndexedSeq
+  val edgeIndex: Map[CEdge, Int] = edgeList.zipWithIndex.toMap
 
   //when a node changes its state, this tells us which edges need to be recomputed
-  val dependentEdges: Map[CNode, IndexedSeq[CEdge]] = {
-    val broken: IndexedSeq[(CNode, CEdge)] = (for(e <- problem.edges; in <- e.input) yield in -> e)(collection.breakOut)
+  val dependentEdges: Map[CEdge, IndexedSeq[CEdge]] = {
+    val broken: IndexedSeq[(CEdge, CEdge)] = (for(e <- edges; in <- e.input) yield in -> e)(collection.breakOut)
     broken.groupByMap(by = _._1, f = _._2)
   }
 
-  val nodeIndex: Map[CNode, Int] = nodeList.zipWithIndex.toMap
-  val edgeIndex: Map[CEdge, Int] = edgeList.zipWithIndex.toMap
-
-  private val state: mutable.Buffer[Any] = nodeList.map(_.create).toBuffer
+  private val state: mutable.Buffer[Any] = edgeList.map(_.create).toBuffer
 
   //when was an edge calibrated the last time?
   private val lastCalibrated: Array[Int] = Array.fill(edgeList.size)(-1)
@@ -50,7 +43,7 @@ class Calibrator(problem: CalProb, tol: Double = 1e-9, maxSteps: Int = 1000){
 
   private var steps: Int = 0
 
-  private def nodeState(n: CNode): n.R = state(nodeIndex(n)).asInstanceOf[n.R]
+  private def nodeState(n: CEdge): n.TOut = state(edgeIndex(n)).asInstanceOf[n.TOut]
 
   calibrate()
 
@@ -59,13 +52,12 @@ class Calibrator(problem: CalProb, tol: Double = 1e-9, maxSteps: Int = 1000){
     val input: IndexedSeq[e.TIn] = e.input.map(n => nodeState(n).asInstanceOf[e.TIn])(collection.breakOut)
     //recalculate
     val newVal: e.TOut = e.compute(input)
-    val output = e.output
-    val diff = output.diff(newVal, nodeState(output))
+    val diff = e.diff(newVal, nodeState(e))
     if(diff > tol) {
       //save new state
-      state(nodeIndex(output)) = newVal
+      state(edgeIndex(e)) = newVal
       //awake dependent edges
-      dirtyEdges.enqueue(dependentEdges(output).map(e => e -> steps):_*)
+      dirtyEdges.enqueue(dependentEdges(e).map(e => e -> steps):_*)
       true
     }
     else false
@@ -84,5 +76,5 @@ class Calibrator(problem: CalProb, tol: Double = 1e-9, maxSteps: Int = 1000){
 
   def isCalibrated = dirtyEdges.isEmpty
 
-  def valuesString: String = nodeList.map(n => s"$n -> ${n.printValue(nodeState(n))}").mkString("\n")
+  def valuesString: String = edgeList.map(n => s"$n -> ${n.printValue(nodeState(n))}").mkString("\n")
 }
