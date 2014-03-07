@@ -42,7 +42,7 @@ package object generators {
   def expGauss(sigma: Double = 1d, mean: Double = 0d): FactorGenerator =
     (entries: Int, random: Random) => Array.fill(entries)(math.exp(random.nextGaussian() * sigma + mean))
 
-  def grid(width: Int, height: Int, domainSize: Int, factorGenerator: FactorGenerator, random: Random): Problem = {
+  def grid(width: Int, height: Int, domainSize: Int, factorGenerator: FactorGenerator, random: Random = new Random(0)): Problem = {
     val variables: Map[(Int, Int), Int] = (for (x <- 0 until width; y <- 0 until height) yield (x, y)).zipWithIndex.toMap
     val domains = Array.fill(variables.size)(domainSize)
     val horizontalPairs =
@@ -60,7 +60,7 @@ package object generators {
               factorSize: Int,
               domainSize: Int,
               factorGenerator: FactorGenerator,
-              random: Random): Problem = {
+              random: Random = new Random(0)): Problem = {
     val domains = Array.fill(numVariables)(domainSize)
     def genFactorVariables: Array[Int] = Iterator
       .continually(Array.fill(factorSize)(random.nextInt(numVariables)))
@@ -72,7 +72,7 @@ package object generators {
             k: Int,
             domainSize: Int,
             fgen: FactorGenerator,
-            random: Random): Problem = {
+            random: Random = new Random(0)): Problem = {
     val numVars = numFactors * (k-1) + 1
     val domains = Array.fill(numVars)(domainSize)
     val factors = Seq.iterate((k,fgen(Seq.range(0,k),domains,random)),numFactors){case (nextVar,_) =>
