@@ -16,6 +16,12 @@ case class GScheme(lSchemes: Map[Int,LScheme] = Map().withDefaultValue(LScheme.e
     assert(singleAssignment.size == 1, "found more than one super condition for a variable")
     singleAssignment.head
   }
+  /** Meant to compute the condition of a variable that is active for a given condition of an adjacent factor. */
+  def superConditionJoint(vars: Iterable[Int], c: Condition): Condition = {
+    val singleAssignment = vars.toSeq.map(lSchemes).foldLeft(LScheme.empty)(_.multiply(_)).condition(c).partialAssignments
+    assert(singleAssignment.size == 1, "found more than one super condition for a variable")
+    singleAssignment.head
+  }
   def subConditions(c: Condition, vars: Iterable[Int]): Seq[Condition] =
     vars.toSeq.map(lSchemes).foldLeft(LScheme.empty)(_.multiply(_)).condition(c).partialAssignments
 
@@ -23,12 +29,10 @@ case class GScheme(lSchemes: Map[Int,LScheme] = Map().withDefaultValue(LScheme.e
     * @param given
     * @return Computes the difference-conditions conditional on condition `given` for each variable. There is no entry for a variable,
     *   if the difference vector is empty. */
-  def conditionalContributions(conditions: IndexedSeq[Condition], given: Condition): Seq[(Int,IndexedSeq[Set[Condition]])] =
-  for {
-    v <- lSchemes.keys.toSeq
-    vScheme = lSchemes(v).condition(given)
-    localConditions: IndexedSeq[Set[Map[Int, Int]]] = conditions.map(c => vScheme.condition(c).partialAssignments.toSet)
-    commonSubset = localConditions.reduce(_ intersect _)
-    diffList = localConditions.map(_ -- commonSubset) if diffList.exists(!_.isEmpty)
-  } yield v -> diffList
+  def conditionalContributions(conditions: IndexedSeq[Condition], given: Condition, v: Int): IndexedSeq[Set[Condition]] = {
+    val vScheme = lSchemes(v).condition(given)
+    val localConditions: IndexedSeq[Set[Map[Int, Int]]] = conditions.map(c => vScheme.condition(c).partialAssignments.toSet)
+    val commonSubset = localConditions.reduce(_ intersect _)
+    localConditions.map(_ -- commonSubset)
+  }
 }

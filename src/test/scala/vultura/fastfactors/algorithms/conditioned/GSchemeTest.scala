@@ -20,7 +20,7 @@ class GSchemeTest extends Specification {
     (threeVars.jointConditions(Seq(2,3)).size === 4) ^
     (threeVars.subConditions(Map(2 -> 0),Seq(1)) === Seq(Map(2->0,3->0),Map(2->0,3->1))) ^
     (threeVars.superCondition(2,Map(2->0,3->1)) === Map(2->0)) ^
-    (threeVars.conditionalContributions(IndexedSeq(Map(2->0,3->0),Map(2->0,3->1)),Map()) ===
-      Seq(1 -> IndexedSeq(Set(Map(2->0,3->0)),Set(Map(2->0,3->1))), 3 -> IndexedSeq(Set(Map(3->0)),Set(Map(3->1)))))
+    (Seq(1,2,3).map(v => v -> threeVars.conditionalContributions(IndexedSeq(Map(2->0,3->0),Map(2->0,3->1)),Map(),v)) ===
+      Seq(1 -> IndexedSeq(Set(Map(2->0,3->0)),Set(Map(2->0,3->1))),2 -> IndexedSeq(Set(),Set()), 3 -> IndexedSeq(Set(Map(3->0)),Set(Map(3->1)))))
 
 }
