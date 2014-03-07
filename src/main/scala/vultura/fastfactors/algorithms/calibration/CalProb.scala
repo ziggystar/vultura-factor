@@ -69,6 +69,7 @@ class Calibrator(edges: Set[CEdge], tol: Double = 1e-9, maxSteps: Int = 1000){
       state(edgeIndex(e)) = newVal
       //awake dependent edges
       dirtyEdges.enqueue(dependentEdges(e).map(e => e -> steps):_*)
+      lastCalibrated(edgeIndex(e)) = steps
       true
     }
     else false
@@ -79,7 +80,7 @@ class Calibrator(edges: Set[CEdge], tol: Double = 1e-9, maxSteps: Int = 1000){
       val (e,lastUpdate) = dirtyEdges.dequeue()
       if(lastUpdate > lastCalibrated(edgeIndex(e))) {
         //recompute
-        if(updateEdge(e))
+        if(updateEdge(e)) //side-effect
           steps = steps + 1
       }
     }
