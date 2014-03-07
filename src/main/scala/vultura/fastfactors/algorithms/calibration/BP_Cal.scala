@@ -69,4 +69,5 @@ class BP_Cal(p: Problem, tol: Double = 1e-7, runInitially: Int = 1000) extends I
   }
 
   override def getProblem: Problem = p
+  def toDOT: String = calibrated.dot.nodeLabeled(n => n.toString + "\\n" + calibrated.nodeState(n).toString).dotString
 }

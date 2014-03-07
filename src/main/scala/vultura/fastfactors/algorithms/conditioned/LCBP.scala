@@ -35,6 +35,14 @@ class LCBP(p: Problem,
     val fMul: (IndexedSeq[FastFactor]) => FastFactor = FastFactor.multiply(p.ring)(p.domains)
   }
 
+  trait ValueEdge { self: CEdge =>
+    type TOut = java.lang.Double
+    /** @return the change between two values of this node. Zero means no change, lower means less change. */
+    override def diff(r1: TOut, r2: TOut): Double = math.abs(r1 - r2)
+  }
+
+  def briefCondition(c: Condition): String = if(c.isEmpty) "" else "| " + c.map{case (k,v) => s"$k=$v"}.mkString(",")
+
   /** Messages from variable nodes to factor nodes. These can be directly used for the factor beliefs/computations,
     * because factors are always conditioned finer than variables. One such method will be used be differently conditioned
     * factors in general.
@@ -50,6 +58,8 @@ class LCBP(p: Problem,
     override def compute: (IndexedSeq[TIn]) => TOut = ins => fMul(ins).normalize(p.ring)
     /** The nodes this edge depends on. This must remain lazy. */
     override def input: IndexedSeq[ETIn] = for(of <- p.factorsOfVariable(v) if of != f) yield F2VSummed(of,v,vc)
+
+    override def toString: String = s"V2F:$v -> ${f.toBriefString} ${briefCondition(vc)}"
   }
 
   case class FactorBelief(f: FastFactor, fc: Condition) extends CEdge with FactorEdge {
@@ -59,6 +69,8 @@ class LCBP(p: Problem,
     override def compute: (IndexedSeq[TIn]) => TOut = ins => fMul(ins :+ f).normalize(p.ring)
     /** The nodes this edge depends on. This must remain lazy. */
     override def input: IndexedSeq[ETIn] = f.variables.map(v => V2F(v,f,scheme.superCondition(v,fc)))
+
+    override def toString: String = s"FBel:${f.toBriefString} ${briefCondition(fc)}"
   }
 
   /** Message emerging from a factor node. In general this has to be combined with messages from differently conditioned
@@ -77,6 +89,8 @@ class LCBP(p: Problem,
 
     /** The nodes this edge depends on. This must remain lazy. */
     override def input: IndexedSeq[ETIn] = for(ov <- f.variables if ov != v) yield V2F(ov,f,scheme.superCondition(ov,fc))
+
+    override def toString: String = s"F2V:${f.toBriefString} -> $v ${briefCondition(fc)}"
   }
 
   /** Message from a factor to a variable after summing over the refined conditions of the factor.
@@ -102,6 +116,8 @@ class LCBP(p: Problem,
 
     /** The conditions this sum combines over. */
     def subConditions: IndexedSeq[Condition] = scheme.subConditions(vc, f.variables).toIndexedSeq
+
+    override def toString: String = s"F2VS:${f.toBriefString} -> $v ${briefCondition(vc)}"
   }
 
   case class VariableBelief(v: Int, vc: Condition) extends CEdge with FactorEdge {
@@ -113,15 +129,13 @@ class LCBP(p: Problem,
 
     /** Compute the value of this node given the values of the independent nodes. */
     override def compute: (IndexedSeq[TIn]) => TOut = ins => fMul(ins).normalize(p.ring)
+
+    override def toString: String = s"VBel:$v ${briefCondition(vc)}"
   }
 
   /** The weight of one elementary condition. */
-  case class LogConditionWeight(condition: Condition) extends CEdge {
+  case class LogConditionWeight(condition: Condition) extends CEdge with ValueEdge {
     override type ETIn = CEdge with FactorEdge
-    override type TOut = java.lang.Double
-
-    /** @return the change between two values of this node. Zero means no change, lower means less change. */
-    override def diff(r1: TOut, r2: TOut): Double = math.abs(r1 - r2)
 
     /** Create a (mutable???) representation of the initial value of this node. */
     override def create: TOut = p.ring.one
@@ -146,6 +160,8 @@ class LCBP(p: Problem,
       val weightedVariableEntropies = vBels.zip(variables).map{case (vbel,(_,_,neighbours)) => p.ring.entropy(vbel.values) * (1 - neighbours)}.sum
       logExpects + factorEntropies + weightedVariableEntropies
     }
+
+    override def toString: String = s"Weight ${briefCondition(condition)}"
   }
 
   /** Conditional distribution over conditions. This is required to combine the factor-to-variable messages,
@@ -191,14 +207,14 @@ class LCBP(p: Problem,
     override def compute: (IndexedSeq[TIn]) => TOut = ins => LogD.decode(LogD.normalize((0 until conditions.size).map{ idx =>
       LogD.sumA(lookBack(idx).map(i=> ins(i).doubleValue)(collection.breakOut))
     }(collection.breakOut)))
+
+    override def toString: String = s"CDist: ${conditions.mkString} ${briefCondition(given)}"
   }
   
   /** Sums all LogConditionWeights. */
-  case object LogPartition extends CEdge {
+  case object LogPartition extends CEdge with ValueEdge {
     override type ETIn = LogConditionWeight
-    override type TOut = java.lang.Double
-    /** @return the change between two values of this node. Zero means no change, lower means less change. */
-    override def diff(r1: TOut, r2: TOut): Double = math.abs(r1 - r2)
+
     /** Create a (mutable???) representation of the initial value of this node. */
     override def create: TOut = 1d
     
@@ -209,6 +225,8 @@ class LCBP(p: Problem,
     /** The nodes this edge depends on. This must remain lazy. */
     override def input: IndexedSeq[ETIn] =
       scheme.jointConditions(p.variables).map(LogConditionWeight)(collection.breakOut)
+
+    override def toString: String = "LogPartition"
   }
 
   def edges: Set[CEdge] = CEdge.expand(Set(LogPartition))
@@ -227,4 +245,6 @@ class LCBP(p: Problem,
   override def logZ: Double = calibrator.nodeState(LogPartition)
 
   override def getProblem: Problem = p
+
+  def toDOT: String = calibrator.dot.nodeLabeled(n => n.toString + "\\n" + calibrator.nodeState(n).toString).dotString
 }

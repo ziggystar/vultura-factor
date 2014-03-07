@@ -2,6 +2,7 @@ package vultura.fastfactors.algorithms.calibration
 
 import scala.collection.mutable
 import vultura.util._
+import vultura.util.graph.DotGraph
 
 /** A CEdge describes the functional dependency of a target node on a set of other nodes. Note that a CEdge
   * describes both a directed hyper-edge *and* the target node.
@@ -89,4 +90,6 @@ class Calibrator(edges: Set[CEdge], tol: Double = 1e-9, maxSteps: Int = 1000){
   def isCalibrated = dirtyEdges.isEmpty
 
   def valuesString: String = edgeList.map(n => s"$n -> ${n.printValue(nodeState(n))}").mkString("\n")
+
+  def dot: DotGraph[CEdge] = DotGraph[CEdge](edges=edgeList.flatMap(n => n.input.map(_ -> n)))
 }
