@@ -9,15 +9,17 @@ import scalaz._
 sealed trait LScheme {
   def usedVariables: Set[Int]
 
-  /** used decisions from partial assignment to strip off contradictory assignments.
-    * - `!strip(pa).usedVariables.contains(pa.values)` holds. */
+  /** remove contradictory assignments. */
   def condition(pa: Map[Int,Int]): LScheme
+
+  /** keep consistent assignments, remove contradictory assignments. */
+  def strip(pa: Map[Int,Int]): LScheme
 
   /** Adds other to every leaf. */
   def multiply(other: LScheme): LScheme = this match {
     case DCon(Stream.Empty) => other
     case DCon(sf)           => DCon(sf.map(_.multiply(other)))
-    case d@DDis(_,subs)     => d.copy(assignments = subs.map{case (k,v) => k -> v.multiply(other)})
+    case d@DDis(conVar,subs)     => d.copy(assignments = subs.map{case (k,v) => k -> v.multiply(other.strip(Map(conVar -> k)))})
   }
 
   /** Gets rid of the DCon nodes. */
@@ -52,6 +54,9 @@ case class DCon(subForest: Stream[LScheme]) extends LScheme {
   /** used decisions from partial assignment to strip off contradictory assignments.
     * - `!strip(pa).usedVariables.contains(pa.values)` holds. */
   override def condition(pa: Map[Int, Int]): LScheme = DCon(subForest.map(_.condition(pa)))
+
+  /** keep consistent assignments, remove contradictory assignments. */
+  override def strip(pa: Map[Int, Int]): LScheme = DCon(subForest.map(_.strip(pa)))
 }
 object DCon{
   def apply(lss: LScheme*): DCon = DCon(lss.toStream)
@@ -69,5 +74,11 @@ case class DDis(variable: Int, assignments: Map[Int,LScheme]) extends LScheme {
   override def condition(pa: Map[Int, Int]): LScheme = pa.get(variable) match {
     case Some(varAssignment) => DDis(variable,Map(varAssignment -> assignments(varAssignment).condition(pa)))
     case None => copy(assignments = assignments.map{case (k,v) => k -> v.condition(pa)})
+  }
+
+  /** keep consistent assignments, remove contradictory assignments. */
+  override def strip(pa: Map[Int, Int]): LScheme = pa.get(variable) match {
+    case Some(varAssignment) => assignments(varAssignment).condition(pa)
+    case None => copy(assignments = assignments.map{case (k,v) => k -> v.strip(pa)})
   }
 }
