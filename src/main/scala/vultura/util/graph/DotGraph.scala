@@ -1,5 +1,7 @@
 package vultura.util.graph
 
+import java.io.{File, PrintStream, FileOutputStream}
+import scala.sys.process._
 
 case class DotGraph[N](edges: Iterable[(N,N)],
                        additionalNodes: Iterable[N] = Set(),
@@ -17,6 +19,12 @@ case class DotGraph[N](edges: Iterable[(N,N)],
        |}
     """.stripMargin
   }
-
   def nodeLabeled(l: N => String) = this.copy(nodeOptions=nodeOptions :+ ((n: N) => "label=\"" + l(n) + "\""))
+
+  def toPDF(file: String): Unit = {
+    val out = new PrintStream(new FileOutputStream(file + ".dot"))
+    out.print(dotString)
+    out.close()
+    (s"dot -Tpdf $file.dot" #> new File(file)).!
+  }
 }
