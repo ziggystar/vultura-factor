@@ -1,7 +1,9 @@
 package vultura.fastfactors.algorithms.conditioned
 
-import vultura.fastfactors.{NormalD, FastFactor, Problem}
-import vultura.fastfactors.algorithms.calibration.CEdge
+import vultura.util._
+import vultura.fastfactors._
+import vultura.fastfactors.algorithms.calibration.{Calibrator, CEdge}
+import vultura.fastfactors.algorithms.InfAlg
 
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
@@ -9,9 +11,10 @@ import vultura.fastfactors.algorithms.calibration.CEdge
 class LCBP(p: Problem,
            scheme: GScheme = GScheme(),
            tol: Double = 1e-9,
-           maxIterations: Int = 1000) {
+           maxIterations: Int = 1000) extends InfAlg {
   require(p.ring == NormalD, "linear combination of messages only implemented for normal domain")
 
+  //TODO make this work for the Log ring
   def linearCombination(weights: Array[Double], factors: IndexedSeq[FastFactor]): FastFactor = {
     require(weights.size == factors.size)
     def elementWiseSum(a1: Array[Double], a2: Array[Double]) = a1.zip(a2).map{case (x1,x2) => x1 + x2}
@@ -44,7 +47,7 @@ class LCBP(p: Problem,
     def variables = Array(v)
 
     /** Compute the value of this node given the values of the independent nodes. */
-    override def compute: (IndexedSeq[TIn]) => TOut = fMul
+    override def compute: (IndexedSeq[TIn]) => TOut = ins => fMul(ins).normalize(p.ring)
     /** The nodes this edge depends on. This must remain lazy. */
     override def input: IndexedSeq[ETIn] = for(of <- p.factorsOfVariable(v) if of != f) yield F2VSummed(of,v,vc)
   }
@@ -53,7 +56,7 @@ class LCBP(p: Problem,
     override type ETIn = V2F
     override def variables: Array[Int] = f.variables
     /** Compute the value of this node given the values of the independent nodes. */
-    override def compute: (IndexedSeq[TIn]) => TOut = ins => fMul(ins :+ f)
+    override def compute: (IndexedSeq[TIn]) => TOut = ins => fMul(ins :+ f).normalize(p.ring)
     /** The nodes this edge depends on. This must remain lazy. */
     override def input: IndexedSeq[ETIn] = f.variables.map(v => V2F(v,f,scheme.superCondition(v,fc)))
   }
@@ -69,7 +72,7 @@ class LCBP(p: Problem,
     def variables = Array(v)
 
     /** Compute the value of this node given the values of the independent nodes. */
-    override def compute: (IndexedSeq[TIn]) => TOut = ins => fMul(ins :+ f)
+    override def compute: (IndexedSeq[TIn]) => TOut = ins => fMul(ins :+ f).normalize(p.ring)
     /** The nodes this edge depends on. This must remain lazy. */
     override def input: IndexedSeq[ETIn] = for(ov <- f.variables if ov != v) yield V2F(ov,f,scheme.superCondition(ov,fc))
   }
@@ -107,11 +110,11 @@ class LCBP(p: Problem,
     override def input: IndexedSeq[ETIn] = p.factorsOfVariable(v).map(f => F2VSummed(f,v,vc))
 
     /** Compute the value of this node given the values of the independent nodes. */
-    override def compute: (IndexedSeq[TIn]) => TOut = fMul
+    override def compute: (IndexedSeq[TIn]) => TOut = ins => fMul(ins).normalize(p.ring)
   }
 
   /** The weight of one elementary condition. */
-  case class AtomicConditionWeight(condition: Condition) extends CEdge {
+  case class LogConditionWeight(condition: Condition) extends CEdge {
     override type ETIn = CEdge with FactorEdge
     override type TOut = java.lang.Double
 
@@ -145,11 +148,19 @@ class LCBP(p: Problem,
 
   /** Conditional distribution over conditions. This is required to combine the factor-to-variable messages,
     * when a factor is conditioned deeper than the adjacent variable.
+    *
+    * These are distributions in normal encoding.
+    *
     * @param conditions The conditions of the factor.
     * @param given The condition of the variable.
     */
   case class ConditionDistribution(conditions: IndexedSeq[Condition], given: Condition) extends CEdge {
-    type ETIn = CEdge with FactorEdge
+    require(
+      conditions.forall(cond => cond.keySet.intersect(given.keySet).forall(k => cond(k) == given(k))),
+      "contradictory conditioned distribution created")
+
+    type ETIn = LogConditionWeight
+    /** The output is in normal encoding! */
     type TOut = IndexedSeq[Double]
 
     /** @return the change between two values of this node. Zero means no change, lower means less change. */
@@ -157,14 +168,61 @@ class LCBP(p: Problem,
     /** Create a (mutable???) representation of the initial value of this node. */
     override def create: TOut = IndexedSeq.fill(conditions.size)(1d / conditions.size)
 
-    /** The conditional distribution over conditions is fed by the following factor/variable beliefs:
-      * 
-      */
-    override def input: IndexedSeq[ETIn] = ???
+    /** The conditional distribution over conditions is fed by the following factor/variable beliefs. */
+    override def input: IndexedSeq[ETIn] = inputConditions.map(LogConditionWeight)
+    /** maps from index in `conditions` to contributing atomic conditions. */
+    val lookup: Map[Int,Iterable[Condition]] = (for{
+      (cond, idx) <- conditions.zipWithIndex
+      refinedCond = cond ++ given //maps are required to be consistent
+      superCond = scheme.superConditionJoint(p.variables,refinedCond)
+    } yield idx -> superCond).groupByMap(_._1,_._2)
+
+    /** atomic conditions appear in in `input` in this order. */
+    val inputConditions: IndexedSeq[Condition] = lookup.flatMap(_._2).toSet.toIndexedSeq
+    /** maps atomic conditions to their index in `inputs`. */
+    val inputMap: Map[Condition, Int] = inputConditions.zipWithIndex.toMap
+
+    /** maps from index in `conditions` to the indices of the contributing atomic conditions in `input`. */
+    val lookBack: Map[Int,Iterable[Int]] = lookup.map{case (k,v) => k -> v.map(inputMap)}
 
     /** Compute the value of this node given the values of the independent nodes. */
-    override def compute: (IndexedSeq[TIn]) => TOut = ???
+    override def compute: (IndexedSeq[TIn]) => TOut = ins => LogD.decode(LogD.normalize((0 until conditions.size).map{ idx =>
+      LogD.sumA(lookBack(idx).map(i=> ins(i).doubleValue)(collection.breakOut))
+    }(collection.breakOut)))
+  }
+  
+  /** Sums all LogConditionWeights. */
+  case object LogPartition extends CEdge {
+    override type ETIn = LogConditionWeight
+    override type TOut = java.lang.Double
+    /** @return the change between two values of this node. Zero means no change, lower means less change. */
+    override def diff(r1: TOut, r2: TOut): Double = math.abs(r1 - r2)
+    /** Create a (mutable???) representation of the initial value of this node. */
+    override def create: TOut = 1d
+    
+    /** Compute the value of this node given the values of the independent nodes. */
+    override def compute: (IndexedSeq[TIn]) => TOut = ins =>
+      LogD.sumA(ins.map(_.doubleValue)(collection.breakOut): Array[Double])
+
+    /** The nodes this edge depends on. This must remain lazy. */
+    override def input: IndexedSeq[ETIn] =
+      scheme.jointConditions(p.variables).map(LogConditionWeight)(collection.breakOut)
   }
 
-  def edges: Set[CEdge] = ???
+  def edges: Set[CEdge] = CEdge.expand(Set(LogPartition))
+
+  val calibrator = new Calibrator(edges,tol,maxIterations)
+
+  override def iteration: Int = calibrator.iteration
+
+  /** @return marginal distribution of variable in encoding specified by `ring`. */
+  override def variableBelief(vi: Int): FastFactor = ???
+
+  /** @return Partition function in encoding specified by `ring`. */
+  override def Z: Double = math.exp(logZ)
+
+  /** @return Natural logarithm of partition function. */
+  override def logZ: Double = calibrator.nodeState(LogPartition)
+
+  override def getProblem: Problem = p
 }

@@ -24,6 +24,15 @@ trait CEdge {
   def compute: IndexedSeq[TIn] => TOut
 }
 
+object CEdge {
+  /** @return The transitive closure, following the edges backwards. */
+  def expand(edges: Set[CEdge], closed: Set[CEdge] = Set()): Set[CEdge] = if(edges.isEmpty) closed else {
+    val preds: Set[CEdge] = edges.flatMap(_.input)
+    val newClosed = edges ++ closed
+    expand(preds -- newClosed, newClosed)
+  }
+}
+
 class Calibrator(edges: Set[CEdge], tol: Double = 1e-9, maxSteps: Int = 1000){
   val edgeList: IndexedSeq[CEdge] = edges.toIndexedSeq
   val edgeIndex: Map[CEdge, Int] = edgeList.zipWithIndex.toMap
@@ -42,6 +51,8 @@ class Calibrator(edges: Set[CEdge], tol: Double = 1e-9, maxSteps: Int = 1000){
   private val dirtyEdges: mutable.Queue[(CEdge,Int)] = mutable.Queue((for(e <- edgeList) yield e -> 0): _*)
 
   private var steps: Int = 0
+
+  def iteration: Int = steps
 
   def nodeState(n: CEdge): n.TOut = state(edgeIndex(n)).asInstanceOf[n.TOut]
 
