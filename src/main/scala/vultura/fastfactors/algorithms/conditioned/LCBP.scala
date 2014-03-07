@@ -4,6 +4,7 @@ import vultura.util._
 import vultura.fastfactors._
 import vultura.fastfactors.algorithms.calibration.{Calibrator, CEdge}
 import vultura.fastfactors.algorithms.InfAlg
+import vultura.util.graph.DotGraph
 
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
@@ -54,8 +55,13 @@ class LCBP(p: Problem,
     override type ETIn = F2VSummed
     def variables = Array(v)
 
+    val conditionedBelief = FastFactor.deterministicMaxEntropy(Array(v),vc,p.domains,p.ring)
+
+    /** Create a (mutable???) representation of the initial value of this node. */
+    override def create: TOut = conditionedBelief
+
     /** Compute the value of this node given the values of the independent nodes. */
-    override def compute: (IndexedSeq[TIn]) => TOut = ins => fMul(ins).normalize(p.ring)
+    override def compute: (IndexedSeq[TIn]) => TOut = ins => fMul(ins :+ conditionedBelief).normalize(p.ring)
     /** The nodes this edge depends on. This must remain lazy. */
     override def input: IndexedSeq[ETIn] = for(of <- p.factorsOfVariable(v) if of != f) yield F2VSummed(of,v,vc)
 
@@ -124,11 +130,16 @@ class LCBP(p: Problem,
     override type ETIn = F2VSummed
     override def variables: Array[Int] = Array(v)
 
+    val conditionedBelief = FastFactor.deterministicMaxEntropy(Array(v),vc,p.domains,p.ring)
+
+    /** Create a (mutable???) representation of the initial value of this node. */
+    override def create: TOut = conditionedBelief
+
     /** The nodes this edge depends on. This must remain lazy. */
     override def input: IndexedSeq[ETIn] = p.factorsOfVariable(v).map(f => F2VSummed(f,v,vc))
 
     /** Compute the value of this node given the values of the independent nodes. */
-    override def compute: (IndexedSeq[TIn]) => TOut = ins => fMul(ins).normalize(p.ring)
+    override def compute: (IndexedSeq[TIn]) => TOut = ins => fMul(ins :+ conditionedBelief).normalize(p.ring)
 
     override def toString: String = s"VBel:$v ${briefCondition(vc)}"
   }
@@ -246,5 +257,5 @@ class LCBP(p: Problem,
 
   override def getProblem: Problem = p
 
-  def toDOT: String = calibrator.dot.nodeLabeled(n => n.toString + "\\n" + calibrator.nodeState(n).toString).dotString
+  def toDOT: DotGraph[CEdge] = calibrator.dot.nodeLabeled(n => n.toString + "\\n" + calibrator.nodeState(n).toString)
 }
