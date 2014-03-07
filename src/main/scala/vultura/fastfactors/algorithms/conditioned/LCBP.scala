@@ -72,7 +72,9 @@ class LCBP(p: Problem,
     def variables = Array(v)
 
     /** Compute the value of this node given the values of the independent nodes. */
-    override def compute: (IndexedSeq[TIn]) => TOut = ins => fMul(ins :+ f).normalize(p.ring)
+    override def compute: (IndexedSeq[TIn]) => TOut = ins =>
+      FastFactor.multiplyRetain(p.ring)(p.domains)(ins :+ f, Array(v)).normalize(p.ring)
+
     /** The nodes this edge depends on. This must remain lazy. */
     override def input: IndexedSeq[ETIn] = for(ov <- f.variables if ov != v) yield V2F(ov,f,scheme.superCondition(ov,fc))
   }
@@ -161,12 +163,12 @@ class LCBP(p: Problem,
 
     type ETIn = LogConditionWeight
     /** The output is in normal encoding! */
-    type TOut = IndexedSeq[Double]
+    type TOut = Array[Double]
 
     /** @return the change between two values of this node. Zero means no change, lower means less change. */
     override def diff(r1: TOut, r2: TOut): Double = vultura.util.maxDiff(r1.toArray,r2.toArray)
     /** Create a (mutable???) representation of the initial value of this node. */
-    override def create: TOut = IndexedSeq.fill(conditions.size)(1d / conditions.size)
+    override def create: TOut = Array.fill(conditions.size)(1d / conditions.size)
 
     /** The conditional distribution over conditions is fed by the following factor/variable beliefs. */
     override def input: IndexedSeq[ETIn] = inputConditions.map(LogConditionWeight)
