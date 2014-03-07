@@ -146,7 +146,7 @@ class LCBP(p: Problem,
 
     //third in tuple is number of neighbours, needed to compute the Bethe entropy approximation
     val variables: IndexedSeq[(Int,Condition,Int)] =
-      p.variables.toIndexedSeq.map(v => (v, scheme.superCondition(v,condition), p.neighboursOf(v).size))
+      p.variables.toIndexedSeq.map(v => (v, scheme.superCondition(v,condition), p.factorsOfVariable(v).size))
     val factors: IndexedSeq[(FastFactor,Condition)] =
       p.factors.toIndexedSeq.map(f => f -> scheme.superConditionJoint(f.variables,condition))
 
