@@ -175,6 +175,8 @@ class LCBP(p: Problem,
     override def toString: String = s"Weight ${briefCondition(condition)}"
   }
 
+  val jointScheme: LScheme = scheme.jointScheme(p.variables)
+
   /** Conditional distribution over conditions. This is required to combine the factor-to-variable messages,
     * when a factor is conditioned deeper than the adjacent variable.
     *
@@ -203,7 +205,7 @@ class LCBP(p: Problem,
     val lookup: Map[Int,Iterable[Condition]] = (for{
       (cond, idx) <- conditions.zipWithIndex
       refinedCond = cond ++ given //maps are required to be consistent
-    subCond <- scheme.subConditions(refinedCond,p.variables)
+    subCond <- jointScheme.condition(refinedCond).partialAssignments
   } yield idx -> subCond).groupByMap(_._1,_._2)
 
     /** atomic conditions appear in in `input` in this order. */

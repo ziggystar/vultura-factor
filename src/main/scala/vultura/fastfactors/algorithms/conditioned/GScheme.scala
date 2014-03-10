@@ -7,8 +7,7 @@ case class GScheme(_lSchemes: Map[Int,LScheme] = Map()){
   val lSchemes = _lSchemes.withDefaultValue(LScheme.empty)
   /** Create the conditions for a factor with the given scope.
     * @return the conditions created by the product of the conditions of `vars`. */
-  def jointConditions(vars: Iterable[Int]): Seq[Condition] =
-    vars.toSeq.map(lSchemes).foldLeft(LScheme.empty)(_.multiply(_)).partialAssignments
+  def jointConditions(vars: Iterable[Int]): Seq[Condition] = jointScheme(vars).partialAssignments
   /** @return The conditions for a given variable. */
   def variableConditions(v: Int): Seq[Condition] = lSchemes(v).partialAssignments
   /** Meant to compute the condition of a variable that is active for a given condition of an adjacent factor. */
@@ -23,8 +22,9 @@ case class GScheme(_lSchemes: Map[Int,LScheme] = Map()){
     assert(singleAssignment.size == 1, "found more than one super condition for a variable")
     singleAssignment.head
   }
-  def subConditions(c: Condition, vars: Iterable[Int]): Seq[Condition] =
-    vars.toSeq.map(lSchemes).foldLeft(LScheme.empty)(_.multiply(_)).condition(c).partialAssignments
+  def subConditions(c: Condition, vars: Iterable[Int]): Seq[Condition] = jointScheme(vars).condition(c).partialAssignments
+
+  def jointScheme(vars: Iterable[Int]) = vars.toSeq.map(lSchemes).foldLeft(LScheme.empty)(_.multiply(_))
 
   /** @param conditions
     * @param given
