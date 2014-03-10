@@ -203,8 +203,8 @@ class LCBP(p: Problem,
     val lookup: Map[Int,Iterable[Condition]] = (for{
       (cond, idx) <- conditions.zipWithIndex
       refinedCond = cond ++ given //maps are required to be consistent
-      superCond = scheme.superConditionJoint(p.variables,refinedCond)
-    } yield idx -> superCond).groupByMap(_._1,_._2)
+    subCond <- scheme.subConditions(refinedCond,p.variables)
+  } yield idx -> subCond).groupByMap(_._1,_._2)
 
     /** atomic conditions appear in in `input` in this order. */
     val inputConditions: IndexedSeq[Condition] = lookup.flatMap(_._2).toSet.toIndexedSeq

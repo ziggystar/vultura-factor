@@ -18,17 +18,23 @@ class LCBPTest extends Specification {
   val p1 = grid(2,2,2,expGauss(0.5))
   def fullyConditioned(p: Problem, cv: Int) = GScheme(p.variables.map(v => v -> LScheme.split(cv,p.domains)).toMap)
   val p2 = grid(4,4,2,expGauss(1))
+  def slightlyConditioned(p: Problem, cv: Int) = GScheme((p.neighboursOf(cv) + cv).map(v => v -> LScheme.split(cv,p.domains)).toMap)
+
   override def is: Fragments =
-    "unconditioned LCBP" ^
+    "unconditioned" ^
       "yield same result as BP" ^
         "on simple loop" ! (new LCBP(p1,GScheme(),1e-7,10000).logZ must beCloseTo(new BeliefPropagation(p1,new Random(0),1e-7,10000).logZ,0.0001)) ^
         "on less simple loop" ! (new LCBP(p2,GScheme(),1e-7,10000).logZ must beCloseTo(new BeliefPropagation(p2,new Random(0),1e-7,10000).logZ,0.0001)) ^
       p^
     p^
-    "fully conditioned LCBP" ^
+    "fully conditioned" ^
       {
-        new LCBP(p1,fullyConditioned(p1,0)).toDOT.toPDF("debug.pdf")
         new LCBP(p1,fullyConditioned(p1,0)).logZ must beCloseTo(CalibratedJunctionTree.logZ(p1),1e-5)
+      } ^
+    p^
+    "locally conditoned" ^
+      {
+        new LCBP(p2,slightlyConditioned(p2,0)).logZ must beCloseTo(CalibratedJunctionTree.logZ(p2),1e-5)
       }
 
 
