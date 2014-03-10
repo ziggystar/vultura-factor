@@ -28,7 +28,7 @@ class LCBP(p: Problem,
     type TOut = FastFactor
 
     def variables: Array[Int]
-    /** Create a (mutable???) representation of the initial value of this node. */
+    /** Create a (mutable?) representation of the initial value of this node. */
     override def create: TOut = FastFactor.maxEntropy(variables,p.domains,p.ring)
     /** @return the change between two values of this node. Zero means no change, lower means less change. */
     override def diff(r1: TOut, r2: TOut): Double = vultura.util.maxDiff(r1.values,r2.values)
@@ -57,7 +57,7 @@ class LCBP(p: Problem,
 
     val conditionedBelief = FastFactor.deterministicMaxEntropy(Array(v),vc,p.domains,p.ring)
 
-    /** Create a (mutable???) representation of the initial value of this node. */
+    /** Create a (mutable?) representation of the initial value of this node. */
     override def create: TOut = conditionedBelief
 
     /** Compute the value of this node given the values of the independent nodes. */
@@ -132,7 +132,7 @@ class LCBP(p: Problem,
 
     val conditionedBelief = FastFactor.deterministicMaxEntropy(Array(v),vc,p.domains,p.ring)
 
-    /** Create a (mutable???) representation of the initial value of this node. */
+    /** Create a (mutable?) representation of the initial value of this node. */
     override def create: TOut = conditionedBelief
 
     /** The nodes this edge depends on. This must remain lazy. */
@@ -148,7 +148,7 @@ class LCBP(p: Problem,
   case class LogConditionWeight(condition: Condition) extends CEdge with ValueEdge {
     override type ETIn = CEdge with FactorEdge
 
-    /** Create a (mutable???) representation of the initial value of this node. */
+    /** Create a (mutable?) representation of the initial value of this node. */
     override def create: TOut = p.ring.one
 
     /** The nodes this edge depends on. This must remain lazy. */
@@ -194,7 +194,7 @@ class LCBP(p: Problem,
 
     /** @return the change between two values of this node. Zero means no change, lower means less change. */
     override def diff(r1: TOut, r2: TOut): Double = vultura.util.maxDiff(r1.toArray,r2.toArray)
-    /** Create a (mutable???) representation of the initial value of this node. */
+    /** Create a (mutable?) representation of the initial value of this node. */
     override def create: TOut = Array.fill(conditions.size)(1d / conditions.size)
 
     /** The conditional distribution over conditions is fed by the following factor/variable beliefs. */
@@ -226,7 +226,7 @@ class LCBP(p: Problem,
   case object LogPartition extends CEdge with ValueEdge {
     override type ETIn = LogConditionWeight
 
-    /** Create a (mutable???) representation of the initial value of this node. */
+    /** Create a (mutable?) representation of the initial value of this node. */
     override def create: TOut = 1d
     
     /** Compute the value of this node given the values of the independent nodes. */
