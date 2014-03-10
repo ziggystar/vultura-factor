@@ -3,7 +3,8 @@ package vultura.fastfactors.algorithms.conditioned
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
  */
-case class GScheme(lSchemes: Map[Int,LScheme] = Map().withDefaultValue(LScheme.empty)){
+case class GScheme(_lSchemes: Map[Int,LScheme] = Map()){
+  val lSchemes = _lSchemes.withDefaultValue(LScheme.empty)
   /** Create the conditions for a factor with the given scope.
     * @return the conditions created by the product of the conditions of `vars`. */
   def jointConditions(vars: Iterable[Int]): Seq[Condition] =
