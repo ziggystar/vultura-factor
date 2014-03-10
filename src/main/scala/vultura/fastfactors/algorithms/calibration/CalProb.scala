@@ -57,11 +57,13 @@ class Calibrator(edges: Set[CEdge], tol: Double = 1e-9, maxSteps: Int = 1000){
 
   def nodeState(n: CEdge): n.TOut = state(edgeIndex(n)).asInstanceOf[n.TOut]
 
+  val inputMemo: Map[CEdge,IndexedSeq[CEdge]] = edges.map(e => e -> e.input)(collection.breakOut)
+
   calibrate()
 
   /** Assumes that `e` is already dequeued, and steps is incremented. */
   private def updateEdge(e: CEdge): Boolean = {
-    val input: IndexedSeq[e.TIn] = e.input.map(n => nodeState(n).asInstanceOf[e.TIn])(collection.breakOut)
+    val input: IndexedSeq[e.TIn] = inputMemo(e).map(n => nodeState(n).asInstanceOf[e.TIn])(collection.breakOut)
     //recalculate
     val newVal: e.TOut = e.compute(input)
     val diff = e.diff(newVal, nodeState(e))
