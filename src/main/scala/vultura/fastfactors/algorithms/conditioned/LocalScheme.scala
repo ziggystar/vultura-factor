@@ -47,9 +47,9 @@ object LScheme{
 
 /** Corresponds to decomposable conjunction for d-dnnf. */
 case class DCon(subForest: Stream[LScheme]) extends LScheme {
-  require((subForest.map(_.usedVariables).toSet: Set[Set[Int]]).isPairwiseDisjoint)
+  assert((subForest.map(_.usedVariables).toSet: Set[Set[Int]]).isPairwiseDisjoint)
 
-  override def usedVariables: Set[Int] = subForest.flatMap(_.usedVariables)(collection.breakOut)
+  lazy val usedVariables: Set[Int] = subForest.flatMap(_.usedVariables)(collection.breakOut)
 
   /** used decisions from partial assignment to strip off contradictory assignments.
     * - `!strip(pa).usedVariables.contains(pa.values)` holds. */
@@ -64,7 +64,7 @@ object DCon{
 
 /** Corresponds do deterministic disjunction. */
 case class DDis(variable: Int, assignments: Map[Int,LScheme]) extends LScheme {
-  require(assignments.values.forall(!_.usedVariables.contains(variable)), "trying to build double assignment")
+  assert(assignments.values.forall(!_.usedVariables.contains(variable)), "trying to build double assignment")
 
   override def usedVariables: Set[Int] =
     (assignments.values.flatMap(_.usedVariables)(collection.breakOut): Set[Int]) + variable

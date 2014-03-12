@@ -61,15 +61,24 @@ object Benchmarks {
 
   def warmup(task: () => Unit): Unit = {
     var times: Seq[Double] = null
+    val begin = System.nanoTime()
     do{
       times = Seq.fill(5)(measure(task()))
-    } while(times.sd > 0.002)
+    } while(times.sd/times.mean > 0.02 && System.nanoTime() - begin < 5e9)
   }
 
   def measure(task: => Unit): Double = {
     val start = System.nanoTime()
     task
     (System.nanoTime() - start) * 1e-9
+  }
+
+  def times(n: Int)(task: () => Unit): () => Unit = () => {
+    var i = 0
+    while(i < n){
+      task()
+      i += 1
+    }
   }
 
   def benchmarkTask(t: SPTask): Unit = {
@@ -88,5 +97,4 @@ object Benchmarks {
       benchmarkTask(t)
     }
   }
-
 }

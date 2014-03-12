@@ -17,7 +17,7 @@ class LCBP(p: Problem,
 
   //TODO make this work for the Log ring
   def linearCombination(weights: Array[Double], factors: IndexedSeq[FastFactor]): FastFactor = {
-    require(weights.size == factors.size)
+    assert(weights.size == factors.size)
     def elementWiseSum(a1: Array[Double], a2: Array[Double]) = a1.zip(a2).map{case (x1,x2) => x1 + x2}
     val weighted = factors.zip(weights).map{case (f,w) => f.map(_ * w)}
     weighted.reduce[FastFactor]{case (f1,f2) => f1.copy(values=elementWiseSum(f1.values,f2.values))}
@@ -186,7 +186,7 @@ class LCBP(p: Problem,
     * @param given The condition of the variable.
     */
   case class ConditionDistribution(conditions: IndexedSeq[Condition], given: Condition) extends CEdge {
-    require(
+    assert(
       conditions.forall(cond => cond.keySet.intersect(given.keySet).forall(k => cond(k) == given(k))),
       "contradictory conditioned distribution created")
 
