@@ -5,7 +5,6 @@ import vultura.fastfactors._
 import vultura.fastfactors.algorithms.calibration.{Calibrator, CEdge}
 import vultura.fastfactors.algorithms.InfAlg
 import vultura.util.graph.DotGraph
-import scala.collection.SeqView
 
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
