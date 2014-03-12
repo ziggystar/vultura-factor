@@ -5,6 +5,7 @@ import vultura.fastfactors._
 import vultura.fastfactors.algorithms.calibration.{Calibrator, CEdge}
 import vultura.fastfactors.algorithms.InfAlg
 import vultura.util.graph.DotGraph
+import scala.collection.SeqView
 
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
@@ -159,18 +160,22 @@ class LCBP(p: Problem,
 
     //third in tuple is number of neighbours, needed to compute the Bethe entropy approximation
     val variables: IndexedSeq[(Int,Condition,Int)] =
-      p.variables.toIndexedSeq.map(v => (v, scheme.superCondition(v,condition), p.factorsOfVariable(v).size))
+      p.variables.map(v => (v, scheme.superCondition(v,condition), p.factorsOfVariable(v).size))(collection.breakOut)
     val factors: IndexedSeq[(FastFactor,Condition)] =
-      p.factors.toIndexedSeq.map(f => f -> scheme.superConditionJoint(f.variables,condition))
+      p.factors.map(f => f -> scheme.superConditionJoint(f.variables,condition))(collection.breakOut)
 
-  /** Compute the value of this node given the values of the independent nodes. */
+    /** Compute the value of this node given the values of the independent nodes. */
     override def compute: (IndexedSeq[TIn]) => TOut = ins => {
-      val vBels = ins.take(variables.length)
-      val fBels = ins.drop(variables.length)
-      val logExpects = fBels.zip(logFactors).map{case (fbel, factor) => p.ring.expectation(fbel.values,factor)}.sum
-      val factorEntropies = fBels.map(fb => p.ring.entropy(fb.values)).sum
-      val weightedVariableEntropies = vBels.zip(variables).map{case (vbel,(_,_,neighbours)) => p.ring.entropy(vbel.values) * (1 - neighbours)}.sum
-      logExpects + factorEntropies + weightedVariableEntropies
+      val view = ins.view
+      val vBels = view.take(variables.length)
+      val fBels = view.drop(variables.length)
+      val logExpectsAndFactorEntropies = fBels.zip(logFactors).foldLeft(0d){
+        case (acc,(fbel, factor)) => acc + p.ring.expectation(fbel.values,factor) + p.ring.entropy(fbel.values)
+      }
+      val weightedVariableEntropies = vBels.zip(variables).foldLeft(0d){
+        case (acc,(vbel,(_,_,neighbours))) => acc + p.ring.entropy(vbel.values) * (1 - neighbours)
+      }
+      logExpectsAndFactorEntropies + weightedVariableEntropies
     }
 
     override def toString: String = s"Weight ${briefCondition(condition)}"
@@ -201,7 +206,7 @@ class LCBP(p: Problem,
     override def create: TOut = Array.fill(conditions.size)(1d / conditions.size)
 
     /** The conditional distribution over conditions is fed by the following factor/variable beliefs. */
-    override def input: IndexedSeq[ETIn] = inputConditions.map(LogConditionWeight)
+    override lazy val input: IndexedSeq[ETIn] = inputConditions.map(LogConditionWeight)
     /** maps from index in `conditions` to contributing atomic conditions. */
     val lookup: Map[Int,Iterable[Condition]] = (for{
       (cond, idx) <- conditions.zipWithIndex
@@ -210,12 +215,14 @@ class LCBP(p: Problem,
   } yield idx -> subCond).groupByMap(_._1,_._2)
 
     /** atomic conditions appear in in `input` in this order. */
-    val inputConditions: IndexedSeq[Condition] = lookup.flatMap(_._2).toSet.toIndexedSeq
-    /** maps atomic conditions to their index in `inputs`. */
-    val inputMap: Map[Condition, Int] = inputConditions.zipWithIndex.toMap
+    val inputConditions: IndexedSeq[Condition] = (lookup.flatMap(_._2)(collection.breakOut):Set[Condition]).toIndexedSeq
 
     /** maps from index in `conditions` to the indices of the contributing atomic conditions in `input`. */
-    val lookBack: Map[Int,Iterable[Int]] = lookup.map{case (k,v) => k -> v.map(inputMap)}
+    val lookBack: Map[Int,Iterable[Int]] = {
+      // maps atomic conditions to their index in `inputs`
+      val inputMap: Map[Condition, Int] = inputConditions.zipWithIndex.toMap
+      lookup.map{case (k,v) => k -> v.map(inputMap)}
+    }
 
     /** Compute the value of this node given the values of the independent nodes. */
     override def compute: (IndexedSeq[TIn]) => TOut = ins => LogD.decode(LogD.normalize((0 until conditions.size).map{ idx =>
