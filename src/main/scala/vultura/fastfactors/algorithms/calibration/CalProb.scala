@@ -28,9 +28,12 @@ trait CEdge {
 object CEdge {
   /** @return The transitive closure, following the edges backwards. */
   def expand(edges: Set[CEdge], closed: Set[CEdge] = Set()): Set[CEdge] = if(edges.isEmpty) closed else {
-    val preds: Set[CEdge] = edges.flatMap(_.input)
     val newClosed = edges ++ closed
-    expand(preds -- newClosed, newClosed)
+    val preds: Set[CEdge] = (for {
+      e <- edges
+      in <- e.input if !newClosed(in)
+    } yield in)(collection.breakOut)
+    expand(preds, newClosed)
   }
 }
 
@@ -57,13 +60,13 @@ class Calibrator(edges: Set[CEdge], tol: Double = 1e-9, maxSteps: Int = 1000){
 
   def nodeState(n: CEdge): n.TOut = state(edgeIndex(n)).asInstanceOf[n.TOut]
 
-  val inputMemo: Map[CEdge,IndexedSeq[CEdge]] = edges.map(e => e -> e.input)(collection.breakOut)
+  val inputMemo: Map[CEdge,IndexedSeq[Any]] = edges.map(e => e -> e.input.map(n => nodeState(n)))(collection.breakOut)
 
   calibrate()
 
   /** Assumes that `e` is already dequeued, and steps is incremented. */
   private def updateEdge(e: CEdge): Boolean = {
-    val input: IndexedSeq[e.TIn] = inputMemo(e).map(n => nodeState(n).asInstanceOf[e.TIn])(collection.breakOut)
+    val input: IndexedSeq[e.TIn] = inputMemo(e).asInstanceOf[IndexedSeq[e.TIn]]
     //recalculate
     val newVal: e.TOut = e.compute(input)
     val diff = e.diff(newVal, nodeState(e))

@@ -66,7 +66,7 @@ case class FastFactor(variables: Array[Int], values: Array[Double]){
     case _ => false
   }
 
-  override def hashCode(): Int = (variables.toSeq,values.toSeq).hashCode()
+  override lazy val hashCode: Int = (variables.toSeq,values.toSeq).hashCode()
 
   override def toString: String = f"FastFactor(VAR: ${variables.mkString(",")},VAL: ${values.mkString(",")})"
   def toBriefString: String = f"${variables.mkString(",")} | ${values.map("%.2f".format(_)).mkString(",")}"

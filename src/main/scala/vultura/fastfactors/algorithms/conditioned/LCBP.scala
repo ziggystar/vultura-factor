@@ -144,6 +144,8 @@ class LCBP(p: Problem,
     override def toString: String = s"VBel:$v ${briefCondition(vc)}"
   }
 
+  val logFactors: IndexedSeq[Array[Double]] = p.factors.map(factor => p.ring.decode(factor.values).map(math.log))
+
   /** The weight of one elementary condition. */
   case class LogConditionWeight(condition: Condition) extends CEdge with ValueEdge {
     override type ETIn = CEdge with FactorEdge
@@ -165,8 +167,7 @@ class LCBP(p: Problem,
     override def compute: (IndexedSeq[TIn]) => TOut = ins => {
       val vBels = ins.take(variables.length)
       val fBels = ins.drop(variables.length)
-      //TODO optimize: cache the log factors
-      val logExpects = fBels.zip(factors).map{case (fbel, (factor,_)) => p.ring.expectation(fbel.values,p.ring.decode(factor.values).map(math.log))}.sum
+      val logExpects = fBels.zip(logFactors).map{case (fbel, factor) => p.ring.expectation(fbel.values,factor)}.sum
       val factorEntropies = fBels.map(fb => p.ring.entropy(fb.values)).sum
       val weightedVariableEntropies = vBels.zip(variables).map{case (vbel,(_,_,neighbours)) => p.ring.entropy(vbel.values) * (1 - neighbours)}.sum
       logExpects + factorEntropies + weightedVariableEntropies

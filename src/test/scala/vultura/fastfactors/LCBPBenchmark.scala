@@ -13,12 +13,14 @@ object LCBPBenchmark {
   case class LCProblem(p: Problem, scheme: GScheme = GScheme())
 
   val gpProblem8x8 = GridProblem(grid(8,8,2,expGauss(1)),8,1,1,1d,0,4)
+  val gpProblem6x6 = GridProblem(grid(6,6,2,expGauss(1)),6,1,1,1d,0,4)
 
   def fromGridProblem(gp: GridProblem): LCProblem = LCProblem(gp.problem,gp.gscheme)
   val problems: Seq[(String,LCProblem)] = Seq(
 //    "grid3x3x2" -> LCProblem(grid(3,3,2,expGauss(1))),
 //    "grid5x5x2" -> LCProblem(grid(5,5,2,expGauss(1))),
 //    "grid6x6x2" -> LCProblem(grid(6,6,2,expGauss(1))),
+    "conditioned 6x6" -> fromGridProblem(gpProblem6x6),
     "conditioned 8x8" -> fromGridProblem(gpProblem8x8)
   )
 
@@ -28,10 +30,10 @@ object LCBPBenchmark {
     for{
       (ps, p) <- problems
     } {
-      val task = () => algorithm(p)
+      val n = 5
+      val task = times(n)(() => algorithm(p))
       warmup(task)
-      val n = 10
-      benchmark(times(n)(task),s"$n x " + ps)
+      benchmark(task,s"$n x " + ps)
     }
   }
 }
