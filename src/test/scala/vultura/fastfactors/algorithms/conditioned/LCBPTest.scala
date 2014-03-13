@@ -6,9 +6,6 @@ import org.specs2.specification.Fragments
 import vultura.fastfactors.generators._
 import scala.util.Random
 import vultura.fastfactors.algorithms.{CalibratedJunctionTree, BeliefPropagation}
-import java.io.{PrintStream, FileOutputStream}
-import scala.sys.process._
-import vultura.fastfactors.algorithms.calibration.BP_Cal
 import vultura.fastfactors.Problem
 
 /**
@@ -23,6 +20,7 @@ class LCBPTest extends Specification {
   val overlappingGrid = GridProblem(6,1,2,1d,4)
   val overlappingGridSmall = GridProblem(width = 3,margin=0,influence=2,coupling = 1d,numConditioned = 4)
 
+  // todo: create matcher that checks for convergence
   override def is: Fragments =
     "unconditioned" ^
       "yield same result as BP" ^
@@ -40,8 +38,8 @@ class LCBPTest extends Specification {
         new LCBP(p2,slightlyConditioned(p2,0)).logZ must beCloseTo(CalibratedJunctionTree.logZ(p2),1e-3)
       } ^
     "overlapping influences" ^
-      "bug, threw an exception" ! {new LCBP(overlappingGrid.problem,overlappingGrid.gscheme).logZ must beCloseTo(overlappingGrid.problem.logZ,0.1)} ^
-      "small grid" ! {new LCBP(overlappingGridSmall.problem,overlappingGridSmall.gscheme).logZ must beCloseTo(overlappingGridSmall.problem.logZ,0.1)}
+      "bug, threw an exception" ! {new LCBP(overlappingGrid.problem,overlappingGrid.gscheme, maxIterations = 100000).logZ must beCloseTo(overlappingGrid.problem.logZ,0.1)} ^
+      "small grid" ! {new LCBP(overlappingGridSmall.problem,overlappingGridSmall.gscheme, maxIterations = 100000).logZ must beCloseTo(overlappingGridSmall.problem.logZ,0.1)}
 
 
 }
