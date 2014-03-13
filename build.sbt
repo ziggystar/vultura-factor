@@ -6,6 +6,8 @@ version := "16-SNAPSHOT"
 
 scalaVersion := "2.10.3"
 
+scalacOptions in Compile += "-Xdisable-assertions"
+
 //specs2 dependency
 libraryDependencies += "org.specs2" % "specs2_2.10" % "2.3.4" % "test"
 
