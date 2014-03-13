@@ -6,6 +6,7 @@ import vultura.util.TreeWidth._
 import scalaz.Tree
 import java.io._
 import vultura.fastfactors.algorithms.CalibratedJunctionTree
+import vultura.util.SSet
 
 /**
  * Created by IntelliJ IDEA.
@@ -60,6 +61,16 @@ case class Problem(factors: IndexedSeq[FastFactor],domains: Array[Int],ring: Rin
 
   /** @return Exact log Z obtained by junction tree algorithm. */
   def logZ: Double = CalibratedJunctionTree.logZ(this)
+  
+  /** merges factors into other factors where possible */
+  def simplify: Problem = {
+    val variablesToFactors: Map[Set[Int], IndexedSeq[FastFactor]] = factors.groupBy(_.variables.toSet)
+    val sSet: SSet[Int] = new SSet(variablesToFactors.keySet)
+    val maximalSets: Set[Set[Int]] = sSet.maximalSets
+    val maximalSetToSets: Map[Set[Int], Iterable[Set[Int]]] = variablesToFactors.keys.groupBy(sSet.superSetsOf(_).intersect(maximalSets).head)
+    val values: Map[Set[Int], FastFactor] = maximalSetToSets.mapValues(sets => FastFactor.multiply(ring)(domains)(sets.flatMap(variablesToFactors).toIndexedSeq))
+    Problem(values.values.toIndexedSeq, domains, ring)
+  }
 }
 
 object Problem{
