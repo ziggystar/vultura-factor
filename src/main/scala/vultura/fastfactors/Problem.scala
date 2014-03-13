@@ -5,6 +5,7 @@ import scala.util.Random
 import vultura.util.TreeWidth._
 import scalaz.Tree
 import java.io._
+import vultura.fastfactors.algorithms.CalibratedJunctionTree
 
 /**
  * Created by IntelliJ IDEA.
@@ -56,6 +57,9 @@ case class Problem(factors: IndexedSeq[FastFactor],domains: Array[Int],ring: Rin
   def toRing(newRing: RingZ[Double]): Problem = Problem(factors.map(f => newRing.encode(ring.decode(f))),domains,newRing)
 
   def toBriefString: String = f"(Problem: ${variables.size} variables, ${factors.size} factors, ring: $ring"
+
+  /** @return Exact log Z obtained by junction tree algorithm. */
+  def logZ: Double = CalibratedJunctionTree.logZ(this)
 }
 
 object Problem{

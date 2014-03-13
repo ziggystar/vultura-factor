@@ -20,6 +20,8 @@ class LCBPTest extends Specification {
   val p2 = grid(4,4,2,expGauss(1))
   def slightlyConditioned(p: Problem, cv: Int) = GScheme((p.neighboursOf(cv) + cv).map(v => v -> LScheme.split(cv,p.domains)).toMap)
 
+  val overlappingGrid = GridProblem(6,1,2,1d,4)
+
   override def is: Fragments =
     "unconditioned" ^
       "yield same result as BP" ^
@@ -34,8 +36,10 @@ class LCBPTest extends Specification {
     p^
     "locally conditoned" ^
       {
-        new LCBP(p2,slightlyConditioned(p2,0)).logZ must beCloseTo(CalibratedJunctionTree.logZ(p2),1e-5)
-      }
+        new LCBP(p2,slightlyConditioned(p2,0)).logZ must beCloseTo(CalibratedJunctionTree.logZ(p2),1e-3)
+      } ^
+    "overlapping influences" ^
+      "bug, threw an exception" ! {new LCBP(overlappingGrid.problem,overlappingGrid.gscheme).logZ must beCloseTo(overlappingGrid.problem.logZ,0.1)}
 
 
 }
