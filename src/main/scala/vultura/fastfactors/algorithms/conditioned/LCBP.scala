@@ -10,7 +10,7 @@ import vultura.util.graph.DotGraph
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
  */
 class LCBP(p: Problem,
-           scheme: GScheme = GScheme(),
+           scheme: GScheme,
            tol: Double = 1e-9,
            maxIterations: Int = 1000) extends InfAlg {
   require(p.ring == NormalD, "linear combination of messages only implemented for normal domain")
@@ -180,8 +180,6 @@ class LCBP(p: Problem,
     override def toString: String = s"Weight ${briefCondition(condition)}"
   }
 
-  val jointScheme: LScheme = scheme.jointScheme(p.variables)
-
   /** Conditional distribution over conditions. This is required to combine the factor-to-variable messages,
     * when a factor is conditioned deeper than the adjacent variable.
     *
@@ -210,7 +208,7 @@ class LCBP(p: Problem,
     val lookup: Map[Int,Iterable[Condition]] = (for{
       (cond, idx) <- conditions.zipWithIndex
       refinedCond = cond ++ given //maps are required to be consistent
-    subCond <- jointScheme.condition(refinedCond).partialAssignments
+    subCond <- scheme.subConditions(refinedCond,p.variables)
   } yield idx -> subCond).groupByMap(_._1,_._2)
 
     /** atomic conditions appear in in `input` in this order. */

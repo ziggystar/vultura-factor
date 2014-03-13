@@ -16,17 +16,18 @@ import vultura.fastfactors.Problem
  */
 class LCBPTest extends Specification {
   val p1 = grid(2,2,2,expGauss(0.5))
-  def fullyConditioned(p: Problem, cv: Int) = GScheme(p.variables.map(v => v -> LScheme.split(cv,p.domains)).toMap)
+  def fullyConditioned(p: Problem, cv: Int) = GScheme(p.domains, p.variables.map(v => v -> LScheme.split(cv,p.domains)).toMap)
   val p2 = grid(4,4,2,expGauss(1))
-  def slightlyConditioned(p: Problem, cv: Int) = GScheme((p.neighboursOf(cv) + cv).map(v => v -> LScheme.split(cv,p.domains)).toMap)
+  def slightlyConditioned(p: Problem, cv: Int) = GScheme(p.domains, (p.neighboursOf(cv) + cv).map(v => v -> LScheme.split(cv,p.domains)).toMap)
 
   val overlappingGrid = GridProblem(6,1,2,1d,4)
+  val overlappingGridSmall = GridProblem(width = 3,margin=0,influence=2,coupling = 1d,numConditioned = 4)
 
   override def is: Fragments =
     "unconditioned" ^
       "yield same result as BP" ^
-        "on simple loop" ! (new LCBP(p1,GScheme(),1e-7,10000).logZ must beCloseTo(new BeliefPropagation(p1,new Random(0),1e-7,10000).logZ,0.0001)) ^
-        "on less simple loop" ! (new LCBP(p2,GScheme(),1e-7,10000).logZ must beCloseTo(new BeliefPropagation(p2,new Random(0),1e-7,10000).logZ,0.0001)) ^
+        "on simple loop" ! (new LCBP(p1,GScheme(p1.domains),1e-7,10000).logZ must beCloseTo(new BeliefPropagation(p1,new Random(0),1e-7,10000).logZ,0.0001)) ^
+        "on less simple loop" ! (new LCBP(p2,GScheme(p2.domains),1e-7,10000).logZ must beCloseTo(new BeliefPropagation(p2,new Random(0),1e-7,10000).logZ,0.0001)) ^
       p^
     p^
     "fully conditioned" ^
@@ -39,7 +40,8 @@ class LCBPTest extends Specification {
         new LCBP(p2,slightlyConditioned(p2,0)).logZ must beCloseTo(CalibratedJunctionTree.logZ(p2),1e-3)
       } ^
     "overlapping influences" ^
-      "bug, threw an exception" ! {new LCBP(overlappingGrid.problem,overlappingGrid.gscheme).logZ must beCloseTo(overlappingGrid.problem.logZ,0.1)}
+      "bug, threw an exception" ! {new LCBP(overlappingGrid.problem,overlappingGrid.gscheme).logZ must beCloseTo(overlappingGrid.problem.logZ,0.1)} ^
+      "small grid" ! {new LCBP(overlappingGridSmall.problem,overlappingGridSmall.gscheme).logZ must beCloseTo(overlappingGridSmall.problem.logZ,0.1)}
 
 
 }

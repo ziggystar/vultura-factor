@@ -12,7 +12,7 @@ import vultura.fastfactors.algorithms.conditioned.GScheme
  * Created by thomas on 3/9/14.
  */
 object LCBPBenchmark {
-  case class LCProblem(p: Problem, scheme: GScheme = GScheme())
+  case class LCProblem(p: Problem, scheme: GScheme)
 
   val gpProblem8x8 = GridProblem(8,1,1,1d,0,4)
   val gpProblem6x6 = GridProblem(6,1,1,1d,0,4)

@@ -32,7 +32,7 @@ case class GridProblem(width: Int, margin: Int, influence: Int, coupling: Double
   def variable(x: Int, y: Int) = x + width * y
   def influences(cx: Int, cy: Int)(x: Int, y: Int) = math.abs(cx - x) <= influence && math.abs(cy - y) <= influence
 
-  val gscheme: GScheme = GScheme((for{
+  val gscheme: GScheme = GScheme(problem.domains, (for{
     x <- 0 until width
     y <- 0 until width
     cvars = conditionVariables.filter{case (cx,cy) => influences(cx,cy)(x,y)}
