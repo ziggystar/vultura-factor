@@ -9,10 +9,11 @@ import vultura.util.graph.DotGraph
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
  */
-class LCBP(p: Problem,
-           scheme: GScheme,
-           tol: Double = 1e-9,
-           maxIterations: Int = 1000) extends InfAlg {
+class LCBP(val p: Problem,
+           val scheme: GScheme,
+           val tol: Double = 1e-9,
+           val maxIterations: Int = 1000,
+           val exactConditions: Boolean = true) extends InfAlg {
   require(p.ring == NormalD, "linear combination of messages only implemented for normal domain")
 
   //TODO make this work for the Log ring
@@ -145,6 +146,30 @@ class LCBP(p: Problem,
   }
 
   val logFactors: IndexedSeq[Array[Double]] = p.factors.map(factor => p.ring.decode(factor.values).map(math.log))
+
+  case class LogCondCorrection(v: Int, f: FastFactor, fc: Condition) extends CEdge with ValueEdge {
+    /** Compute the value of this node given the values of the independent nodes. */
+    override def compute: (IndexedSeq[TIn]) => TOut = ins => {
+      val v2f = ins(0)
+      val f2v = ins(1)
+      val f2vSummed = ins(2)
+
+      val exponent = ???
+
+      ???
+    }
+
+    /** The nodes this edge depends on. This must remain lazy. */
+    override def input: IndexedSeq[ETIn] = IndexedSeq(
+      V2F(v,f,scheme.superCondition(v,fc)),
+      F2V(f,v,fc),
+      F2VSummed(f,v,scheme.superCondition(v,fc)))
+
+    /** Create a (mutable???) representation of the initial value of this node. */
+    override def create: TOut = 0d
+
+    override type ETIn = FactorEdge
+  }
 
   /** The weight of one elementary condition. */
   case class LogConditionWeight(condition: Condition) extends CEdge with ValueEdge {
