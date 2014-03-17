@@ -205,12 +205,13 @@ class LCBP(val p: Problem,
       logExpectsAndFactorEntropies + weightedVariableEntropies
     }
 
-    override def toString: String = s"Weight ${briefCondition(condition)}"
+    override def toString: String = s"LogWeight ${briefCondition(condition)}"
   }
   
   case class CorrectedLCW(condition: Condition) extends CEdge with ValueEdge {
     /** Compute the value of this node given the values of the independent nodes. */
-    override def compute: (IndexedSeq[TIn]) => TOut = ins => LogD.sum(ins.head, LogD.sumA(ins.tail.map(math.log(_)).toArray))
+    override def compute: (IndexedSeq[TIn]) => TOut = (ins: IndexedSeq[java.lang.Double]) =>
+      LogD.prodA((ins.tail.map(math.log(_)) :+ ins.head.doubleValue).toArray)
 
     /** The nodes this edge depends on. This must remain lazy. */
     override def input: IndexedSeq[ETIn] = IndexedSeq(LogConditionWeight(condition)) ++ corrections
@@ -273,6 +274,9 @@ class LCBP(val p: Problem,
     }(collection.breakOut)))
 
     override def toString: String = s"CDist: ${conditions.mkString} ${briefCondition(given)}"
+
+    /** @return human readable representation of a value. */
+    override def printValue(v: TOut): String = s"(${v.mkString(",")})"
   }
   
   /** Sums all LogConditionWeights. */
