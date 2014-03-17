@@ -41,7 +41,7 @@ object CEdge {
 
 class Calibrator(edges: Set[CEdge], tol: Double = 1e-9, maxSteps: Int = 1000){
   val edgeList: IndexedSeq[CEdge] = edges.toIndexedSeq
-  val edgeIndex: Map[CEdge, Int] = edgeList.zipWithIndex.toMap
+  val edgeIndex: collection.Map[CEdge, Int] = mutable.HashMap(edgeList.zipWithIndex:_*)
 
   //when a node changes its state, this tells us which edges need to be recomputed
   val dependentEdges: Map[CEdge, IndexedSeq[CEdge]] = {

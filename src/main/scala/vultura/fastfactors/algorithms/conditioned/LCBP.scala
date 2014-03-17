@@ -25,7 +25,7 @@ class LCBP(val p: Problem,
   }
 
   /** Mixin for CEdges that have factor values. */
-  trait FactorEdge { self: CEdge =>
+  trait FactorEdge extends HashMemo { self: CEdge with Product =>
     type TOut = FastFactor
 
     def variables: Array[Int]
@@ -37,7 +37,7 @@ class LCBP(val p: Problem,
     val fMul: (IndexedSeq[FastFactor]) => FastFactor = FastFactor.multiply(p.ring)(p.domains)
   }
 
-  trait ValueEdge { self: CEdge =>
+  trait ValueEdge extends HashMemo { self: CEdge with Product =>
     type TOut = java.lang.Double
     /** @return the change between two values of this node. Zero means no change, lower means less change. */
     override def diff(r1: TOut, r2: TOut): Double = math.abs(r1 - r2)
