@@ -8,6 +8,7 @@ import scala.util.Random
 import vultura.fastfactors.algorithms.{CalibratedJunctionTree, BeliefPropagation}
 import vultura.fastfactors.Problem
 import org.specs2.matcher.MatchResult
+import vultura.fastfactors.algorithms.calibration.BP_Cal
 
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
@@ -38,14 +39,21 @@ class LCBPTest extends Specification {
     "locally conditioned" ^
       "grid" ! convergedAndExactTo(new LCBP(p2,slightlyConditioned(p2,0), maxIterations = 100000, exactConditions = false),1e-3) ^
       "compare lcbp with and without correction" ! {
-        val problem = grid(4,1,2,expGauss(5))
+        val problem = grid(4,1,2,expGauss(1),new Random(1)).simplify
         val scheme = slightlyConditioned(problem, 0)
+        val lcbp = new LCBP(problem, scheme, tol=1e-11, maxIterations = 100000, exactConditions = false)
         val lcbpCorrected: LCBP = new LCBP(problem, scheme, maxIterations = 100000, exactConditions = true)
+        println("problem:\n\t" + problem.factors.mkString("\n\t"))
+        println("# LCBP-corrected")
         println(lcbpCorrected.calibrator.report)
-        println("true logz: " + problem.logZ)
-        val lcbp = new LCBP(problem, scheme, maxIterations = 100000, exactConditions = false)
+        println("# LCBP-uncorrected")
+        println(lcbp.calibrator.report)
+        println("\n\ntrue logz: " + problem.logZ)
+        println("lcbp-corrected: " + lcbpCorrected.logZ)
+        println("lcbp:\t" + lcbp.logZ)
+        println(lcbpCorrected.calibrator.isCalibrated + "/" + lcbp.calibrator.isCalibrated)
         (lcbpCorrected.calibrator.isCalibrated must beTrue) and (lcbp.calibrator.isCalibrated must beTrue) and
-          (lcbpCorrected.logZ must beCloseTo(lcbp.logZ,1e-5))
+          (lcbpCorrected.logZ must beCloseTo(lcbp.logZ,1e-4))
       } ^
       "random structure" ! convergedAndExactTo(new LCBP(rand1,slightlyConditioned(rand1,0),1e-9,10000, exactConditions = false), 1e-2) ^
       "random structure (exact)" ! convergedAndExactTo(new LCBP(rand1,slightlyConditioned(rand1,0),1e-9,10000,exactConditions = true), 1e-2) ^
