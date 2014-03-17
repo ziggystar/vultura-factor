@@ -17,12 +17,14 @@ trait CEdge {
   def create: TOut
   /** @return the change between two values of this node. Zero means no change, lower means less change. */
   def diff(r1: TOut, r2: TOut): Double
-  /** @return human readable representation of a value. */
-  def printValue(v: TOut): String = v.toString
   /** The nodes this edge depends on. This must remain lazy. */
   def input: IndexedSeq[ETIn]
   /** Compute the value of this node given the values of the independent nodes. */
   def compute: IndexedSeq[TIn] => TOut
+
+  def tabEntry: String = this.toString
+  /** @return human readable representation of a value. */
+  def printValue(v: TOut): String = v.toString
 }
 
 object CEdge {
@@ -97,4 +99,8 @@ class Calibrator(edges: Set[CEdge], tol: Double = 1e-9, maxSteps: Int = 1000){
   def valuesString: String = edgeList.map(n => s"$n -> ${n.printValue(nodeState(n))}").mkString("\n")
 
   def dot: DotGraph[CEdge] = DotGraph[CEdge](edges=edgeList.flatMap(n => n.input.map(_ -> n)))
+
+  def report: String = edgeList
+    .map(e => e.tabEntry + "\n\t" + e.printValue(nodeState(e).asInstanceOf[e.TOut]))
+    .sorted.mkString("\n")
 }

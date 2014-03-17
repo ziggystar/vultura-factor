@@ -147,16 +147,19 @@ class LCBP(val p: Problem,
 
   val logFactors: IndexedSeq[Array[Double]] = p.factors.map(factor => p.ring.decode(factor.values).map(math.log))
 
-  case class LogCondCorrection(v: Int, f: FastFactor, fc: Condition) extends CEdge with ValueEdge {
+  require(p.ring == NormalD, "condDist correction only implemented for normal messages")
+  case class CondCorrection(v: Int, f: FastFactor, fc: Condition) extends CEdge with ValueEdge {
+    
     /** Compute the value of this node given the values of the independent nodes. */
     override def compute: (IndexedSeq[TIn]) => TOut = ins => {
       val v2f = ins(0)
       val f2v = ins(1)
       val f2vSummed = ins(2)
-
-      val exponent = ???
-
-      ???
+      
+      val correction = 
+        for(i <- 0 until p.domains(v)) 
+        yield math.pow(v2f.values(i),v2f.values(i) * (f2v.values(i) - f2vSummed.values(i)))
+      correction.product
     }
 
     /** The nodes this edge depends on. This must remain lazy. */
@@ -168,7 +171,7 @@ class LCBP(val p: Problem,
     /** Create a (mutable???) representation of the initial value of this node. */
     override def create: TOut = 0d
 
-    override type ETIn = FactorEdge
+    override type ETIn = CEdge with FactorEdge
   }
 
   /** The weight of one elementary condition. */
@@ -204,6 +207,23 @@ class LCBP(val p: Problem,
 
     override def toString: String = s"Weight ${briefCondition(condition)}"
   }
+  
+  case class CorrectedLCW(condition: Condition) extends CEdge with ValueEdge {
+    /** Compute the value of this node given the values of the independent nodes. */
+    override def compute: (IndexedSeq[TIn]) => TOut = ins => LogD.sum(ins.head, LogD.sumA(ins.tail.map(math.log(_)).toArray))
+
+    /** The nodes this edge depends on. This must remain lazy. */
+    override def input: IndexedSeq[ETIn] = IndexedSeq(LogConditionWeight(condition)) ++ corrections
+
+    val corrections =
+      for(f <- p.factors; v <- f.variables)
+      yield CondCorrection(v,f,scheme.superConditionJoint(f.variables,condition))
+
+    /** Create a (mutable???) representation of the initial value of this node. */
+    override def create: TOut = 1d
+
+    override type ETIn = CEdge with ValueEdge
+  }
 
   /** Conditional distribution over conditions. This is required to combine the factor-to-variable messages,
     * when a factor is conditioned deeper than the adjacent variable.
@@ -218,7 +238,7 @@ class LCBP(val p: Problem,
       conditions.forall(cond => cond.keySet.intersect(given.keySet).forall(k => cond(k) == given(k))),
       "contradictory conditioned distribution created")
 
-    type ETIn = LogConditionWeight
+    type ETIn = CEdge with ValueEdge
     /** The output is in normal encoding! */
     type TOut = Array[Double]
 
@@ -228,7 +248,8 @@ class LCBP(val p: Problem,
     override def create: TOut = Array.fill(conditions.size)(1d / conditions.size)
 
     /** The conditional distribution over conditions is fed by the following factor/variable beliefs. */
-    override lazy val input: IndexedSeq[ETIn] = inputConditions.map(LogConditionWeight)
+    override lazy val input: IndexedSeq[ETIn] =
+      if(exactConditions) inputConditions.map(CorrectedLCW) else inputConditions.map(LogConditionWeight)
     /** maps from index in `conditions` to contributing atomic conditions. */
     val lookup: Map[Int,Iterable[Condition]] = (for{
       (cond, idx) <- conditions.zipWithIndex
@@ -256,7 +277,7 @@ class LCBP(val p: Problem,
   
   /** Sums all LogConditionWeights. */
   case object LogPartition extends CEdge with ValueEdge {
-    override type ETIn = LogConditionWeight
+    override type ETIn = CEdge with ValueEdge
 
     /** Create a (mutable?) representation of the initial value of this node. */
     override def create: TOut = 1d
@@ -267,7 +288,8 @@ class LCBP(val p: Problem,
 
     /** The nodes this edge depends on. This must remain lazy. */
     override def input: IndexedSeq[ETIn] =
-      scheme.jointConditions(p.variables).map(LogConditionWeight)(collection.breakOut)
+      if(exactConditions) scheme.jointConditions(p.variables).map(CorrectedLCW)(collection.breakOut)
+      else scheme.jointConditions(p.variables).map(LogConditionWeight)(collection.breakOut)
 
     override def toString: String = "LogPartition"
   }
