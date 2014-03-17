@@ -35,14 +35,23 @@ class LCBPTest extends Specification {
       "grid" ! convergedAndExactTo(new LCBP(p1,fullyConditioned(p1,0)), 1e-5) ^
       "random structure" ! convergedAndExactTo(new LCBP(rand1,fullyConditioned(rand1,0),1e-9,10000), 1e-2) ^
       p^
-    "locally conditoned" ^
-      "grid" ! convergedAndExactTo(new LCBP(p2,slightlyConditioned(p2,0),exactConditions = false),1e-3) ^
-      "grid (exact)" ! convergedAndExactTo(new LCBP(p2,slightlyConditioned(p2,0),exactConditions = true),1e-3) ^
+    "locally conditioned" ^
+      "grid" ! convergedAndExactTo(new LCBP(p2,slightlyConditioned(p2,0), maxIterations = 100000, exactConditions = false),1e-3) ^
+      "compare lcbp with and without correction" ! {
+        val problem = grid(4,1,2,expGauss(5))
+        val scheme = slightlyConditioned(problem, 0)
+        val lcbpCorrected: LCBP = new LCBP(problem, scheme, maxIterations = 100000, exactConditions = true)
+        println(lcbpCorrected.calibrator.report)
+        println("true logz: " + problem.logZ)
+        val lcbp = new LCBP(problem, scheme, maxIterations = 100000, exactConditions = false)
+        (lcbpCorrected.calibrator.isCalibrated must beTrue) and (lcbp.calibrator.isCalibrated must beTrue) and
+          (lcbpCorrected.logZ must beCloseTo(lcbp.logZ,1e-5))
+      } ^
       "random structure" ! convergedAndExactTo(new LCBP(rand1,slightlyConditioned(rand1,0),1e-9,10000, exactConditions = false), 1e-2) ^
       "random structure (exact)" ! convergedAndExactTo(new LCBP(rand1,slightlyConditioned(rand1,0),1e-9,10000,exactConditions = true), 1e-2) ^
       "overlapping influences" ^
       "bug, threw an exception" ! convergedAndExactTo(new LCBP(overlappingGrid.problem,overlappingGrid.gscheme, maxIterations = 100000),0.1) ^
       "small grid" ! convergedAndExactTo(new LCBP(overlappingGridSmall.problem,overlappingGridSmall.gscheme, maxIterations = 100000),0.1)
 
-  def convergedAndExactTo(lcbp:LCBP, tol: Double) = (lcbp.logZ must beCloseTo(lcbp.getProblem.logZ, tol)) and (lcbp.calibrator.isCalibrated must beTrue)
+  def convergedAndExactTo(lcbp:LCBP, tol: Double) = (lcbp.calibrator.isCalibrated must beTrue) and (lcbp.logZ must beCloseTo(lcbp.getProblem.logZ, tol))
 }

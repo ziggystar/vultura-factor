@@ -288,8 +288,7 @@ class LCBP(val p: Problem,
 
     /** The nodes this edge depends on. This must remain lazy. */
     override def input: IndexedSeq[ETIn] =
-      if(exactConditions) scheme.jointConditions(p.variables).map(CorrectedLCW)(collection.breakOut)
-      else scheme.jointConditions(p.variables).map(LogConditionWeight)(collection.breakOut)
+      scheme.jointConditions(p.variables).map(if(exactConditions) CorrectedLCW else LogConditionWeight)(collection.breakOut)
 
     override def toString: String = "LogPartition"
   }
