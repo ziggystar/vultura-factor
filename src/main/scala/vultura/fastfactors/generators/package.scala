@@ -12,7 +12,7 @@ import language.implicitConversions
 package object generators {
   trait FactorGenerator extends ((Seq[Int],IndexedSeq[Int],Random) => FastFactor) {
     def generate(variables: Array[Int], domains: Array[Int], random: Random): FastFactor
-    def apply(v1: Seq[Int], v2: IndexedSeq[Int], v3: Random): FastFactor = generate(v1.toArray.sorted,v2.toArray,v3)
+    final def apply(v1: Seq[Int], v2: IndexedSeq[Int], v3: Random): FastFactor = generate(v1.toArray.sorted,v2.toArray,v3)
   }
   trait SimpleGenerator extends FactorGenerator {
     final def generate(variables: Array[Int], domains: Array[Int], random: Random): FastFactor =  {
@@ -41,6 +41,13 @@ package object generators {
 
   def expGauss(sigma: Double = 1d, mean: Double = 0d): FactorGenerator =
     (entries: Int, random: Random) => Array.fill(entries)(math.exp(random.nextGaussian() * sigma + mean))
+
+  /** @return a factor with values `exp(-n*theta)`. large values for theta make strong attractive coupling,
+    *   negative values make repulsive coupling and zero makes no coupling. */
+  def attractive(theta: Double = 1d): FactorGenerator = new FactorGenerator {
+    override def generate(variables: Array[Int], domains: Array[Int], random: Random): FastFactor =
+      FastFactor.fromFunction(variables,domains,assignment => math.exp(-assignment.toSet.size * theta)).normalize(NormalD)
+  }
 
   def grid(width: Int, height: Int, domainSize: Int, factorGenerator: FactorGenerator, random: Random = new Random(0)): Problem = {
     val variables: Map[(Int, Int), Int] = (for (x <- 0 until width; y <- 0 until height) yield (x, y)).zipWithIndex.toMap
