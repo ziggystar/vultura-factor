@@ -1,11 +1,13 @@
 package vultura.fastfactors.algorithms
 
-import vultura.fastfactors.{RingZ, LogD, FastFactor, Problem}
+import vultura.fastfactors._
 import vultura.util.TreeWidth._
 import scalaz._
 import Scalaz._
 import scalaz.Tree._
 import scala.collection.mutable
+import vultura.util._
+
 
 /**
  * Created by IntelliJ IDEA.
@@ -19,6 +21,10 @@ class CalibratedJunctionTree(val problem: Problem) extends InfAlg {
     val calibratedTreesWithZ = uncalibratedTrees.map(CalibratedJunctionTree.calibrate(_,problem.ring, problem.domains))
     (calibratedTreesWithZ.map(_._1),problem.ring.prodA(calibratedTreesWithZ.map(_._2)(collection.breakOut)))
   }
+
+  lazy val calibratedCliques: Map[Set[Var],FastFactor] =
+    calibratedTrees.map(_.flatten).flatten.groupBy(_.variables.toSet).map{case (k,v) => k -> v.head}
+  lazy val ssetCliques = new SSet(calibratedCliques.keySet)
 
   //TODO [design] doesn't make much sense?
   def iteration: Int = 1
@@ -36,13 +42,17 @@ class CalibratedJunctionTree(val problem: Problem) extends InfAlg {
   def Z: Double = myLogZ
 
   private val marginalCache = new mutable.HashMap[Int, FastFactor]()
+
   /** @return marginal distribution of variable in encoding specified by `ring`. */
-  def variableBelief(vi: Int): FastFactor = marginalCache.getOrElseUpdate(vi,
-    calibratedTrees.flatMap(_.flatten)
-      .find(_.variables.contains(vi))
-      .map(f => FastFactor.multiplyRetain(problem.ring)(problem.domains)(Seq(f),Array(vi)).normalize(problem.ring))
-      .get
-  )
+  def variableBelief(vi: Int): FastFactor = marginalCache.getOrElseUpdate(vi, cliqueBelief(Array(vi)))
+
+  /** Throws if no clique contains `vars`.
+    * @return Normalized belief over given variables in encoding specified by problem ring. */
+  def cliqueBelief(vars: Array[Var]): FastFactor = {
+    FastFactor.multiplyRetain(problem.ring)(problem.domains)(
+      Seq(calibratedCliques(ssetCliques.superSetsOf(vars.toSet).head)),
+      vars).normalize(problem.ring)
+  }
 
   def graphviz: String = {
     def nodeName(cliqueFactor: FastFactor): String = "n" + cliqueFactor.variables.mkString("_")
