@@ -71,6 +71,12 @@ case class FastFactor(variables: Array[Int], values: Array[Double]){
   override def toString: String = f"FastFactor(VAR: ${variables.mkString(",")},VAL: ${values.mkString(",")})"
   def toBriefString: String = f"${variables.mkString(",")} | ${values.map("%.2f".format(_)).mkString(",")}"
   def map(f: Double => Double): FastFactor = this.copy(values = values.map(f))
+
+  def eval(values: Array[Val], domains: Array[Int]): Double = {
+    val index = values.zip(variables.map(domains)).foldLeft((0,1)){
+      case ((acc,stride),(value,domainSize)) => (acc + value * stride, stride * domainSize)}._1
+    this.values(index)
+  }
 }
 
 object FastFactor{
