@@ -1,6 +1,6 @@
 package vultura.fastfactors
 
-import scala.collection.mutable
+import scala.collection.{immutable, mutable}
 import scala.util.Random
 import vultura.util.TreeWidth._
 import scalaz.Tree
@@ -64,13 +64,18 @@ case class Problem(factors: IndexedSeq[FastFactor],domains: Array[Int],ring: Rin
   
   /** merges factors into other factors where possible */
   def simplify: Problem = {
-    val variablesToFactors: Map[Set[Int], IndexedSeq[FastFactor]] = factors.groupBy(_.variables.toSet)
-    val sSet: SSet[Int] = new SSet(variablesToFactors.keySet)
-    val maximalSets: Set[Set[Int]] = sSet.maximalSets
-    val maximalSetToSets: Map[Set[Int], Iterable[Set[Int]]] = variablesToFactors.keys.groupBy(sSet.superSetsOf(_).intersect(maximalSets).head)
-    val values: Map[Set[Int], FastFactor] = maximalSetToSets.mapValues(sets => FastFactor.multiply(ring)(domains)(sets.flatMap(variablesToFactors).toIndexedSeq))
-    Problem(values.values.toIndexedSeq, domains, ring)
+    val sset: SSet[Int] = new SSet(factors.map(_.variables.toSet)(collection.breakOut))
+    val groupedFactors: Iterator[IndexedSeq[FastFactor]] =
+      factors.groupBy(f => sset.superSetsOf(f.variables.toSet).head).valuesIterator
+    val aggregatedFactors: IndexedSeq[FastFactor] = groupedFactors.map(FastFactor.multiply(ring)(domains)).toIndexedSeq
+    copy(factors = aggregatedFactors)
   }
+
+  /** Set some variables to values and simplify the problem.
+    * @param condition Maps variables to the values they shall assume.
+    * @return The resulting problem. It will contain a constant representing the product over the now assigned factors.
+    */
+  def condition(condition: Map[Var,Val]): Problem = map(_.condition(condition,domains)).simplify
 }
 
 object Problem{

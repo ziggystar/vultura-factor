@@ -8,6 +8,9 @@ import vultura.util.TreeWidth
  * Date: 2/13/13
  */
 package object fastfactors {
+  type Var = Int
+  type Val = Int
+
   def veJunctionTree(p: Problem): Double = {
     import TreeWidth._
     import scalaz.Tree
