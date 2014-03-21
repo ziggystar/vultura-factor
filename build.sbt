@@ -29,6 +29,7 @@ libraryDependencies += "com.jsuereth" %% "scala-arm" % "1.3"
 // --------------- Java libraries ------------------------------
 libraryDependencies += "net.sf.trove4j" % "trove4j" % "3.0.3"
 
+libraryDependencies += "org.apache.commons" % "commons-math3" % "3.2"
 // --------------- Publishing ----------------------------------
 
 publishMavenStyle := true
