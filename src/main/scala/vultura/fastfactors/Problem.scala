@@ -66,7 +66,7 @@ case class Problem(factors: IndexedSeq[FastFactor],domains: Array[Int],ring: Rin
   def simplify: Problem = {
     val sset: SSet[Int] = new SSet(factors.map(_.variables.toSet)(collection.breakOut))
     val groupedFactors: Iterator[IndexedSeq[FastFactor]] =
-      factors.groupBy(f => sset.superSetsOf(f.variables.toSet).head).valuesIterator
+      factors.groupBy(f => sset.superSetsOf(f.variables.toSet).maxBy(_.size)).valuesIterator
     val aggregatedFactors: IndexedSeq[FastFactor] = groupedFactors.map(FastFactor.multiply(ring)(domains)).toIndexedSeq
     copy(factors = aggregatedFactors)
   }
