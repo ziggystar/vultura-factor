@@ -16,8 +16,6 @@ import vultura.fastfactors.algorithms.{BeliefPropagation, CBP}
  * Date: 5/31/13
  */
 object uaiInfer {
-  implicit val (logger, formatter, appender) = ZeroLoggerFactory.newLogger(this)
-
   class Config(args: Seq[String]) extends ScallopConf(args) {
     implicit val fileConverter: ValueConverter[File] = scallop.singleArgConverter(new File(_))
     implicit val inStream = scallop.singleArgConverter[InputStream](new FileInputStream(_))
@@ -66,16 +64,13 @@ object uaiInfer {
 
     val ring = if(config.useLog()) LogD else NormalD
 
-    logger.info(f"Loaded problem with ${inProblem.factors.size} factors and ${inProblem.variables.size} variables")
 
     val problem = simplifyProblem(inProblem)
-    logger.info(f"simplified ${inProblem.factors.size} factors to ${problem.factors.size}")
 
     val conditioningVariables: Seq[Int] = config.condition.get.map(_.split(",").toSeq.map(_.toInt)).getOrElse(Seq[Int]())
     val cpi = new IntDomainCPI(conditioningVariables.map(problem.domains).map(x => (0 until x).toArray).toArray)
     val random = new Random
 
-    logger.info(f"running algorithm ${config.algorithm()}")
     val infer: Problem => Double = config.algorithm().toUpperCase match {
       case "CBP" => { problem =>
         val cbp = new CBP(problem,CBP.LEAF_SELECTION.RANDOM,CBP.VARIABLE_SELECTION(CBP.VARIABLE_SELECTION.RANDOM),CBP.CLAMP_METHOD.CLAMP,50,1e-10,random)
@@ -85,10 +80,6 @@ object uaiInfer {
 
       case "BP" => { problem =>
         val bp = new BeliefPropagation(problem,random,1e-7,1000)
-        if(!bp.converged)
-          logger.warning(f"BP did not converge after ${bp.iterations} iterations with ${bp.getMessageUpdates} message updates; remaining message delta of ${bp.maxDelta}")
-        else
-          logger.fine(f"BP converged after ${bp.iterations} iterations with ${bp.getMessageUpdates} message updates; remaining message delta of ${bp.maxDelta}")
         if(config.useLog()) bp.logZ else math.exp(bp.logZ)
       }
       case "JTREE" => veJunctionTree
@@ -98,18 +89,15 @@ object uaiInfer {
     def calcCondZs: IndexedSeq[Double] = cpi.map{ assignment =>
       val cond = conditioningVariables.zip(assignment).toMap
       val (conditionedProblem,conditionedDomain) = conditionProblem(problem.factors,problem.domains,cond)
-      logger.fine(f"conditioning on assignment: ${assignment.mkString(":")}")
       infer(Problem(conditionedProblem,conditionedDomain,ring))
     }
 
     if(config.benchmark()){
-      logger.info("running warmup for at least 5s")
       //warmup
       val wut = System.nanoTime
       while(System.nanoTime - wut < 5e9){
         calcCondZs
       }
-      logger.info("running benchmark for at least 20s")
       //measure
       val startTime = System.nanoTime
       var i = 0

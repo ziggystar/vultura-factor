@@ -277,25 +277,4 @@ object TreeWidth {
   def printJTs[A](trees: Seq[Tree[A]]): String = trees.map(_.map(_.toString).drawTree).mkString("\n---\n")
 
   def minDegreeOrdering(cliques: Seq[Set[Int]]): List[Int] = minDegreeOrderingAndWidth(cliques.toIndexedSeq)._1
-
-  import xml.{NodeSeq, Elem}
-
-  def treeAsGraphML[A](tree: Tree[A])(elemContent: A => NodeSeq = (_: A) => NodeSeq.Empty): Elem = {
-    val index = tree.flatten.zipWithIndex.toMap.mapValues("n" + _)
-
-    def toNode(a: A): Elem = <node id={index(a)}>{elemContent(a)}</node>
-    def toEdge(src: A, dst: A): Elem = <edge source={index(src)} target={index(dst)} />
-
-    //assumes the root is already there
-    def treeToXml(t: Tree[A]): NodeSeq = t.subForest.map{ subTree =>
-      toNode(subTree.rootLabel) ++
-        toEdge(t.rootLabel,subTree.rootLabel) ++
-        treeToXml(subTree)
-    }.foldLeft(NodeSeq.Empty)(_ ++ _)
-
-    <graph id="G" edgedefault="directed">
-      {toNode(tree.rootLabel)}
-      {treeToXml(tree)}
-    </graph>
-  }
 }

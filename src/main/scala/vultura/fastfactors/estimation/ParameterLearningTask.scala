@@ -17,16 +17,22 @@ case class LearningTask(
   estimatees: IndexedSeq[Set[Feature]],
   ring: RingZ[Double]){
   val numParameters = estimatees.size
+
+  def buildProblem(theta: IndexedSeq[Double]): Problem = {
+    val weightedFeatures: IndexedSeq[(Feature, Double)] =
+      fixedFeatures ++ (for((fs,p) <- estimatees.zip(theta); f <- fs) yield (f,p))
+    Feature.buildProblem(domains, ring, weightedFeatures)
+  }
 }
 
-trait ParameterLearner{
+trait ParameterLearner {
   def task: LearningTask
   def data: Map[Var,Val]
   def estimate: (IndexedSeq[Double], Double)
 }
 
 /** Use gradient ascend and exact computation of gradients and likelihood. */
-case class ExactGradientAscent(task: LearningTask, data: Map[Var,Val], tol: Double = 1e-7, maxIter: Int = 1000) extends ParameterLearner{
+case class ExactGradientAscent(task: LearningTask, data: Map[Var,Val] = Map(), tol: Double = 1e-7, maxIter: Int = 1000) extends ParameterLearner{
   import org.apache.commons.math3.analysis.{MultivariateVectorFunction, MultivariateFunction}
   import org.apache.commons.math3.optim._
   import nonlinear.scalar.gradient.NonLinearConjugateGradientOptimizer
@@ -36,14 +42,9 @@ case class ExactGradientAscent(task: LearningTask, data: Map[Var,Val], tol: Doub
   //note that the parameters are always kept in normal representation
   type Theta = IndexedSeq[Double]
 
-  def buildProblem(theta: Theta): Problem = {
-    val weightedFeatures: IndexedSeq[(Feature, Double)] =
-      task.fixedFeatures ++ (for((fs,p) <- task.estimatees.zip(theta); f <- fs) yield (f,p))
-    Feature.buildProblem(task.domains, task.ring, weightedFeatures)
-  }
 
   def loglikelihoodGradient(theta: Theta): IndexedSeq[Double] = {
-    val problem: Problem = buildProblem(theta)
+    val problem: Problem = task.buildProblem(theta)
     val unconditioned = new CalibratedJunctionTree(problem)
     val conditioned = new CalibratedJunctionTree(problem.condition(data))
 
@@ -60,7 +61,7 @@ case class ExactGradientAscent(task: LearningTask, data: Map[Var,Val], tol: Doub
   }
 
   def logLikelihood(theta: Theta): Double = {
-    val p = buildProblem(theta)
+    val p = task.buildProblem(theta)
     p.condition(data).logZ - p.logZ
   }
 
@@ -78,7 +79,7 @@ case class ExactGradientAscent(task: LearningTask, data: Map[Var,Val], tol: Doub
         override def value(point: Array[Double]): Double = logLikelihood(point)
       }),
       GoalType.MAXIMIZE,
-      new SimpleBounds(Array.fill(task.numParameters)(0),Array.fill(task.numParameters)(Double.PositiveInfinity)),
+//      new SimpleBounds(Array.fill(task.numParameters)(0),Array.fill(task.numParameters)(Double.PositiveInfinity)),
       new InitialGuess(Array.fill(task.numParameters)(1)),
       new MaxEval(maxIter),
       new MaxIter(maxIter)

@@ -17,10 +17,8 @@ extends InfAlg with Iterator[InfAlg] {
 
   def getProblem: Problem = problem
 
-  implicit val (logger, formatter, appender) = BeliefPropagation.allLog
 
   val cg = BeliefPropagation.createBetheClusterGraph(problem)
-  logger.fine(f"bethe factor graph has ${cg.clusterFactors.size} clusters and ${cg.sepsets.size} edges")
   lazy val singleVariableClusters: Map[Int,Int] = cg.clusterFactors.zipWithIndex
     .collect{case (f,fi) if f.variables.size == 1 => f.variables.head -> fi}(collection.breakOut)
 
@@ -180,14 +178,12 @@ extends InfAlg with Iterator[InfAlg] {
           val Ineighbour: Int = incomingNeighbours(IneighboursIndex)
           val foundUpdateReason = (Ineighbour != i) && lookUpMessage(Ineighbour, i).lastUpdate >= lastUpdate
           if(foundUpdateReason)
-            logger.finer(f"updating $i->$j because of $Ineighbour->$i")
           needsUpdate = foundUpdateReason
           IneighboursIndex += 1
         }
 
         if( needsUpdate ){
           val updateConverged: Boolean = updateMessage(edge, tol)
-          logger.finer("update: " + (i,j) + " : update converged: " + updateConverged)
           converged = converged && !updateConverged
         }
         edgeIndex += 1
@@ -198,7 +194,6 @@ extends InfAlg with Iterator[InfAlg] {
     didConverge = converged
     totalIterations += iterations
     invalidateCaches()
-    logger.fine(f"BP ran for $iterations iterations, updating ${messageUpdates - startMessageUpdates}, converged: $didConverge")
     didConverge
   }
 
@@ -279,8 +274,6 @@ extends InfAlg with Iterator[InfAlg] {
 }
 
 object BeliefPropagation{
-  implicit val allLog@(logger, formatter, appender) = ZeroLoggerFactory.newLogger(this)
-
   def createBetheClusterGraph(problem: Problem): ClusterGraph  = {
     val Problem(factors: IndexedSeq[FastFactor],domains: Array[Int], ring: RingZ[Double]) = problem
     //we append a cluster for each variable after the factor clusters
