@@ -15,7 +15,6 @@ class CBP(val problem: Problem,
           val bpMaxiter: Int = 1000,
           val bpTol: Double = 1e-10,
           private val random: Random) extends InfAlg with Iterator[CBP] {
-  implicit val (logger, formatter, appender) = CBP.allLog
 
   val leafSelection: (Map[Map[Int,Int],BeliefPropagation], Random) => Map[Int,Int] = CBP.LEAF_SELECTION.apply(leafSel)
   val variableSelection: (BeliefPropagation, Random) => Int = varSel
@@ -43,7 +42,6 @@ class CBP(val problem: Problem,
     var steps = 0
     while(steps < maxIter && !queue.isEmpty){
       val selectAssignment =  leafSelection(queue,random)
-      logger.finer(f"CBP refining assignment $selectAssignment")
       val selectVar: Int = variableSelection(queue(selectAssignment),random)
       val newAssignments: IndexedSeq[Map[Int, Int]] =
         for(x <- 0 until domains(selectVar)) yield selectAssignment + (selectVar -> x)
@@ -89,10 +87,7 @@ class CBP(val problem: Problem,
 
   def constructBP(p: Problem): BeliefPropagation = {
     val seed = random.nextLong()
-    val bp = new BeliefPropagation(p, new Random(seed),bpTol,bpMaxiter)
-    if(!bp.converged)
-      logger.fine(f"bp run did not converge")
-    bp
+    new BeliefPropagation(p, new Random(seed),bpTol,bpMaxiter)
   }
 
   /** @return Partition function in encoding specified by `ring`. */
@@ -119,7 +114,6 @@ class CBP(val problem: Problem,
 }
 
 object CBP {
-  implicit val allLog@(logger, formatter, appender) = ZeroLoggerFactory.newLogger(this)
 
   trait TypefulEnum[A]{ self: Enumeration =>
     def apply(value: self.Value): A

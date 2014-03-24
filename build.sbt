@@ -19,9 +19,6 @@ libraryDependencies += "org.scalaz" % "scalaz-core_2.10" % "7.0.3"
 //cli parsing
 libraryDependencies += "org.rogach" % "scallop_2.10" % "0.9.2"
 
-//logging
-libraryDependencies += "com.dongxiguo" % "zero-log_2.10" % "0.3.3"
-
 //scala-arm
 libraryDependencies += "com.jsuereth" %% "scala-arm" % "1.3"
 
