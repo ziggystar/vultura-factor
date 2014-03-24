@@ -1,7 +1,8 @@
 package vultura.fastfactors
 
 import scala.reflect.ClassTag
-import vultura.util.IntDomainCPI
+import vultura.util.{CrossProductIndexer, IntDomainCPI}
+import com.sun.java.util.jar.pack.Constants
 
 /**
  * Created by IntelliJ IDEA.
@@ -76,6 +77,8 @@ case class FastFactor(variables: Array[Int], values: Array[Double]){
     values.zip(variables.map(domains)).foldLeft((0,1)){
     case ((acc,stride),(value,domainSize)) => (acc + value * stride, stride * domainSize)}._1
 
+  def cpi(domains: Array[Int]): CrossProductIndexer = new CrossProductIndexer(variables.map(domains))
+
   def eval(vals: Array[Val], domains: Array[Int]): Double = values(index(vals,domains))
   def set(vals: Array[Val], domains: Array[Int], to: Double): FastFactor =
     copy(values = {
@@ -103,6 +106,8 @@ object FastFactor{
     def zero: Double = sys.error("operation not supported")
 
     def one: Double = sys.error("operation not supported")
+
+    override def productInverse(x: Double): Double = sys.error("operation not supported")
 
     def sum(s1: Double, s2: Double): Double = if(s1 == s2) s1 else Double.NaN
 

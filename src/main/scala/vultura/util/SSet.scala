@@ -20,6 +20,14 @@ class SSet[A](sets: Set[Set[A]]) {
     builder
   }
 
-  def superSetsOf(x: Set[A]): Set[Set[A]]= x.toList.map(lookup).sortBy(_.size).reduceLeft((a,b) => a intersect b)
+  private val lookupMaximal: mutable.HashMap[A,Set[Set[A]]] =
+    lookup.map{case (k,supersets) => k -> supersets.filterNot(ss => superSetsOf(ss).size > 1)}
+
+  def superSetsOf(x: Set[A]): Set[Set[A]]= if(x.isEmpty) sets else
+    x.toList.map(lookup).sortBy(_.size).reduceLeft((a,b) => a intersect b)
+
   def maximalSets: Set[Set[A]] = sets.filterNot(x => superSetsOf(x).size > 1)
+
+  def maximalSuperSetsOf(x: Set[A]): Set[Set[A]] = if(x.isEmpty) sets else
+    x.toList.map(lookupMaximal).sortBy(_.size).reduceLeft((a,b) => a intersect b)
 }
