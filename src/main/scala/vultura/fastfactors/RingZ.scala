@@ -9,6 +9,7 @@ import scala.annotation.tailrec
 trait RingZ[@specialized(Double) T]{
   def zero: T
   def one: T
+  def productInverse(x: T): T
   def sum(s1: T, s2: T): T
   def prod(f1: T, f2: T): T
   def sumA(ss: Array[T]): T = ss.foldLeft(zero)(sum)
@@ -32,6 +33,7 @@ trait RingZ[@specialized(Double) T]{
   * It can be used where the true ring is not known.
   */
 object SafeD extends RingZ[Double]{
+  def productInverse(x: Double): Double = sys.error("Safe ring has no product inverse")
   def zero: Double = sys.error("Safe ring has no zero")
   def one: Double = sys.error("Safe ring has no one")
   def sum(s1: Double, s2: Double): Double = sys.error("safe ring has no binary ops")
@@ -45,8 +47,9 @@ object SafeD extends RingZ[Double]{
 }
 
 object NormalD extends RingZ[Double]{
-  final val zero: Double = 0d
-  final val one: Double = 1d
+  val zero: Double = 0d
+  val one: Double = 1d
+  def productInverse(x: Double): Double = 1/x
   def sum(s1: Double, s2: Double): Double = s1 + s2
   def prod(f1: Double, f2: Double): Double = f1 * f2
   override def sumA(ss: Array[Double]): Double = {
@@ -114,6 +117,8 @@ object NormalD extends RingZ[Double]{
 object LogD extends RingZ[Double] {
   final val zero: Double = Double.NegativeInfinity
   final val one: Double = 0d
+
+  override def productInverse(x: Double): Double = -x
 
   @inline
   def sum(s1: Double, s2: Double): Double =
