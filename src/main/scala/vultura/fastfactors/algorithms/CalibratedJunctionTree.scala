@@ -7,6 +7,7 @@ import Scalaz._
 import scalaz.Tree._
 import scala.collection.mutable
 import vultura.util._
+import scala.util.Random
 
 
 /**
@@ -39,7 +40,9 @@ class CalibratedJunctionTree(val problem: Problem) extends InfAlg {
     }
 
   /** @return Partition function in encoding specified by `ring`. */
-  def Z: Double = myLogZ
+  def Z: Double = problem.ring.decode(Array(myLogZ))(0)
+  /** @return Natural logarithm of partition function. */
+  override def logZ: Double = if(problem.ring == LogD) myLogZ else math.log(problem.ring.decode(Array(myLogZ))(0))
 
   private val marginalCache = new mutable.HashMap[Int, FastFactor]()
 
@@ -53,6 +56,13 @@ class CalibratedJunctionTree(val problem: Problem) extends InfAlg {
       Seq(calibratedCliques(ssetCliques.superSetsOf(vars.toSet).head)),
       vars).normalize(problem.ring)
   }
+
+  def sample(r: Random): Map[Var,Val] = calibratedTrees.map{ tree =>
+    CalibratedJunctionTree.mapDown(tree)(Map[Var,Val]()){ case (cond,factor) =>
+      val conditionedFactor: FastFactor = factor.condition(cond, problem.domains)
+      (conditionedFactor.variables zip conditionedFactor.sample(r, problem.domains, problem.ring))(collection.breakOut)
+    }.flatten.reduce(_ ++ _)
+  }.foldLeft(Map[Var,Val]())(_ ++ _)
 
   def graphviz: String = {
     def nodeName(cliqueFactor: FastFactor): String = "n" + cliqueFactor.variables.mkString("_")
@@ -130,6 +140,11 @@ object CalibratedJunctionTree{
   def scand[A,B,C](tree: Tree[A])(init: B)(f: (B,Tree[A]) => (C,Seq[B])): Tree[C] = {
     val (newVal, childPropagations) = f(init,tree)
     node(newVal,tree.subForest.zip(childPropagations).map{case (child,childProp) => scand(child)(childProp)(f)})
+  }
+
+  def mapDown[A,B](tree: Tree[A])(init: B)(f: (B,A) => B): Tree[B] = {
+    val mappedRootLabel: B = f(init, tree.rootLabel)
+    node(mappedRootLabel, tree.subForest.map(mapDown(_)(mappedRootLabel)(f)))
   }
 
   /** Return xs without the element at position idx. */
