@@ -3,6 +3,7 @@ package vultura.fastfactors.estimation
 import vultura.fastfactors._
 import vultura.util._
 import vultura.fastfactors.algorithms.CalibratedJunctionTree
+import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.BOBYQAOptimizer
 
 /**
  * Parameter estimation task.
@@ -99,7 +100,7 @@ class ExactGradientAscent2(_problem: Problem, val data: Seq[Map[Var,Val]], val t
   val problem = _problem.toRing(LogD).simplify
 
   def buildProblem(parameters: Theta): Problem = {
-    val weightedFeatures = for{
+    val weightedFeatures: IndexedSeq[(Feature, Double)] = for{
       (features, theta) <- target zip parameters
       f <- features
     } yield (f, theta)
@@ -150,22 +151,39 @@ class ExactGradientAscent2(_problem: Problem, val data: Seq[Map[Var,Val]], val t
     import nonlinear.scalar.{ObjectiveFunction, GoalType, ObjectiveFunctionGradient}
     import NonLinearConjugateGradientOptimizer._
 
+    val useGradient = true
 
-    val result = new NonLinearConjugateGradientOptimizer(
-      Formula.POLAK_RIBIERE,
-      new SimpleValueChecker(0, tol, maxIter)).optimize(
-        new BracketingStep(1),
-        new ObjectiveFunctionGradient(new MultivariateVectorFunction {
-          override def value(point: Array[Double]): Array[Double] = loglikelihoodGradient(point).toArray
-        }),
-        new ObjectiveFunction(new MultivariateFunction {
-          override def value(point: Array[Double]): Double = logLikelihood(point)
-        }),
-        GoalType.MAXIMIZE,
-        new InitialGuess(Array.fill(target.size)(0d)),
-        new MaxEval(maxIter),
-        new MaxIter(maxIter)
-      )
+    val result = if(useGradient)
+      new NonLinearConjugateGradientOptimizer(
+        Formula.POLAK_RIBIERE,
+        new SimpleValueChecker(0, tol, maxIter)).optimize(
+          new BracketingStep(1),
+          new ObjectiveFunctionGradient(new MultivariateVectorFunction {
+            override def value(point: Array[Double]): Array[Double] = loglikelihoodGradient(point).toArray
+          }),
+          new ObjectiveFunction(new MultivariateFunction {
+            override def value(point: Array[Double]): Double = logLikelihood(point)
+          }),
+          GoalType.MAXIMIZE,
+          new InitialGuess(Array.fill(target.size)(0d)),
+          new MaxEval(maxIter),
+          new MaxIter(maxIter)
+        )
+    else new BOBYQAOptimizer(target.size * 2 + 1).optimize(
+      //      new BracketingStep(0.1),
+      //      new ObjectiveFunctionGradient(new MultivariateVectorFunction {
+      //        override def value(point: Array[Double]): Array[Double] = loglikelihoodGradient(point).toArray
+      //      }),
+      new ObjectiveFunction(new MultivariateFunction {
+        override def value(point: Array[Double]): Double = logLikelihood(point)
+      }),
+      GoalType.MAXIMIZE,
+      new SimpleBounds(Array.fill(target.size)(Double.NegativeInfinity),Array.fill(target.size)(Double.PositiveInfinity)),
+      new InitialGuess(Array.fill(target.size)(0d)),
+      new MaxEval(maxIter),
+      new MaxIter(maxIter)
+    )
+
     (result.getPoint,result.getValue)
   }
 }
