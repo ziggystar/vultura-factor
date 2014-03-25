@@ -89,7 +89,7 @@ case class FastFactor(variables: Array[Int], values: Array[Double]){
     })
 
   def sample(r: Random, domains: Array[Int], ring: RingZ[Double]): Array[Val] =
-    cpi(domains)(vultura.util.wheelOfFortune(values, r))
+    cpi(domains)(vultura.util.wheelOfFortune(ring.decode(values), r))
 }
 
 object FastFactor{
