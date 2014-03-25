@@ -24,6 +24,7 @@ trait FastFactorMatchers {
       t
     )
   }
+
   def beSimilarTo(ref: FastFactor, tol: Double = 1e-7): Matcher[FastFactor] =
     haveSameStructureAs(ref) and haveValuesCloseTo(ref,tol)
 
@@ -38,6 +39,15 @@ trait FastFactorMatchers {
         t
       )
     }
+  }
+
+  def beCloseTo(ref: Seq[Double], tol: Double = 1e-12): Matcher[Seq[Double]] = new Matcher[Seq[Double]]{
+    override def apply[S <: Seq[Double]](t: Expectable[S]): MatchResult[S] = result(
+      t.value.zip(ref).map{case (x,y) => math.abs(x - y)}.max < tol,
+      "has close values to " + ref,
+      "differs in some values by up to " + t.value.zip(ref).map{case (x,y) => math.abs(x - y)}.max,
+      t
+    )
   }
 
 }
