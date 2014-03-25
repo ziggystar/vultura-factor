@@ -61,6 +61,18 @@ package object util {
     }
   }
 
+  def wheelOfFortune(xs: IndexedSeq[Double], random: Random, partition: Option[Double] = None): Int = {
+    val z = partition.getOrElse(xs.sum)
+    val sample = random.nextDouble() * z
+    var i = 0
+    var sum = xs(i)
+    while(sum <= sample){
+      i = i + 1
+      sum = sum + xs(i)
+    }
+    i
+  }
+
   class RichRandomSeq[A](val s: IndexedSeq[A]) {
     def pickRandom(r: Random): A = s(r.nextInt(s.size))
     def pickRandomOpt(r: Random): Option[A] = if(s.isEmpty) None else Some(s(r.nextInt(s.size)))
