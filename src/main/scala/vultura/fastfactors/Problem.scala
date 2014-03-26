@@ -1,6 +1,6 @@
 package vultura.fastfactors
 
-import scala.collection.{immutable, mutable}
+import scala.collection.mutable
 import scala.util.Random
 import vultura.util.TreeWidth._
 import scalaz.Tree
@@ -8,12 +8,9 @@ import java.io._
 import vultura.fastfactors.algorithms.CalibratedJunctionTree
 import vultura.util.SSet
 
-/**
- * Created by IntelliJ IDEA.
- * User: Thomas Geier
- * Date: 6/14/13
- */
-case class Problem(factors: IndexedSeq[FastFactor],domains: Array[Int],ring: RingZ[Double]){
+/** A problem is basically a collection of factors, together with a domain and a ring.
+  * It provides several inference methods based on the exact junction tree algorithm. */
+case class Problem(factors: IndexedSeq[FastFactor], domains: Array[Int], ring: RingZ[Double]){
   lazy val factorsOfVariable: collection.Map[Int,IndexedSeq[FastFactor]] =
     variables.map(v => v -> factors.filter(_.variables.contains(v)))(collection.breakOut): mutable.HashMap[Int, IndexedSeq[FastFactor]]
   lazy val variables: Set[Int] = (for (f <- factors; v <- f.variables) yield v)(collection.breakOut)

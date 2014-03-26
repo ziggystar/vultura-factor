@@ -37,8 +37,10 @@ case class Feature(variables: Array[Var], point: Array[Val]) {
     case _ => false
   }
 
+  def toMap: Map[Var,Val] = variables.zip(point).toMap
+
   override def toString: String =
-    s"Feature(VS(${variables.mkString(",")}), Points(${point.mkString(",")}))"
+    s"Feature(VS(${variables.mkString(",")}), Point(${point.mkString(",")}))"
 }
 
 /**

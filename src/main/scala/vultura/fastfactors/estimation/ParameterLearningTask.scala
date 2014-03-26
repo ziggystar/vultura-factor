@@ -5,109 +5,89 @@ import vultura.util._
 import vultura.fastfactors.algorithms.CalibratedJunctionTree
 import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.BOBYQAOptimizer
 
-/**
- * Parameter estimation task.
- * - global parameter tying
- * - fixed (input) parameters
- *
- * @param estimatees Each set corresponds to one parameter, tied for all features in the set.
- * @author Thomas Geier <thomas.geier@uni-ulm.de>
- */
-case class LearningTask(
-  domains: Array[Var],
-  fixedFeatures: IndexedSeq[(Feature,Double)],
-  estimatees: IndexedSeq[Set[Feature]],
-  ring: RingZ[Double]){
-  val numParameters = estimatees.size
+trait UnconstraintDifferentiableFunction {
+  def dimension: Int
+  def value(theta: IndexedSeq[Double]): Double
+  def gradient(theta: IndexedSeq[Double]): IndexedSeq[Double]
+  def initialGuess: IndexedSeq[Double]
+}
 
-  def buildProblem(theta: IndexedSeq[Double]): Problem = {
-    val weightedFeatures: IndexedSeq[(Feature, Double)] =
-      fixedFeatures ++ (for((fs,p) <- estimatees.zip(theta); f <- fs) yield (f,p))
-    Feature.buildProblem(domains, ring, weightedFeatures)
+object UnconstraintDifferentiableFunction {
+  def average(fs: Seq[UnconstraintDifferentiableFunction]) = new UnconstraintDifferentiableFunction{
+    override def dimension: Int = fs.head.dimension
+    require(fs.forall(_.dimension == dimension), "all function must have the same dimension")
+
+    def avg(xss: Seq[IndexedSeq[Double]]): IndexedSeq[Double] = xss.transpose.map(_.mean)(collection.breakOut)
+
+    override def initialGuess: IndexedSeq[Double] = avg(fs.map(_.initialGuess))
+
+    override def gradient(theta: IndexedSeq[Double]): IndexedSeq[Double] = avg(fs.map(_.gradient(theta)))
+
+    override def value(theta: IndexedSeq[Double]): Double = fs.map(_.value(theta)).mean
   }
 }
 
-trait ParameterLearner {
-  def task: LearningTask
-  def data: Map[Var,Val]
-  def estimate: (IndexedSeq[Double], Double)
-}
+object Optimization {
+  /* @return the found maximizing function values and the result. */
+  def maximize(f: UnconstraintDifferentiableFunction, tol: Double = 1e-9, maxSteps: Int = 100, useGradient: Boolean = true): (IndexedSeq[Double],Double) = {
+    import org.apache.commons.math3.analysis.{MultivariateVectorFunction, MultivariateFunction}
+    import org.apache.commons.math3.optim._
+    import nonlinear.scalar.gradient.NonLinearConjugateGradientOptimizer
+    import nonlinear.scalar.{ObjectiveFunction, GoalType, ObjectiveFunctionGradient}
+    import NonLinearConjugateGradientOptimizer._
 
-/** Use gradient ascend and exact computation of gradients and likelihood. */
-case class ExactGradientAscent(task: LearningTask, data: Map[Var,Val] = Map(), tol: Double = 1e-7, maxIter: Int = 1000) extends ParameterLearner{
-  require(task.ring == LogD, "log-linear model required")
-
-  import org.apache.commons.math3.analysis.{MultivariateVectorFunction, MultivariateFunction}
-  import org.apache.commons.math3.optim._
-  import nonlinear.scalar.gradient.NonLinearConjugateGradientOptimizer
-  import nonlinear.scalar.{ObjectiveFunction, GoalType, ObjectiveFunctionGradient}
-  import NonLinearConjugateGradientOptimizer._
-
-  //note that the parameters are always kept in normal representation
-  type Theta = IndexedSeq[Double]
-
-  def decode(x: Double): Double = task.ring.decode(Array(x))(0)
-
-
-  def loglikelihoodGradient(theta: Theta): IndexedSeq[Double] = {
-    val problem: Problem = task.buildProblem(theta)
-    val unconditioned = new CalibratedJunctionTree(problem)
-    val conditioned = new CalibratedJunctionTree(problem.condition(data))
-
-    def unconditionedExpected(f: Feature): Double = decode(unconditioned.cliqueBelief(f.variables).eval(f.point,task.domains))
-
-    def conditionedExpected(f: Feature): Double =
-      f.condition(data).map{ cFeat =>
-        decode(conditioned.cliqueBelief(cFeat.variables).eval(cFeat.point,task.domains))
-      }.getOrElse(0d)
-
-    val gradient = task.estimatees.map(_.map(f => conditionedExpected(f) - unconditionedExpected(f)).mean)
-
-    gradient
-  }
-
-  def logLikelihood(theta: Theta): Double = {
-    val p = task.buildProblem(theta)
-    val ll: Double = p.condition(data).logZ - p.logZ
-    ll
-  }
-
-  override val estimate: (Theta,Double) = {
-    val result = new NonLinearConjugateGradientOptimizer(
-      Formula.POLAK_RIBIERE,
-      new SimpleValueChecker(0, tol, maxIter)).optimize(
-      new BracketingStep(0.01),
-      new ObjectiveFunctionGradient(new MultivariateVectorFunction {
-        override def value(point: Array[Double]): Array[Double] = loglikelihoodGradient(point).toArray
-      }),
+    val result = if(useGradient)
+      new NonLinearConjugateGradientOptimizer(
+        Formula.POLAK_RIBIERE,
+        new SimpleValueChecker(0, tol, maxSteps)).optimize(
+          new BracketingStep(1),
+          new ObjectiveFunctionGradient(new MultivariateVectorFunction {
+            override def value(point: Array[Double]): Array[Double] = f.gradient(point).toArray
+          }),
+          new ObjectiveFunction(new MultivariateFunction {
+            override def value(point: Array[Double]): Double = f.value(point)
+          }),
+          GoalType.MAXIMIZE,
+          new InitialGuess(f.initialGuess.toArray),
+          new MaxEval(maxSteps),
+          new MaxIter(maxSteps)
+        )
+    else new BOBYQAOptimizer(f.dimension * 2 + 1).optimize(
       new ObjectiveFunction(new MultivariateFunction {
-        override def value(point: Array[Double]): Double = logLikelihood(point)
+        override def value(point: Array[Double]): Double = f.value(point)
       }),
       GoalType.MAXIMIZE,
-      new InitialGuess(Array.fill(task.numParameters)(1)),
-      new MaxEval(maxIter),
-      new MaxIter(maxIter)
+      new SimpleBounds(Array.fill(f.dimension)(Double.NegativeInfinity),Array.fill(f.dimension)(Double.PositiveInfinity)),
+      new InitialGuess(f.initialGuess.toArray),
+      new MaxEval(maxSteps),
+      new MaxIter(maxSteps)
     )
+
     (result.getPoint,result.getValue)
   }
 }
 
-/** Use gradient ascend and exact computation of gradients and likelihood. */
-class ExactGradientAscent2(_problem: Problem, val data: Seq[Map[Var,Val]], val target: IndexedSeq[Set[Feature]], val tol: Double = 1e-7, val maxIter: Int = 1000) {
+/** The average log-likelihood function. Supports shared parameters.
+  * @param problem A markov network.
+  * @param data Each entry is an observation to an instance of problem.
+  * @param target Each set of features will have one shared parameter.
+  */
+case class CompressedAvgLogLikelihood(problem: Problem, data: Seq[Map[Var,Val]], target: IndexedSeq[Set[Feature]]) extends UnconstraintDifferentiableFunction {
+
+  val simplifiedLogProblem: Problem = problem.simplify.toRing(LogD)
+
   //note that the parameters are always kept in normal representation
   type Theta = IndexedSeq[Double]
-
-  val problem = _problem.toRing(LogD).simplify
 
   def buildProblem(parameters: Theta): Problem = {
     val weightedFeatures: IndexedSeq[(Feature, Double)] = for{
       (features, theta) <- target zip parameters
       f <- features
     } yield (f, theta)
-    problem.copy(factors = problem.factors ++ Feature.buildProblem(problem.domains, LogD, weightedFeatures).factors).simplify
+    simplifiedLogProblem.copy(factors = simplifiedLogProblem.factors ++ Feature.buildProblem(simplifiedLogProblem.domains, LogD, weightedFeatures).factors).simplify
   }
 
-  def loglikelihoodGradient(theta: Theta): IndexedSeq[Double] = {
+  def gradient(theta: Theta): IndexedSeq[Double] = {
     val p: Problem = buildProblem(theta)
     val unconditioned = new CalibratedJunctionTree(p)
 
@@ -115,8 +95,8 @@ class ExactGradientAscent2(_problem: Problem, val data: Seq[Map[Var,Val]], val t
       val conditioned = new CalibratedJunctionTree(p.condition(d))
       //every element in target corresponds to one parameter
       target.map{ features =>
-        //the average expected value over all features tied for this parameter; note that the feature might already
-        //be evaluated completely by the data `d`
+      //the average expected value over all features tied for this parameter; note that the feature might already
+      //be evaluated completely by the data `d`
         features.map(f => f.condition(d).map(conditionedFeature =>
           math.exp(conditioned.cliqueBelief(conditionedFeature.variables).eval(conditionedFeature.point,p.domains))
         ).getOrElse(0d)).mean
@@ -138,52 +118,76 @@ class ExactGradientAscent2(_problem: Problem, val data: Seq[Map[Var,Val]], val t
   }
 
   /** @return The average log-likelihood of the data given the parameters `theta`. */
-  def logLikelihood(theta: Theta): Double = {
+  def value(theta: Theta): Double = {
     val p = buildProblem(theta)
     val llMean = data.map(d => p.condition(d).logZ).mean - p.logZ
     llMean
   }
 
-  val estimate: (Theta,Double) = {
-    import org.apache.commons.math3.analysis.{MultivariateVectorFunction, MultivariateFunction}
-    import org.apache.commons.math3.optim._
-    import nonlinear.scalar.gradient.NonLinearConjugateGradientOptimizer
-    import nonlinear.scalar.{ObjectiveFunction, GoalType, ObjectiveFunctionGradient}
-    import NonLinearConjugateGradientOptimizer._
+  /** @return the neutral vector (zeros in log domain there). */
+  override def initialGuess: IndexedSeq[Double] = IndexedSeq.fill(dimension)(0d)
 
-    val useGradient = true
+  override def dimension: Int = target.size
+}
 
-    val result = if(useGradient)
-      new NonLinearConjugateGradientOptimizer(
-        Formula.POLAK_RIBIERE,
-        new SimpleValueChecker(0, tol, maxIter)).optimize(
-          new BracketingStep(1),
-          new ObjectiveFunctionGradient(new MultivariateVectorFunction {
-            override def value(point: Array[Double]): Array[Double] = loglikelihoodGradient(point).toArray
-          }),
-          new ObjectiveFunction(new MultivariateFunction {
-            override def value(point: Array[Double]): Double = logLikelihood(point)
-          }),
-          GoalType.MAXIMIZE,
-          new InitialGuess(Array.fill(target.size)(0d)),
-          new MaxEval(maxIter),
-          new MaxIter(maxIter)
-        )
-    else new BOBYQAOptimizer(target.size * 2 + 1).optimize(
-      //      new BracketingStep(0.1),
-      //      new ObjectiveFunctionGradient(new MultivariateVectorFunction {
-      //        override def value(point: Array[Double]): Array[Double] = loglikelihoodGradient(point).toArray
-      //      }),
-      new ObjectiveFunction(new MultivariateFunction {
-        override def value(point: Array[Double]): Double = logLikelihood(point)
-      }),
-      GoalType.MAXIMIZE,
-      new SimpleBounds(Array.fill(target.size)(Double.NegativeInfinity),Array.fill(target.size)(Double.PositiveInfinity)),
-      new InitialGuess(Array.fill(target.size)(0d)),
-      new MaxEval(maxIter),
-      new MaxIter(maxIter)
+/** The log-likelihood for a single data item, but with potentially soft observations.
+  * Important: The features are supposed to be in the log-domain. */
+case class SingleDataSoftObsLogLikelihood(domains: Array[Int],
+                                          ring: RingZ[Double],
+                                          fixedFeatures: Seq[(Feature,Double)],
+                                          observations: Seq[(Feature,Double)],
+                                          target: IndexedSeq[Set[Feature]]) extends UnconstraintDifferentiableFunction{
+  require(ring == LogD)
+
+  val (hardObs, softObs) = observations
+    .partition(_._2 == Double.PositiveInfinity)
+
+  val observedCondition: Map[Int, Int] = hardObs
+    .map(_._1.toMap)
+    .foldLeft(Map[Int,Int]()){
+      case (acc,nextCondition) =>
+        require(nextCondition.keys.filter(acc.contains).forall(k => acc(k) == nextCondition(k)))
+        acc ++ nextCondition
+    }
+
+  def valuedTarget(theta: IndexedSeq[Double]): Seq[(Feature,Double)] = for{
+    (features, value) <- target zip theta
+    feature <- features
+  } yield (feature, value)
+
+  def buildProblem(valuedFeatures: Seq[(Feature,Double)]): Problem = Feature.buildProblem(domains,ring,valuedFeatures)
+
+  def unobservedProblem(theta: IndexedSeq[Double]): Problem =
+    buildProblem(fixedFeatures ++ valuedTarget(theta)).simplify
+  def observedProblem(theta: IndexedSeq[Double]): Problem =
+    buildProblem(fixedFeatures ++ valuedTarget(theta) ++ softObs).condition(observedCondition).simplify
+
+  override def value(theta: IndexedSeq[Double]): Double =
+    observedProblem(theta).logZ - unobservedProblem(theta).logZ
+
+  override def gradient(theta: IndexedSeq[Double]): IndexedSeq[Double] = {
+    val unobserved = new CalibratedJunctionTree(unobservedProblem(theta))
+    val observed = new CalibratedJunctionTree(observedProblem(theta))
+
+    val featureExpectations: IndexedSeq[Double] = target.map(
+      _.map(f =>
+        f
+          .condition(observedCondition)
+          .map(conditionedFeature => math.exp(observed.cliqueBelief(conditionedFeature.variables).eval(conditionedFeature.point,domains)))
+          .getOrElse(0d)
+      ).mean
     )
 
-    (result.getPoint,result.getValue)
+    //average (over tied features) of the feature expectations without observations
+    val parameterExpectations: IndexedSeq[Double] = target.map(
+      _.map(f => math.exp(unobserved.cliqueBelief(f.variables).eval(f.point,domains))).mean
+    )
+
+    (featureExpectations zip parameterExpectations).map{case (obsExp,unobExp) => obsExp - unobExp}
   }
+
+  override def initialGuess: IndexedSeq[Double] = IndexedSeq.fill(dimension)(0d)
+
+  val dimension: Int = target.size
 }
+
