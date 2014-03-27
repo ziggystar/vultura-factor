@@ -2,9 +2,12 @@ name := "vultura.util"
 
 organization := "de.uni-ulm"
 
-version := "16-SNAPSHOT"
+/*
+17: add parameter learning
+*/
+version := "17-SNAPSHOT"
 
-scalaVersion := "2.10.3"
+scalaVersion := "2.10.4"
 
 scalacOptions in Compile += "-Xdisable-assertions"
 
