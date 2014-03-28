@@ -15,8 +15,8 @@ import scala.util.Random
  * User: Thomas Geier
  * Date: 6/14/13
  */
+class CalibratedJunctionTree(val problem: Problem, variableOrder: Option[Seq[Int]] = None) extends InfAlg {
 
-class CalibratedJunctionTree(val problem: Problem) extends InfAlg {
   def getProblem: Problem = problem
   val (calibratedTrees: Seq[Tree[FastFactor]], myLogZ) = {
     val calibratedTreesWithZ = uncalibratedTrees.map(CalibratedJunctionTree.calibrate(_,problem.ring, problem.domains))
@@ -33,11 +33,17 @@ class CalibratedJunctionTree(val problem: Problem) extends InfAlg {
   def uncalibratedTrees: Seq[Tree[FastFactor]] = {
     //1. create format for jt-creation
     //2. multiply all factors of each clique into one
-    compactJTrees(minDegreeJTs(problem.factors.map(f => f.variables.toSet -> f)))
+    compactJTrees(initialTrees)
         .map(_.map {
         case (vars, factors) => FastFactor.multiplyRetain(problem.ring)(problem.domains)(factors.toIndexedSeq,vars.toArray.sorted)
       })
     }
+
+
+  def initialTrees: Seq[Tree[(Set[Int], Seq[FastFactor])]] = variableOrder match {
+    case None => minDegreeJTs(problem.factors.map(f => f.variables.toSet -> f))
+    case Some(order) => junctionTreesFromOrder(problem.factors.map(f => f.variables.toSet -> f), order)
+  }
 
   /** @return Partition function in encoding specified by `ring`. */
   def Z: Double = problem.ring.decode(Array(myLogZ))(0)

@@ -157,6 +157,19 @@ object TreeWidth {
       case _ => None
     })
 
+  def junctionTreesFromOrder[A](cliques: Seq[(Set[Int],A)], order: Seq[Int]): Seq[Tree[(Set[Int],Seq[A])]] = {
+    def jtRec(leafs: Seq[Tree[(Set[Int], Seq[A])]], order: List[Int]): Seq[Tree[(Set[Int], Seq[A])]] = order match {
+      case Nil => leafs
+      case next :: rest => {
+        val (elim, remain) = leafs.partition(_.rootLabel._1.contains(next))
+        val newTree = node((elim.map(_.rootLabel._1).flatten.toSet - next,Seq()), elim.toStream)
+        jtRec(remain :+ newTree, rest)
+      }
+    }
+
+    jtRec(cliques.map{case (vars, a) => leaf((vars,Seq(a)))}, order.toList)
+  }
+
   def minDegreeJTs[A](_cliques: IndexedSeq[(Set[Int],A)]): Seq[Tree[(Set[Int],Seq[A])]] = {
     //convert the scala sets to BitSets
     val cliques = _cliques.map(c => intSet2BS(c._1))
