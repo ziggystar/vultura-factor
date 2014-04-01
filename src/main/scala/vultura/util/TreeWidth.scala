@@ -158,16 +158,21 @@ object TreeWidth {
     })
 
   def junctionTreesFromOrder[A](cliques: Seq[(Set[Int],A)], order: Seq[Int]): Seq[Tree[(Set[Int],Seq[A])]] = {
-    def jtRec(leafs: Seq[Tree[(Set[Int], Seq[A])]], order: List[Int]): Seq[Tree[(Set[Int], Seq[A])]] = order match {
-      case Nil => leafs
-      case next :: rest => {
+    //the first set contains variables to propagate upwards, the second set contains those in the local clique
+    //the first set does not contain the eliminated vertex, the second one does; that's the reason for the two sets
+    def jtRec(leafs: Seq[Tree[(Set[Int], Set[Int], Seq[A])]], order: List[Int]): Seq[Tree[(Set[Int], Seq[A])]] = order match {
+      case Nil =>
+        require(leafs.forall(_.rootLabel._1.isEmpty), "given order did not eliminate all variables")
+        leafs.map(tree => tree.map{case (_,c,a) => (c,a)})
+
+      case next :: rest =>
         val (elim, remain) = leafs.partition(_.rootLabel._1.contains(next))
-        val newTree = node((elim.map(_.rootLabel._1).flatten.toSet - next,Seq()), elim.toStream)
+        val elimClique: Set[Int] = elim.map(_.rootLabel._1).flatten.toSet
+        val newTree = node((elimClique - next, elimClique, Seq()), elim.toStream)
         jtRec(remain :+ newTree, rest)
-      }
     }
 
-    jtRec(cliques.map{case (vars, a) => leaf((vars,Seq(a)))}, order.toList)
+    jtRec(cliques.map{case (vars, a) => leaf((vars, vars, Seq(a)))}, order.toList)
   }
 
   def minDegreeJTs[A](_cliques: IndexedSeq[(Set[Int],A)]): Seq[Tree[(Set[Int],Seq[A])]] = {

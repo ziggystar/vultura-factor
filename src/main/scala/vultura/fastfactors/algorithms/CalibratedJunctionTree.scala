@@ -39,7 +39,6 @@ class CalibratedJunctionTree(val problem: Problem, variableOrder: Option[Seq[Int
       })
     }
 
-
   def initialTrees: Seq[Tree[(Set[Int], Seq[FastFactor])]] = variableOrder match {
     case None => minDegreeJTs(problem.factors.map(f => f.variables.toSet -> f))
     case Some(order) => junctionTreesFromOrder(problem.factors.map(f => f.variables.toSet -> f), order)
