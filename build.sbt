@@ -5,7 +5,7 @@ organization := "de.uni-ulm"
 /*
 17: add parameter learning
 */
-version := "17-SNAPSHOT"
+version := "18-SNAPSHOT"
 
 scalaVersion := "2.10.4"
 

@@ -4,6 +4,7 @@ import org.specs2.Specification
 import org.specs2.specification.Fragments
 import vultura.fastfactors.{Problem, generators}
 import scala.util.Random
+import vultura.fastfactors.algorithms.conditioned.{CBPConfig, CBP}
 
 /**
  * @author Thomas Geier
