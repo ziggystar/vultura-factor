@@ -20,7 +20,7 @@ class BeliefPropagationTest extends Specification with FastFactorMatchers {
   val treeProblem2 = generators.treeK(15,3,2,generators.expGauss(1),new Random(1))
 
   def bpInfer(problem: Problem, seed: Long = 1): BeliefPropagation = new BeliefPropagation(problem,new Random(seed),1e-10,100)
-  def jtInfer(problem: Problem) = new CalibratedJunctionTree(problem)
+  def jtInfer(problem: Problem) = new JunctionTree(problem)
 
   val testProblem1 = Problem(IS(FF(AI(0),AD(1,2)),FF(AI(0),AD(3,4))),Array(2),NormalD)
   val testProblem1lnZ = math.log(11d)

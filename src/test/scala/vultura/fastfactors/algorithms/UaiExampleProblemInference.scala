@@ -15,6 +15,6 @@ class UaiExampleProblemInference extends Specification {
 
   def calibratedJTTest = Fragments.create(
     SampleProblems.examples.filter(_.logZ.isDefined).map( example =>
-      example.filename ! (CalibratedJunctionTree.logZ(example.problem) must beCloseTo(example.logZ.get,0.01))
+      example.filename ! (JunctionTree.logZ(example.problem) must beCloseTo(example.logZ.get,0.01))
       ):_*)
 }

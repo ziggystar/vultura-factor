@@ -27,7 +27,7 @@ class SimplestProblem extends Specification {
     """.stripMargin)
   val logZTiny = 3.784189634
 
-  def inferJT(p: Problem): Double = new CalibratedJunctionTree(p).logZ
+  def inferJT(p: Problem): Double = new JunctionTree(p).logZ
 //  def inferBP(p: Problem): Double
   def inferVE(p: Problem): Double = math.log(variableElimination(p))
 }

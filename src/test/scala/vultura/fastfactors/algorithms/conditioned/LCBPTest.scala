@@ -5,7 +5,7 @@ import org.specs2.specification.Fragments
 
 import vultura.fastfactors.generators._
 import scala.util.Random
-import vultura.fastfactors.algorithms.{CalibratedJunctionTree, BeliefPropagation}
+import vultura.fastfactors.algorithms.{JunctionTree, BeliefPropagation}
 import vultura.fastfactors.Problem
 import org.specs2.matcher.MatchResult
 import vultura.fastfactors.algorithms.calibration.BP_Cal

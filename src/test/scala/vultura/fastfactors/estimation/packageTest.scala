@@ -5,7 +5,7 @@ import org.specs2.specification.Fragments
 import vultura.fastfactors._
 import generators._
 import scala.util.Random
-import vultura.fastfactors.algorithms.CalibratedJunctionTree
+import vultura.fastfactors.algorithms.JunctionTree
 import org.specs2.matcher.MatchResult
 
 /**
@@ -23,7 +23,7 @@ class packageTest extends Specification with FastFactorMatchers {
   def randomCompletelyObservedLearningTest(_problem: Problem, numParameters: Int, numData: Int = 50): MatchResult[IndexedSeq[Double]] = {
     val random = new Random(1)
     val problem = _problem.simplify.toRing(LogD)
-    val jt = new CalibratedJunctionTree(problem)
+    val jt = new JunctionTree(problem)
     val data = Seq.fill(numData)(jt.sample(random))
 
     val (droppedFeatures, keptFeatures) = random.shuffle(Feature.extractFeaturesFromProblem(problem).toIndexedSeq).splitAt(numParameters)

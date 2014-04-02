@@ -4,7 +4,7 @@ import scala.collection.mutable
 import scala.util.Random
 import vultura.fastfactors.{Problem, FastFactor}
 import vultura.util.seq2randomSeq
-import vultura.fastfactors.algorithms.{AlgConfig, CalibratedJunctionTree, InfAlg, BeliefPropagation}
+import vultura.fastfactors.algorithms.{AlgConfig, JunctionTree, InfAlg, BeliefPropagation}
 
 /**
  * Conditioned Belief Propagation.
@@ -81,7 +81,7 @@ class CBP(val problem: Problem,
     }
     val conditionedProblem: Problem = problem.copy(factors = clampFactor(problem.factors))
     if(conditionedProblem.variables.isEmpty)
-      Right(new CalibratedJunctionTree(conditionedProblem))
+      Right(new JunctionTree(conditionedProblem))
     else
       Left(constructBP(conditionedProblem))
   }

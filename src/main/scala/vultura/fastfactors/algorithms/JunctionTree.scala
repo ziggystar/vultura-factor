@@ -15,11 +15,11 @@ import scala.util.Random
  * User: Thomas Geier
  * Date: 6/14/13
  */
-class CalibratedJunctionTree(val problem: Problem, variableOrder: Option[Seq[Int]] = None) extends InfAlg {
+class JunctionTree(val problem: Problem, variableOrder: Option[Seq[Int]] = None) extends InfAlg {
 
   def getProblem: Problem = problem
   val (calibratedTrees: Seq[Tree[FastFactor]], myLogZ) = {
-    val calibratedTreesWithZ = uncalibratedTrees.map(CalibratedJunctionTree.calibrate(_,problem.ring, problem.domains))
+    val calibratedTreesWithZ = uncalibratedTrees.map(JunctionTree.calibrate(_,problem.ring, problem.domains))
     (calibratedTreesWithZ.map(_._1),problem.ring.prodA(calibratedTreesWithZ.map(_._2)(collection.breakOut)))
   }
 
@@ -63,7 +63,7 @@ class CalibratedJunctionTree(val problem: Problem, variableOrder: Option[Seq[Int
   }
 
   def sample(r: Random): Map[Var,Val] = calibratedTrees.map{ tree =>
-    CalibratedJunctionTree.mapDown(tree)(Map[Var,Val]()){ case (cond,factor) =>
+    JunctionTree.mapDown(tree)(Map[Var,Val]()){ case (cond,factor) =>
       val conditionedFactor: FastFactor = factor.condition(cond, problem.domains)
       (conditionedFactor.variables zip conditionedFactor.sample(r, problem.domains, problem.ring))(collection.breakOut)
     }.flatten.reduce(_ ++ _)
@@ -73,7 +73,7 @@ class CalibratedJunctionTree(val problem: Problem, variableOrder: Option[Seq[Int
     def nodeName(cliqueFactor: FastFactor): String = "n" + cliqueFactor.variables.mkString("_")
 
     val calibratedTrees: Seq[Tree[(FastFactor, Set[Int], FastFactor, FastFactor)]] =
-      uncalibratedTrees.map(CalibratedJunctionTree.calibrateTree(_,problem.ring, problem.domains))
+      uncalibratedTrees.map(JunctionTree.calibrateTree(_,problem.ring, problem.domains))
 
     val nodes = calibratedTrees.flatMap(_.flatten.map{case (cliqueFactor,_,_,_) =>
       f"""${nodeName(cliqueFactor)} [label="${cliqueFactor.toBriefString}"]"""
@@ -94,8 +94,8 @@ class CalibratedJunctionTree(val problem: Problem, variableOrder: Option[Seq[Int
   }
 }
 
-object CalibratedJunctionTree{
-  def logZ(p: Problem): Double = new CalibratedJunctionTree(p).logZ
+object JunctionTree{
+  def logZ(p: Problem): Double = new JunctionTree(p).logZ
   /** Discards the tree structure and returns calibrated cliques and the partition function for the tree. */
   def calibrate(tree: Tree[FastFactor], ring: RingZ[Double], domains: Array[Int]): (Tree[FastFactor], Double) = {
     val calTree: Tree[(FastFactor,Set[Int],FastFactor,FastFactor)] = calibrateTree(tree,ring, domains)

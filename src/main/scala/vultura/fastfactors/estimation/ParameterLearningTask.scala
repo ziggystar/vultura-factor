@@ -2,7 +2,7 @@ package vultura.fastfactors.estimation
 
 import vultura.fastfactors._
 import vultura.util._
-import vultura.fastfactors.algorithms.CalibratedJunctionTree
+import vultura.fastfactors.algorithms.JunctionTree
 import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.BOBYQAOptimizer
 
 trait UnconstraintDifferentiableFunction {
@@ -89,10 +89,10 @@ case class CompressedAvgLogLikelihood(problem: Problem, data: Seq[Map[Var,Val]],
 
   def gradient(theta: Theta): IndexedSeq[Double] = {
     val p: Problem = buildProblem(theta)
-    val unconditioned = new CalibratedJunctionTree(p)
+    val unconditioned = new JunctionTree(p)
 
     val expectationMatrix = data.map{ d =>
-      val conditioned = new CalibratedJunctionTree(p.condition(d))
+      val conditioned = new JunctionTree(p.condition(d))
       //every element in target corresponds to one parameter
       target.map{ features =>
       //the average expected value over all features tied for this parameter; note that the feature might already
@@ -166,8 +166,8 @@ case class SingleDataSoftObsLogLikelihood(domains: Array[Int],
     observedProblem(theta).logZ - unobservedProblem(theta).logZ
 
   override def gradient(theta: IndexedSeq[Double]): IndexedSeq[Double] = {
-    val unobserved = new CalibratedJunctionTree(unobservedProblem(theta))
-    val observed = new CalibratedJunctionTree(observedProblem(theta))
+    val unobserved = new JunctionTree(unobservedProblem(theta))
+    val observed = new JunctionTree(observedProblem(theta))
 
     val featureExpectations: IndexedSeq[Double] = target.map(
       _.map(f =>
