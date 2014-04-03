@@ -2,7 +2,7 @@ package vultura.fastfactors
 
 import scala.language.reflectiveCalls
 import scala.util.Random
-import vultura.fastfactors.algorithms.BeliefPropagation
+import vultura.fastfactors.inference.BeliefPropagation
 import vultura.util._
 
 

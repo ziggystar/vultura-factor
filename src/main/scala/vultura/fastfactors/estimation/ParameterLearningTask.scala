@@ -3,7 +3,7 @@ package vultura.fastfactors.estimation
 import scala.language.reflectiveCalls
 import vultura.fastfactors._
 import vultura.util._
-import vultura.fastfactors.algorithms.JunctionTree
+import vultura.fastfactors.inference.JunctionTree
 import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.BOBYQAOptimizer
 
 trait UnconstraintDifferentiableFunction {

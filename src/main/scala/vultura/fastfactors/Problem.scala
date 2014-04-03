@@ -5,7 +5,7 @@ import scala.util.Random
 import vultura.util.TreeWidth._
 import scalaz.Tree
 import java.io._
-import vultura.fastfactors.algorithms.{VariableElimination, JunctionTree}
+import vultura.fastfactors.inference.{VariableElimination, JunctionTree}
 import vultura.util.SSet
 
 /** A problem is basically a collection of factors, together with a domain and a ring.

@@ -1,12 +1,12 @@
 package vultura.fastfactors
 
 import vultura.fastfactors.generators._
-import vultura.fastfactors.algorithms.calibration.BP_Cal
-import vultura.fastfactors.algorithms.conditioned._
+import vultura.fastfactors.inference.calibration.BP_Cal
+import vultura.fastfactors.inference.conditioned._
 import Benchmarks._
-import vultura.fastfactors.algorithms.BeliefPropagation
+import vultura.fastfactors.inference.BeliefPropagation
 import scala.util.Random
-import vultura.fastfactors.algorithms.conditioned.GScheme
+import vultura.fastfactors.inference.conditioned.GScheme
 
 /**
  * Created by thomas on 3/9/14.

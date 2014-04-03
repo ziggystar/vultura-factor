@@ -2,7 +2,7 @@ package vultura.fastfactors
 
 import org.specs2.Specification
 import org.specs2.specification.Fragments
-import vultura.fastfactors.algorithms.conditioned.GridProblem
+import vultura.fastfactors.inference.conditioned.GridProblem
 
 /**
  * Tests checking for correct simplification of problems

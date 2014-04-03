@@ -5,7 +5,7 @@ import org.specs2.specification.Fragments
 import vultura.fastfactors._
 import generators._
 import scala.util.Random
-import vultura.fastfactors.algorithms.JunctionTree
+import vultura.fastfactors.inference.JunctionTree
 import org.specs2.matcher.MatchResult
 
 /**
