@@ -31,6 +31,22 @@ trait MargParI extends MarginalI with ParFunI{
   def toResult = Result(problem,Z,problem.variables.map(v => v -> variableBelief(v))(collection.breakOut))
 }
 
+trait JointMargI extends MarginalI {
+  /** Throws if no clique contains `vars`.
+    * @return Normalized belief over given variables in encoding specified by problem ring. */
+  def cliqueBelief(vars: Array[Var]): FastFactor
+
+  def decodedCliqueBelief(vars: Array[Var]): FastFactor =
+    if(problem.ring != NormalD) problem.ring.decode(cliqueBelief(vars)) else cliqueBelief(vars)
+
+  /** @return marginal distribution of variable in log encoding. */
+  def logCliqueBelief(vars: Array[Var]): FastFactor  =
+    if(problem.ring == LogD) cliqueBelief(vars) else LogD.encode(decodedCliqueBelief(vars))
+
+  /** @return marginal distribution of variable in encoding specified by `ring`. */
+  override def variableBelief(vi: Int): FastFactor = cliqueBelief(Array(vi))
+}
+
 /** Trait that is implemented by inference algorithms that can compute the most probable explanation, most probable
   * assignment, maximum aposteriori assignment.
   */

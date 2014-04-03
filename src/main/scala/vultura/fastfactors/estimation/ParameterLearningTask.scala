@@ -3,7 +3,7 @@ package vultura.fastfactors.estimation
 import scala.language.reflectiveCalls
 import vultura.fastfactors._
 import vultura.util._
-import vultura.fastfactors.inference.JunctionTree
+import vultura.fastfactors.inference.{ParFunI, JointMargI, JunctionTree}
 import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.BOBYQAOptimizer
 
 trait UnconstraintDifferentiableFunction {
@@ -78,7 +78,8 @@ object Optimization {
   */
 case class MObsAvgLogLikelihood(problem: Problem,
                                 data: Seq[Map[Var,Val]], 
-                                target: IndexedSeq[Set[Feature]]) extends UnconstraintDifferentiableFunction {
+                                target: IndexedSeq[Set[Feature]],
+                                inferer: Problem => JointMargI with ParFunI = new JunctionTree(_)) extends UnconstraintDifferentiableFunction {
 
   val simplifiedLogProblem: Problem = problem.simplify.toRing(LogD)
 
@@ -95,10 +96,10 @@ case class MObsAvgLogLikelihood(problem: Problem,
 
   def gradient(theta: Theta): IndexedSeq[Double] = {
     val p: Problem = buildProblem(theta)
-    val unconditioned = new JunctionTree(p)
+    val unconditioned = inferer(p)
 
     val expectationMatrix = data.map{ d =>
-      val conditioned = new JunctionTree(p.condition(d))
+      val conditioned = inferer(p.condition(d))
       //every element in target corresponds to one parameter
       target.map{ features =>
       //the average expected value over all features tied for this parameter; note that the feature might already
@@ -126,7 +127,7 @@ case class MObsAvgLogLikelihood(problem: Problem,
   /** @return The average log-likelihood of the data given the parameters `theta`. */
   def value(theta: Theta): Double = {
     val p = buildProblem(theta)
-    val llMean = data.map(d => p.condition(d).logZ).mean - p.logZ
+    val llMean = data.map(d => inferer(p.condition(d)).logZ).mean - inferer(p).logZ
     llMean
   }
 
@@ -142,7 +143,8 @@ case class SingleDataSoftObsLogLikelihood(domains: Array[Int],
                                           ring: RingZ[Double],
                                           fixedFeatures: Seq[(Feature,Double)],
                                           observations: Seq[(Feature,Double)],
-                                          target: IndexedSeq[Set[Feature]]) extends UnconstraintDifferentiableFunction{
+                                          target: IndexedSeq[Set[Feature]],
+                                          inferer: Problem => JointMargI with ParFunI = new JunctionTree(_)) extends UnconstraintDifferentiableFunction{
   require(ring == LogD)
 
   val (hardObs, softObs) = observations
@@ -169,11 +171,11 @@ case class SingleDataSoftObsLogLikelihood(domains: Array[Int],
     buildProblem(fixedFeatures ++ valuedTarget(theta) ++ softObs).condition(observedCondition).simplify
 
   override def value(theta: IndexedSeq[Double]): Double =
-    observedProblem(theta).logZ - unobservedProblem(theta).logZ
+    inferer(observedProblem(theta)).logZ - inferer(unobservedProblem(theta)).logZ
 
   override def gradient(theta: IndexedSeq[Double]): IndexedSeq[Double] = {
-    val unobserved = new JunctionTree(unobservedProblem(theta))
-    val observed = new JunctionTree(observedProblem(theta))
+    val unobserved = inferer(unobservedProblem(theta))
+    val observed = inferer(observedProblem(theta))
 
     val featureExpectations: IndexedSeq[Double] = target.map(
       _.map(f =>

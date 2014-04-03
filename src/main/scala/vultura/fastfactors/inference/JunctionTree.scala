@@ -8,9 +8,10 @@ import scala.collection.mutable
 import vultura.util._
 import ScalazUtils._
 import scala.util.Random
+import java.util.concurrent.ConcurrentLinkedQueue
 
 /** Ordinary Shanoy-Shafer (1990) junction tree algorithm. */
-class JunctionTree(val problem: Problem, variableOrderer: VariableOrderer = MinDegreeOrderer) extends MargParI {
+class JunctionTree(val problem: Problem, variableOrderer: VariableOrderer = MinDegreeOrderer) extends MargParI with JointMargI {
 
   val variableOrder: VariableOrder = variableOrderer(problem)
 
@@ -43,7 +44,7 @@ class JunctionTree(val problem: Problem, variableOrderer: VariableOrderer = MinD
   private val marginalCache = new mutable.HashMap[Int, FastFactor]()
 
   /** @return marginal distribution of variable in encoding specified by `ring`. */
-  def variableBelief(vi: Int): FastFactor = marginalCache.getOrElseUpdate(vi, cliqueBelief(Array(vi)))
+  override def variableBelief(vi: Int): FastFactor = marginalCache.getOrElseUpdate(vi, cliqueBelief(Array(vi)))
 
   /** Throws if no clique contains `vars`.
     * @return Normalized belief over given variables in encoding specified by problem ring. */
