@@ -5,7 +5,7 @@ import scala.util.Random
 import vultura.util.TreeWidth._
 import scalaz.Tree
 import java.io._
-import vultura.fastfactors.algorithms.JunctionTree
+import vultura.fastfactors.algorithms.{VariableElimination, JunctionTree}
 import vultura.util.SSet
 
 /** A problem is basically a collection of factors, together with a domain and a ring.
@@ -36,6 +36,7 @@ case class Problem(factors: IndexedSeq[FastFactor], domains: Array[Int], ring: R
     ).mkString("\n")
   }
 
+  @deprecated("get rid of this","18")
   def minDegreeJunctionTrees(random: Random): Seq[Tree[(Set[Int], Seq[FastFactor])]] =
     compactJTrees(minDegreeJTs(factors.map(f => f.variables.toSet -> f)))
 
@@ -57,7 +58,7 @@ case class Problem(factors: IndexedSeq[FastFactor], domains: Array[Int], ring: R
   def toBriefString: String = f"(Problem: ${variables.size} variables, ${factors.size} factors, ring: $ring"
 
   /** @return Exact log Z obtained by junction tree algorithm. */
-  def logZ: Double = JunctionTree.logZ(this)
+  def logZ: Double = VariableElimination(this).logZ
   
   /** merges factors into other factors where possible */
   def simplify: Problem = {
