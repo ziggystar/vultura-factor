@@ -9,7 +9,7 @@ import scala.collection.mutable
  * @author Thomas Geier
  * @param maxIter The maximum number of updates. One update is recalculating one marginal belief.
  */
-class MeanField(val problem: Problem, val tol: Double = 1e-9, val maxIter: Int = 10000) extends InfAlg {
+class MeanField(val problem: Problem, val tol: Double = 1e-9, val maxIter: Int = 10000) extends MargParI  {
 
   require(problem.ring == NormalD, "mean field only supports calculation in normal domain")
 

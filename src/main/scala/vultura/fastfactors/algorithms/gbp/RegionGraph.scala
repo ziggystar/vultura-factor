@@ -3,7 +3,7 @@ package vultura.fastfactors.algorithms.gbp
 import vultura.fastfactors.{Problem, FastFactor}
 import vultura.util.SSet
 import scala.util.Random
-import vultura.util.graph.{EdgeMapDiGraph, EdgeBiMapDiGraph}
+import vultura.util.graph.EdgeMapDiGraph
 
 case class Region(cr: Double, variables: Set[Int], factors: Set[FastFactor]){
   /** @return true if the union of factor scopes is a subset of the variables. */
@@ -54,7 +54,7 @@ trait RegionGraph {
     edges.find{ case (Region(_,hiVs,hiFs), Region(_,loVs,loFs)) =>
       !(loVs.subsetOf(hiVs) && loFs.subsetOf(hiFs)) }.map("child region is no subset of parent region for edge " + _),
     regions.find(!_.hasValidScope).map("there exists a region not encompassing its factors scopes: " + _),
-    EdgeMapDiGraph(regions,edges).findCycle.map("graph has a cycle: " +)
+    EdgeMapDiGraph(regions,edges).findCycle.map("graph has a cycle: " + _)
   )
 
   def issues: Seq[String] = checks.flatten

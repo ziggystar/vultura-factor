@@ -3,7 +3,7 @@ package vultura.fastfactors.algorithms.conditioned
 import vultura.util._
 import vultura.fastfactors._
 import vultura.fastfactors.algorithms.calibration.{Calibrator, CEdge}
-import vultura.fastfactors.algorithms.InfAlg
+import vultura.fastfactors.algorithms.MargParI
 import vultura.util.graph.DotGraph
 
 /**
@@ -13,7 +13,7 @@ class LCBP(val problem: Problem,
            val scheme: GScheme,
            val tol: Double = 1e-9,
            val maxIterations: Int = 1000,
-           val exactConditions: Boolean = true) extends InfAlg {
+           val exactConditions: Boolean = true) extends MargParI {
   require(problem.ring == NormalD, "linear combination of messages only implemented for normal domain")
 
   //TODO make this work for the Log ring
@@ -301,7 +301,7 @@ class LCBP(val problem: Problem,
 
   val calibrator = new Calibrator(edges,tol,maxIterations)
 
-  override def iteration: Int = calibrator.iteration
+  def iteration: Int = calibrator.iteration
 
   /** @return marginal distribution of variable in encoding specified by `ring`. */
   override def variableBelief(vi: Int): FastFactor = ???

@@ -1,5 +1,7 @@
 package vultura.cnf
 
+import scala.language.implicitConversions
+
 /**Provides implicit conversions to use the DSL to specify CNF objects. */
 package object dsl {
 

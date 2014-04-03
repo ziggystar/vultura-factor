@@ -1,7 +1,7 @@
 package vultura.fastfactors
 
 import org.specs2.matcher.{MatchResult, Expectable, Matcher}
-import vultura.fastfactors.algorithms.{JunctionTree, InfAlg}
+import vultura.fastfactors.algorithms.{ParFunI, JunctionTree}
 
 /**
  * Matchers for use with FastFactor objects.
@@ -28,8 +28,8 @@ trait FastFactorMatchers {
   def beSimilarTo(ref: FastFactor, tol: Double = 1e-7): Matcher[FastFactor] =
     haveSameStructureAs(ref) and haveValuesCloseTo(ref,tol)
 
-  def haveExactZ(tol: Double = 1e-7): Matcher[InfAlg] = new Matcher[InfAlg]{
-    def apply[S <: InfAlg](t: Expectable[S]): MatchResult[S] = {
+  def haveExactZ(tol: Double = 1e-7): Matcher[ParFunI] = new Matcher[ParFunI]{
+    def apply[S <: ParFunI](t: Expectable[S]): MatchResult[S] = {
       val obtainedZ: Double = t.value.Z
       val exactZ: Double = new JunctionTree(t.value.problem).Z
       result(

@@ -1,12 +1,12 @@
 package vultura.fastfactors.algorithms.conditioned
 
-import vultura.fastfactors._
 import scala.collection.mutable
-import vultura.fastfactors.algorithms.InfAlg
+import vultura.fastfactors._
+import vultura.fastfactors.algorithms.MargParI
 import vultura.util.IntDomainCPI
 
 /** Just one set of variables gets conditioned. */
-class SinglyLCMF(val problem: Problem, val scheme: SimpleScheme, val tol: Double = 1e-9, maxIterations: Int = 1000) extends InfAlg {
+class SinglyLCMF(val problem: Problem, val scheme: SimpleScheme, val tol: Double = 1e-9, maxIterations: Int = 1000) extends MargParI {
   require(problem.ring == NormalD, "mean field only supports calculation in normal domain")
   require(problem == scheme.problem, "scheme targets a different problem")
   require(
@@ -19,7 +19,7 @@ class SinglyLCMF(val problem: Problem, val scheme: SimpleScheme, val tol: Double
       n <- problem.neighboursOf(variable) if !scheme.conditionVariables(n)
       cond <- scheme.conditionsOf(n) if cond.isCompatibleWith(condition)
       eff <- Seq(Marginal(n,cond)) ++ cond.headOption.map{case (cv,_) => Seq(Weight(cv))}.getOrElse(Seq())
-    } yield eff
+    } yield eff: Parameter
 
     override def toString: String = f"b($variable|${printCondition(condition)})"
   }
@@ -120,7 +120,7 @@ class SinglyLCMF(val problem: Problem, val scheme: SimpleScheme, val tol: Double
 
     def logZOfCondition(cond: Condition): Double = {
       val entropies = scheme.influencedVariables(variable)
-        .filterNot(variable ==)
+        .filterNot(variable == _)
         .map(v => NormalD.entropy(estimatedDistribution(Array(v),cond).values))
       val logExpect = scheme.influencedFactors(variable).map(logExpectation(_,cond))
       logExpect.sum + entropies.sum

@@ -11,7 +11,7 @@ import gnu.trove.map.hash.TLongObjectHashMap
  * Date: 6/10/13
  */
 class BeliefPropagation(val problem: Problem, random: Random = new Random, tol: Double = 1e-7, runInitially: Int = 0)
-extends InfAlg with Iterator[InfAlg] {
+extends MargParI with Iterator[MargParI] {
 
   val Problem(factors: IndexedSeq[FastFactor], domains: Array[Int], ring: RingZ[Double]) = problem
 
@@ -196,7 +196,7 @@ extends InfAlg with Iterator[InfAlg] {
 
   def hasNext: Boolean = !didConverge
 
-  def next(): InfAlg = {
+  def next(): MargParI = {
     require(!didConverge)
     run(1)
     this

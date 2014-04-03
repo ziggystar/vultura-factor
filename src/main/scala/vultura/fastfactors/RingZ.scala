@@ -1,6 +1,5 @@
 package vultura.fastfactors
 
-import scala.reflect.ClassTag
 import scala.annotation.tailrec
 
 /**

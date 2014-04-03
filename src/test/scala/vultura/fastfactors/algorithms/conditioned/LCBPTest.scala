@@ -37,7 +37,7 @@ class LCBPTest extends Specification {
       "random structure" ! convergedAndExactTo(new LCBP(rand1,fullyConditioned(rand1,0),1e-9,10000), 1e-2) ^
       p^
     "locally conditioned" ^
-      "grid" ! convergedAndExactTo(new LCBP(p2,slightlyConditioned(p2,0), maxIterations = 100000, exactConditions = false),1e-3).orSkip ^
+      "grid" ! convergedAndExactTo(new LCBP(p2,slightlyConditioned(p2,0), maxIterations = 100000, exactConditions = false),5e-3).orSkip ^
       "compare lcbp with and without correction" ^
         "4x1 grid" ! {
           val problem = grid(4,1,2,expGauss(1),new Random(1)).simplify

@@ -1,7 +1,8 @@
 package vultura.fastfactors
 
-import vultura.fastfactors
+import scala.language.reflectiveCalls
 import scala.util.Random
+import vultura.fastfactors
 import vultura.util._
 
 /**

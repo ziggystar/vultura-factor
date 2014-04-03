@@ -3,7 +3,6 @@ package vultura.fastfactors.algorithms
 import vultura.fastfactors._
 import vultura.util.TreeWidth._
 import scalaz._
-import Scalaz._
 import scalaz.Tree._
 import scala.collection.mutable
 import vultura.util._
@@ -15,7 +14,7 @@ import scala.util.Random
  * User: Thomas Geier
  * Date: 6/14/13
  */
-class JunctionTree(val problem: Problem, variableOrder: Option[Seq[Int]] = None) extends InfAlg {
+class JunctionTree(val problem: Problem, variableOrder: Option[Seq[Int]] = None) extends MargParI {
 
   val (calibratedTrees: Seq[Tree[FastFactor]], myLogZ) = {
     val calibratedTreesWithZ = uncalibratedTrees.map(JunctionTree.calibrate(_,problem.ring, problem.domains))
@@ -25,9 +24,6 @@ class JunctionTree(val problem: Problem, variableOrder: Option[Seq[Int]] = None)
   lazy val calibratedCliques: Map[Set[Var],FastFactor] =
     calibratedTrees.map(_.flatten).flatten.groupBy(_.variables.toSet).map{case (k,v) => k -> v.head}
   lazy val ssetCliques = new SSet(calibratedCliques.keySet)
-
-  //TODO [design] doesn't make much sense?
-  def iteration: Int = 1
 
   def uncalibratedTrees: Seq[Tree[FastFactor]] = {
     //1. create format for jt-creation

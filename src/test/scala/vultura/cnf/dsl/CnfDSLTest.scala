@@ -1,5 +1,6 @@
 package vultura.cnf.dsl
 
+import scala.language.reflectiveCalls
 import org.specs2._
 import specification.Fragments
 

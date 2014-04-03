@@ -1,5 +1,6 @@
 package vultura.fastfactors.estimation
 
+import scala.language.reflectiveCalls
 import vultura.fastfactors._
 import vultura.util._
 import vultura.fastfactors.algorithms.JunctionTree

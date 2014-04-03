@@ -1,12 +1,12 @@
 package vultura.fastfactors.algorithms.calibration
 
 import vultura.fastfactors.{FastFactor, Problem}
-import vultura.fastfactors.algorithms.InfAlg
+import vultura.fastfactors.algorithms.MargParI
 
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
  */
-class BP_Cal(val problem: Problem, val tol: Double = 1e-7, runInitially: Int = 1000) extends InfAlg {
+class BP_Cal(val problem: Problem, val tol: Double = 1e-7, runInitially: Int = 1000) extends MargParI  {
   case class V2F(v: Int, f: FastFactor) extends CEdge {
     /** Compute the value of this node given the values of the independent nodes. */
     override def compute: (IndexedSeq[TIn]) => TOut = ins => FastFactor.multiply(problem.ring)(problem.domains)(ins).normalize(problem.ring)
@@ -41,7 +41,7 @@ class BP_Cal(val problem: Problem, val tol: Double = 1e-7, runInitially: Int = 1
 
   val calibrated = new Calibrator(edges,tol,runInitially)
 
-  override def iteration: Int = 1
+  def iteration: Int = 1
 
   val fMult: IndexedSeq[FastFactor] => FastFactor = FastFactor.multiply(problem.ring)(problem.domains)
 
@@ -68,6 +68,5 @@ class BP_Cal(val problem: Problem, val tol: Double = 1e-7, runInitially: Int = 1
     result
   }
 
-  override def getProblem: Problem = problem
   def toDOT: String = calibrated.dot.nodeLabeled(n => n.toString + "\\n" + calibrated.nodeState(n).toString).dotString
 }

@@ -1,7 +1,8 @@
 package vultura.fastfactors
 
+import scala.language.reflectiveCalls
 import scala.util.Random
-import vultura.fastfactors.algorithms.{RoundRobinCalibrator, CalibrationProblem, BeliefPropagation}
+import vultura.fastfactors.algorithms.BeliefPropagation
 import vultura.util._
 
 

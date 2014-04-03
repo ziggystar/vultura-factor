@@ -4,6 +4,7 @@ organization := "de.uni-ulm"
 
 /*
 17: add parameter learning
+18: refactoring, remove some stuff
 */
 version := "18-SNAPSHOT"
 

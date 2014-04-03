@@ -4,7 +4,7 @@ import scala.collection.mutable
 import scala.util.Random
 import vultura.fastfactors.{Problem, FastFactor}
 import vultura.util.seq2randomSeq
-import vultura.fastfactors.algorithms.{AlgConfig, JunctionTree, InfAlg, BeliefPropagation}
+import vultura.fastfactors.algorithms._
 
 /**
  * Conditioned Belief Propagation.
@@ -15,14 +15,14 @@ class CBP(val problem: Problem,
           val clampMethod: CBP.CLAMP_METHOD.Value = CBP.CLAMP_METHOD.CLAMP,
           val bpMaxiter: Int = 1000,
           val bpTol: Double = 1e-10,
-          private val random: Random) extends InfAlg with Iterator[CBP] {
+          private val random: Random) extends MargParI  with Iterator[CBP] {
 
   val leafSelection: (Map[Map[Int,Int],BeliefPropagation], Random) => Map[Int,Int] = CBP.LEAF_SELECTION.apply(leafSel)
   val variableSelection: (BeliefPropagation, Random) => Int = varSel
 
   val Problem(factors,domains,ring) = problem
 
-  var exactlySolved: Map[Map[Int,Int],InfAlg] = _
+  var exactlySolved: Map[Map[Int,Int],MargParI] = _
   var queue: Map[Map[Int,Int],BeliefPropagation] = _
   var iterations: Int = _
 
@@ -46,9 +46,9 @@ class CBP(val problem: Problem,
       val newAssignments: IndexedSeq[Map[Int, Int]] =
         for(x <- 0 until domains(selectVar)) yield selectAssignment + (selectVar -> x)
 
-      val newLeafs: IndexedSeq[(Map[Int, Int], Either[BeliefPropagation, InfAlg])] = newAssignments.map(a => a -> processPA(a))
+      val newLeafs: IndexedSeq[(Map[Int, Int], Either[BeliefPropagation, MargParI])] = newAssignments.map(a => a -> processPA(a))
       val newBPLeafs: IndexedSeq[(Map[Int, Int], BeliefPropagation)] = newLeafs.collect{case (pa,Left(bp)) => (pa,bp)}
-      val newExactLeafs: IndexedSeq[(Map[Int, Int], InfAlg)] = newLeafs.collect{case (pa,Right(ia)) => (pa,ia)}
+      val newExactLeafs: IndexedSeq[(Map[Int, Int], MargParI)] = newLeafs.collect{case (pa,Right(ia)) => (pa,ia)}
       exactlySolved = exactlySolved ++ newExactLeafs
       queue = queue - selectAssignment ++ newBPLeafs
       steps += 1
@@ -69,7 +69,7 @@ class CBP(val problem: Problem,
   }
 
   /** @return right is exact solution. */
-  def processPA(assignment: Map[Int,Int]): Either[BeliefPropagation,InfAlg] = {
+  def processPA(assignment: Map[Int,Int]): Either[BeliefPropagation, MargParI] = {
     import CBP.CLAMP_METHOD._
     val clampFactor: IndexedSeq[FastFactor] => IndexedSeq[FastFactor] = clampMethod match {
       case CONDITION => _.map(_.condition(assignment,domains))
@@ -196,7 +196,12 @@ case class CBPConfig(leafSelection: CBP.LEAF_SELECTION.Value = CBP.LEAF_SELECTIO
                      variableSelection: CBP.VARIABLE_SELECTION.Value = CBP.VARIABLE_SELECTION.RANDOM,
                      clampMethod: CBP.CLAMP_METHOD.Value = CBP.CLAMP_METHOD.CLAMP,
                      bpMaxiter: Int = 1000,
-                     bpTol: Double = 1e-15) extends AlgConfig {
+                     bpTol: Double = 1e-15) { outer =>
+
+  def iterable(p: Problem, seed: Long) = new Iterable[CBP]{
+    def iterator: Iterator[CBP] = outer.iterator(p,seed)
+  }
+
   def iterator(p: Problem, seed: Long): CBP = new CBP(
     p,
     leafSelection,
