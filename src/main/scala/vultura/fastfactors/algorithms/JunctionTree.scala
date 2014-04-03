@@ -6,14 +6,12 @@ import scalaz._
 import scalaz.Tree._
 import scala.collection.mutable
 import vultura.util._
+import ScalazUtils._
 import scala.util.Random
 
-
-/**
- * Created by IntelliJ IDEA.
- * User: Thomas Geier
- * Date: 6/14/13
- */
+/** Ordinary Shanoy-Shafer (1990) junction tree algorithm.
+  * @param variableOrder If None, a min-degree ordering is used.
+  */
 class JunctionTree(val problem: Problem, variableOrder: Option[Seq[Int]] = None) extends MargParI {
 
   val (calibratedTrees: Seq[Tree[FastFactor]], myLogZ) = {
@@ -58,7 +56,7 @@ class JunctionTree(val problem: Problem, variableOrder: Option[Seq[Int]] = None)
   }
 
   def sample(r: Random): Map[Var,Val] = calibratedTrees.map{ tree =>
-    JunctionTree.mapDown(tree)(Map[Var,Val]()){ case (cond,factor) =>
+    tree.mapDown(Map[Var,Val]()){ case (cond,factor) =>
       val conditionedFactor: FastFactor = factor.condition(cond, problem.domains)
       (conditionedFactor.variables zip conditionedFactor.sample(r, problem.domains, problem.ring))(collection.breakOut)
     }.flatten.reduce(_ ++ _)
@@ -108,7 +106,7 @@ object JunctionTree{
                     ring: RingZ[Double],
                     domains: Array[Int]): Tree[(FastFactor, Set[Int], FastFactor, FastFactor)] = {
     val withSepsets: Tree[(FastFactor, Set[Int])] =
-      scand(tree)(Set[Int]()){ case (parentSet, subtree) =>
+      tree.scand(Set[Int]()){ case (parentSet, subtree) =>
         val newLabel: (FastFactor, Set[Int]) = (subtree.rootLabel, parentSet)
         val childSepSets: Stream[Set[Int]] =
           subtree.subForest.map(_.rootLabel.variables.toSet.intersect(subtree.rootLabel.variables.toSet))
@@ -122,7 +120,7 @@ object JunctionTree{
         )
         (factor,sepset,upwardMessage)
       }
-    scand(upwardCalibrated)(FastFactor(Array(),Array(ring.one))){
+    upwardCalibrated.scand(FastFactor(Array(),Array(ring.one))){
       case (downMessage,Node((factor,sepset,upmessage),children)) => {
         val newLabel = (factor,sepset,upmessage,downMessage)
         val downMessages = mapOthers2(children.map(_.rootLabel)){case (childLabel,otherChildLabels) =>
@@ -134,17 +132,6 @@ object JunctionTree{
         (newLabel,downMessages)
       }
     }
-  }
-
-  /** downward propagation in trees. */
-  def scand[A,B,C](tree: Tree[A])(init: B)(f: (B,Tree[A]) => (C,Seq[B])): Tree[C] = {
-    val (newVal, childPropagations) = f(init,tree)
-    node(newVal,tree.subForest.zip(childPropagations).map{case (child,childProp) => scand(child)(childProp)(f)})
-  }
-
-  def mapDown[A,B](tree: Tree[A])(init: B)(f: (B,A) => B): Tree[B] = {
-    val mappedRootLabel: B = f(init, tree.rootLabel)
-    node(mappedRootLabel, tree.subForest.map(mapDown(_)(mappedRootLabel)(f)))
   }
 
   /** Return xs without the element at position idx. */

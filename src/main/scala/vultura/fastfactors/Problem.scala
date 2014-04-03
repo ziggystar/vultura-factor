@@ -58,7 +58,7 @@ case class Problem(factors: IndexedSeq[FastFactor], domains: Array[Int], ring: R
   def toBriefString: String = f"(Problem: ${variables.size} variables, ${factors.size} factors, ring: $ring"
 
   /** @return Exact log Z obtained by junction tree algorithm. */
-  def logZ: Double = VariableElimination(this).logZ
+  lazy val logZ: Double = VariableElimination(this).logZ
   
   /** merges factors into other factors where possible */
   def simplify: Problem = {
