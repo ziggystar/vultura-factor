@@ -68,12 +68,17 @@ object Optimization {
   }
 }
 
-/** The average log-likelihood function. Supports shared parameters.
+/** The average log-likelihood function. Supports shared parameters. "MObs" means multiple observation,
+  * means data contains observations to the same model instance. This is in contrast to e.g. training on
+  * temporal sequences of differing length.
+  * 
   * @param problem A markov network.
-  * @param data Each entry is an observation to an instance of problem.
+  * @param data Each entry is an observation to an instance of the given problem.
   * @param target Each set of features will have one shared parameter.
   */
-case class CompressedAvgLogLikelihood(problem: Problem, data: Seq[Map[Var,Val]], target: IndexedSeq[Set[Feature]]) extends UnconstraintDifferentiableFunction {
+case class MObsAvgLogLikelihood(problem: Problem,
+                                data: Seq[Map[Var,Val]], 
+                                target: IndexedSeq[Set[Feature]]) extends UnconstraintDifferentiableFunction {
 
   val simplifiedLogProblem: Problem = problem.simplify.toRing(LogD)
 
