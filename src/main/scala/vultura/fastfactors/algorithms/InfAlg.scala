@@ -1,32 +1,54 @@
 package vultura.fastfactors.algorithms
 
-import vultura.fastfactors.{LogD, NormalD, Problem, FastFactor}
+import vultura.fastfactors._
 
 /**
  * Created by IntelliJ IDEA.
  * User: Thomas Geier
  * Date: 6/13/13
  */
-trait InfAlg {
-  def getProblem: Problem
+@deprecated("use Inferer instead", "18")
+trait InfAlg extends Inferer with MarginalI with ParFunI{
+  def getProblem: Problem = problem
   /** @return Natural logarithm of partition function. */
-  def logZ: Double = math.log(getProblem.ring.decode(Array(Z))(0))
-  /** @return Partition function in encoding specified by `ring`. */
-  def Z: Double
-  def decodedZ: Double = getProblem.ring.decode(Array(Z))(0)
+  def iteration: Int
+  def toResult = Result(problem,Z,problem.variables.map(v => v -> variableBelief(v))(collection.breakOut))
+}
+
+/** Base-trait for probabilistic inference algorithms. */
+trait Inferer {
+  def problem: Problem
+}
+
+/** Trait that is implemented by inference algorithms that can compute variable marginals. */
+trait MarginalI { self: Inferer =>
   def decodedVariableBelief(vi: Int): FastFactor =
-    if(getProblem.ring != NormalD) getProblem.ring.decode(variableBelief(vi)) else variableBelief(vi)
+    if(problem.ring != NormalD) problem.ring.decode(variableBelief(vi)) else variableBelief(vi)
   /** @return marginal distribution of variable in encoding specified by `ring`. */
   def variableBelief(vi: Int): FastFactor
   /** @return marginal distribution of variable in log encoding. */
   def logVariableBelief(vi: Int): FastFactor  =
-      if(getProblem.ring == LogD) variableBelief(vi) else LogD.encode(decodedVariableBelief(vi))
-  def iteration: Int
-  def toResult = Result(getProblem,Z,getProblem.variables.map(v => v -> variableBelief(v))(collection.breakOut))
+    if(problem.ring == LogD) variableBelief(vi) else LogD.encode(decodedVariableBelief(vi))
+}
+
+/** Trait that is implemented by inference algorithms that can compute the partition function. */
+trait ParFunI { self: Inferer =>
+  /** @return Natural logarithm of partition function. */
+  def logZ: Double = math.log(problem.ring.decode(Array(Z))(0))
+  /** @return Partition function in encoding specified by `ring`. */
+  def Z: Double
+  def decodedZ: Double = problem.ring.decode(Array(Z))(0)
+}
+
+/** Trait that is implemented by inference algorithms that can compute the most probable explanation, most probable
+  * assignment, maximum aposteriori assignment.
+  */
+trait MPEI { self: Inferer =>
+  /** @return the most probably variable assignment. */
+  def mpe: Map[Var,Val]
 }
 
 case class Result(problem: Problem, Z: Double, variableBeliefs: Map[Int,FastFactor], iteration: Int = 1) extends InfAlg{
-  def getProblem: Problem = problem
   /** @return marginal distribution of variable in encoding specified by `ring`. */
   def variableBelief(vi: Int): FastFactor = variableBeliefs(vi)
 }

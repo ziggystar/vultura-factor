@@ -6,7 +6,7 @@ import vultura.fastfactors.algorithms.InfAlg
 import vultura.util.IntDomainCPI
 
 /** Just one set of variables gets conditioned. */
-class SinglyLCMF(problem: Problem, scheme: SimpleScheme, tol: Double = 1e-9, maxIterations: Int = 1000) extends InfAlg {
+class SinglyLCMF(val problem: Problem, val scheme: SimpleScheme, val tol: Double = 1e-9, maxIterations: Int = 1000) extends InfAlg {
   require(problem.ring == NormalD, "mean field only supports calculation in normal domain")
   require(problem == scheme.problem, "scheme targets a different problem")
   require(
@@ -215,8 +215,6 @@ class SinglyLCMF(problem: Problem, scheme: SimpleScheme, tol: Double = 1e-9, max
 
     math.exp(variableEntropy.sum + logExp.sum + conditionEntropies.sum)
   }
-
-  def getProblem: Problem = problem
 
   def verboseDescription: String = {
     "SinglyLCMF\n" +

@@ -32,7 +32,7 @@ class SinglyLCMFTest extends Specification with FastFactorMatchers {
 
   def haveLargerZThanMF: Matcher[SinglyLCMF] = new Matcher[SinglyLCMF]{
     def apply[S <: SinglyLCMF](t: Expectable[S]): MatchResult[S] = {
-      val mf: MeanField = new MeanField(t.value.getProblem)
+      val mf: MeanField = new MeanField(t.value.problem)
       result(
         t.value.Z must be_>(mf.Z),
         f"yields larger Z than mean field inference: ${t.value.Z} > ${mf.Z}",

@@ -72,5 +72,5 @@ class LCBPTest extends Specification {
       (lcbpCorrected.logZ must beCloseTo(lcbp.logZ, 1e-4))
   }
 
-  def convergedAndExactTo(lcbp:LCBP, tol: Double) = (lcbp.calibrator.isCalibrated must beTrue) and (lcbp.logZ must beCloseTo(lcbp.getProblem.logZ, tol))
+  def convergedAndExactTo(lcbp:LCBP, tol: Double) = (lcbp.calibrator.isCalibrated must beTrue) and (lcbp.logZ must beCloseTo(lcbp.problem.logZ, tol))
 }

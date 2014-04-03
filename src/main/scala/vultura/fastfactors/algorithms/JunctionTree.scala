@@ -17,7 +17,6 @@ import scala.util.Random
  */
 class JunctionTree(val problem: Problem, variableOrder: Option[Seq[Int]] = None) extends InfAlg {
 
-  def getProblem: Problem = problem
   val (calibratedTrees: Seq[Tree[FastFactor]], myLogZ) = {
     val calibratedTreesWithZ = uncalibratedTrees.map(JunctionTree.calibrate(_,problem.ring, problem.domains))
     (calibratedTreesWithZ.map(_._1),problem.ring.prodA(calibratedTreesWithZ.map(_._2)(collection.breakOut)))

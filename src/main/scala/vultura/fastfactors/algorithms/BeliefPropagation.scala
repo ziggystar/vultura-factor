@@ -15,9 +15,6 @@ extends InfAlg with Iterator[InfAlg] {
 
   val Problem(factors: IndexedSeq[FastFactor], domains: Array[Int], ring: RingZ[Double]) = problem
 
-  def getProblem: Problem = problem
-
-
   val cg = BeliefPropagation.createBetheClusterGraph(problem)
   lazy val singleVariableClusters: Map[Int,Int] = cg.clusterFactors.zipWithIndex
     .collect{case (f,fi) if f.variables.size == 1 => f.variables.head -> fi}(collection.breakOut)

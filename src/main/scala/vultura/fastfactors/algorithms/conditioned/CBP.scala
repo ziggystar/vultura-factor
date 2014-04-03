@@ -21,7 +21,6 @@ class CBP(val problem: Problem,
   val variableSelection: (BeliefPropagation, Random) => Int = varSel
 
   val Problem(factors,domains,ring) = problem
-  def getProblem: Problem = problem
 
   var exactlySolved: Map[Map[Int,Int],InfAlg] = _
   var queue: Map[Map[Int,Int],BeliefPropagation] = _
@@ -144,7 +143,7 @@ object CBP {
         }.max
       }
 
-      vultura.util.maxByMultiple(bp.getProblem.variables.toSeq)(lastBidirectionalUpdate).pickRandom(random)
+      vultura.util.maxByMultiple(bp.problem.variables.toSeq)(lastBidirectionalUpdate).pickRandom(random)
     }
 
     def backdoor(bp: BeliefPropagation, random: Random): Int = {

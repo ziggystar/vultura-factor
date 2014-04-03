@@ -9,12 +9,12 @@ import vultura.util.graph.DotGraph
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
  */
-class LCBP(val p: Problem,
+class LCBP(val problem: Problem,
            val scheme: GScheme,
            val tol: Double = 1e-9,
            val maxIterations: Int = 1000,
            val exactConditions: Boolean = true) extends InfAlg {
-  require(p.ring == NormalD, "linear combination of messages only implemented for normal domain")
+  require(problem.ring == NormalD, "linear combination of messages only implemented for normal domain")
 
   //TODO make this work for the Log ring
   def linearCombination(weights: Array[Double], factors: IndexedSeq[FastFactor]): FastFactor = {
@@ -30,11 +30,11 @@ class LCBP(val p: Problem,
 
     def variables: Array[Int]
     /** Create a (mutable?) representation of the initial value of this node. */
-    override def create: TOut = FastFactor.maxEntropy(variables,p.domains,p.ring)
+    override def create: TOut = FastFactor.maxEntropy(variables,problem.domains,problem.ring)
     /** @return the change between two values of this node. Zero means no change, lower means less change. */
     override def diff(r1: TOut, r2: TOut): Double = vultura.util.maxDiff(r1.values,r2.values)
 
-    val fMul: (IndexedSeq[FastFactor]) => FastFactor = FastFactor.multiply(p.ring)(p.domains)
+    val fMul: (IndexedSeq[FastFactor]) => FastFactor = FastFactor.multiply(problem.ring)(problem.domains)
   }
 
   trait ValueEdge extends HashMemo { self: CEdge with Product =>
@@ -56,15 +56,15 @@ class LCBP(val p: Problem,
     override type ETIn = F2VSummed
     def variables = Array(v)
 
-    val conditionedBelief = FastFactor.deterministicMaxEntropy(Array(v),vc,p.domains,p.ring)
+    val conditionedBelief = FastFactor.deterministicMaxEntropy(Array(v),vc,problem.domains,problem.ring)
 
     /** Create a (mutable?) representation of the initial value of this node. */
     override def create: TOut = conditionedBelief
 
     /** Compute the value of this node given the values of the independent nodes. */
-    override def compute: (IndexedSeq[TIn]) => TOut = ins => fMul(ins :+ conditionedBelief).normalize(p.ring)
+    override def compute: (IndexedSeq[TIn]) => TOut = ins => fMul(ins :+ conditionedBelief).normalize(problem.ring)
     /** The nodes this edge depends on. This must remain lazy. */
-    override def input: IndexedSeq[ETIn] = for(of <- p.factorsOfVariable(v) if of != f) yield F2VSummed(of,v,vc)
+    override def input: IndexedSeq[ETIn] = for(of <- problem.factorsOfVariable(v) if of != f) yield F2VSummed(of,v,vc)
 
     override def toString: String = s"V2F:$v -> ${f.toBriefString} ${briefCondition(vc)}"
   }
@@ -73,7 +73,7 @@ class LCBP(val p: Problem,
     override type ETIn = V2F
     override def variables: Array[Int] = f.variables
     /** Compute the value of this node given the values of the independent nodes. */
-    override def compute: (IndexedSeq[TIn]) => TOut = ins => fMul(ins :+ f).normalize(p.ring)
+    override def compute: (IndexedSeq[TIn]) => TOut = ins => fMul(ins :+ f).normalize(problem.ring)
     /** The nodes this edge depends on. This must remain lazy. */
     override def input: IndexedSeq[ETIn] = f.variables.map(v => V2F(v,f,scheme.superCondition(v,fc)))
 
@@ -92,7 +92,7 @@ class LCBP(val p: Problem,
 
     /** Compute the value of this node given the values of the independent nodes. */
     override def compute: (IndexedSeq[TIn]) => TOut = ins =>
-      FastFactor.multiplyRetain(p.ring)(p.domains)(ins :+ f, Array(v)).normalize(p.ring)
+      FastFactor.multiplyRetain(problem.ring)(problem.domains)(ins :+ f, Array(v)).normalize(problem.ring)
 
     /** The nodes this edge depends on. This must remain lazy. */
     override def input: IndexedSeq[ETIn] = for(ov <- f.variables if ov != v) yield V2F(ov,f,scheme.superCondition(ov,fc))
@@ -131,23 +131,23 @@ class LCBP(val p: Problem,
     override type ETIn = F2VSummed
     override def variables: Array[Int] = Array(v)
 
-    val conditionedBelief = FastFactor.deterministicMaxEntropy(Array(v),vc,p.domains,p.ring)
+    val conditionedBelief = FastFactor.deterministicMaxEntropy(Array(v),vc,problem.domains,problem.ring)
 
     /** Create a (mutable?) representation of the initial value of this node. */
     override def create: TOut = conditionedBelief
 
     /** The nodes this edge depends on. This must remain lazy. */
-    override def input: IndexedSeq[ETIn] = p.factorsOfVariable(v).map(f => F2VSummed(f,v,vc))
+    override def input: IndexedSeq[ETIn] = problem.factorsOfVariable(v).map(f => F2VSummed(f,v,vc))
 
     /** Compute the value of this node given the values of the independent nodes. */
-    override def compute: (IndexedSeq[TIn]) => TOut = ins => fMul(ins :+ conditionedBelief).normalize(p.ring)
+    override def compute: (IndexedSeq[TIn]) => TOut = ins => fMul(ins :+ conditionedBelief).normalize(problem.ring)
 
     override def toString: String = s"VBel:$v ${briefCondition(vc)}"
   }
 
-  val logFactors: IndexedSeq[Array[Double]] = p.factors.map(factor => p.ring.decode(factor.values).map(math.log))
+  val logFactors: IndexedSeq[Array[Double]] = problem.factors.map(factor => problem.ring.decode(factor.values).map(math.log))
 
-  require(p.ring == NormalD, "condDist correction only implemented for normal messages")
+  require(problem.ring == NormalD, "condDist correction only implemented for normal messages")
   case class CondCorrection(v: Int, f: FastFactor, fc: Condition) extends CEdge with ValueEdge {
     
     /** Compute the value of this node given the values of the independent nodes. */
@@ -157,7 +157,7 @@ class LCBP(val p: Problem,
       val f2vSummed = ins(2)
       
       val correction = 
-        for(i <- 0 until p.domains(v)) 
+        for(i <- 0 until problem.domains(v))
         yield math.pow(v2f.values(i),v2f.values(i) * (f2v.values(i) - f2vSummed.values(i)))
       correction.product
     }
@@ -179,7 +179,7 @@ class LCBP(val p: Problem,
     override type ETIn = CEdge with FactorEdge
 
     /** Create a (mutable?) representation of the initial value of this node. */
-    override def create: TOut = p.ring.one
+    override def create: TOut = problem.ring.one
 
     /** The nodes this edge depends on. This must remain lazy. */
     override def input: IndexedSeq[ETIn] =
@@ -187,9 +187,9 @@ class LCBP(val p: Problem,
 
     //third in tuple is number of neighbours, needed to compute the Bethe entropy approximation
     val variables: IndexedSeq[(Int,Condition,Int)] =
-      p.variables.map(v => (v, scheme.superCondition(v,condition), p.factorsOfVariable(v).size))(collection.breakOut)
+      problem.variables.map(v => (v, scheme.superCondition(v,condition), problem.factorsOfVariable(v).size))(collection.breakOut)
     val factors: IndexedSeq[(FastFactor,Condition)] =
-      p.factors.map(f => f -> scheme.superConditionJoint(f.variables,condition))(collection.breakOut)
+      problem.factors.map(f => f -> scheme.superConditionJoint(f.variables,condition))(collection.breakOut)
 
     /** Compute the value of this node given the values of the independent nodes. */
     override def compute: (IndexedSeq[TIn]) => TOut = ins => {
@@ -197,10 +197,10 @@ class LCBP(val p: Problem,
       val vBels = view.take(variables.length)
       val fBels = view.drop(variables.length)
       val logExpectsAndFactorEntropies = fBels.zip(logFactors).foldLeft(0d){
-        case (acc,(fbel, factor)) => acc + p.ring.expectation(fbel.values,factor) + p.ring.entropy(fbel.values)
+        case (acc,(fbel, factor)) => acc + problem.ring.expectation(fbel.values,factor) + problem.ring.entropy(fbel.values)
       }
       val weightedVariableEntropies = vBels.zip(variables).foldLeft(0d){
-        case (acc,(vbel,(_,_,neighbours))) => acc + p.ring.entropy(vbel.values) * (1 - neighbours)
+        case (acc,(vbel,(_,_,neighbours))) => acc + problem.ring.entropy(vbel.values) * (1 - neighbours)
       }
       logExpectsAndFactorEntropies + weightedVariableEntropies
     }
@@ -217,7 +217,7 @@ class LCBP(val p: Problem,
     override def input: IndexedSeq[ETIn] = IndexedSeq(LogConditionWeight(condition)) ++ corrections
 
     val corrections =
-      for(f <- p.factors; v <- f.variables)
+      for(f <- problem.factors; v <- f.variables)
       yield CondCorrection(v,f,scheme.superConditionJoint(f.variables,condition))
 
     /** Create a (mutable???) representation of the initial value of this node. */
@@ -255,7 +255,7 @@ class LCBP(val p: Problem,
     val lookup: Map[Int,Iterable[Condition]] = (for{
       (cond, idx) <- conditions.zipWithIndex
       refinedCond = cond ++ given //maps are required to be consistent
-    subCond <- scheme.subConditions(refinedCond,p.variables)
+    subCond <- scheme.subConditions(refinedCond,problem.variables)
   } yield idx -> subCond).groupByMap(_._1,_._2)
 
     /** atomic conditions appear in in `input` in this order. */
@@ -292,7 +292,7 @@ class LCBP(val p: Problem,
 
     /** The nodes this edge depends on. This must remain lazy. */
     override def input: IndexedSeq[ETIn] =
-      scheme.jointConditions(p.variables).map(if(exactConditions) CorrectedLCW else LogConditionWeight)(collection.breakOut)
+      scheme.jointConditions(problem.variables).map(if(exactConditions) CorrectedLCW else LogConditionWeight)(collection.breakOut)
 
     override def toString: String = "LogPartition"
   }
@@ -311,8 +311,6 @@ class LCBP(val p: Problem,
 
   /** @return Natural logarithm of partition function. */
   override def logZ: Double = calibrator.nodeState(LogPartition)
-
-  override def getProblem: Problem = p
 
   def toDOT: DotGraph[CEdge] = calibrator.dot.nodeLabeled(n => n.toString + "\\n" + calibrator.nodeState(n).toString)
 }

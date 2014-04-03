@@ -31,7 +31,7 @@ trait FastFactorMatchers {
   def haveExactZ(tol: Double = 1e-7): Matcher[InfAlg] = new Matcher[InfAlg]{
     def apply[S <: InfAlg](t: Expectable[S]): MatchResult[S] = {
       val obtainedZ: Double = t.value.Z
-      val exactZ: Double = new JunctionTree(t.value.getProblem).Z
+      val exactZ: Double = new JunctionTree(t.value.problem).Z
       result(
         math.abs(obtainedZ - exactZ) < tol,
         "has same Z as exact inference",
