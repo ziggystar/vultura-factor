@@ -5,7 +5,6 @@ import org.specs2.specification.Fragments
 import vultura.fastfactors._
 import generators._
 import scala.util.Random
-import java.io.{PrintStream, FileOutputStream}
 
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
@@ -21,9 +20,9 @@ class JunctionTreeTest extends Specification with FastFactorMatchers{
       testSampleMarginals(grid(1,2,2,expGauss(0.2)).toRing(LogD), numSamples = 1000, tol = 5e-2) ^
     p^
     "all orders must produce same marginals" !
-      (new JunctionTree(p1).logZ must beCloseTo(new JunctionTree(p1, Some(shuffle(p1.variables.toSeq))).logZ, 1e-9)) ^
+      (new JunctionTree(p1).logZ must beCloseTo(new JunctionTree(p1, RandomOrderer()).logZ, 1e-9)) ^
     "must throw when given order misses variables" !
-      (new JunctionTree(p1,Some(p1.variables.toSeq.tail)) must throwA[Exception])
+      (new JunctionTree(p1,VariableOrderer.fromOrder(p1.variables.toSeq.tail)) must throwA[Exception])
 
   def testSampleMarginals(p: Problem, numSamples: Int = 1000, tol: Double = 1e-2) = {
     val jt = new JunctionTree(p)

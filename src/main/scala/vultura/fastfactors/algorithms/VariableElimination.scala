@@ -10,7 +10,7 @@ case class VariableElimination(problem: Problem, orderer: VariableOrderer = MinD
 
   /** @return Partition function in encoding specified by `ring`. */
   override def Z: Double = {
-    val resultFactors = variableOrder.foldLeft(problem.factors){case (factors, elimVar) =>
+    val resultFactors = variableOrder.order.foldLeft(problem.factors){case (factors, elimVar) =>
       val (elimFactors, remaining) = factors.partition(_.variables.contains(elimVar))
       val elimResult = FastFactor.multiplyMarginalize(problem.ring)(problem.domains)(elimFactors,Array(elimVar))
       remaining :+ elimResult

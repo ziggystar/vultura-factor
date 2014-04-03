@@ -9,10 +9,10 @@ import vultura.util._
 import ScalazUtils._
 import scala.util.Random
 
-/** Ordinary Shanoy-Shafer (1990) junction tree algorithm.
-  * @param variableOrder If None, a min-degree ordering is used.
-  */
-class JunctionTree(val problem: Problem, variableOrder: Option[Seq[Int]] = None) extends MargParI {
+/** Ordinary Shanoy-Shafer (1990) junction tree algorithm. */
+class JunctionTree(val problem: Problem, variableOrderer: VariableOrderer = MinDegreeOrderer) extends MargParI {
+
+  val variableOrder: VariableOrder = variableOrderer(problem)
 
   val (calibratedTrees: Seq[Tree[FastFactor]], myLogZ) = {
     val calibratedTreesWithZ = uncalibratedTrees.map(JunctionTree.calibrate(_,problem.ring, problem.domains))
@@ -32,10 +32,8 @@ class JunctionTree(val problem: Problem, variableOrder: Option[Seq[Int]] = None)
       })
     }
 
-  def initialTrees: Seq[Tree[(Set[Int], Seq[FastFactor])]] = variableOrder match {
-    case None => minDegreeJTs(problem.factors.map(f => f.variables.toSet -> f))
-    case Some(order) => junctionTreesFromOrder(problem.factors.map(f => f.variables.toSet -> f), order)
-  }
+  def initialTrees: Seq[Tree[(Set[Int], Seq[FastFactor])]] =
+    junctionTreesFromOrder(problem.factors.map(f => f.variables.toSet -> f), variableOrder.order.toList)
 
   /** @return Partition function in encoding specified by `ring`. */
   def Z: Double = problem.ring.decode(Array(myLogZ))(0)
