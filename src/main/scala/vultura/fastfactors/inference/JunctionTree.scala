@@ -49,8 +49,9 @@ class JunctionTree(val problem: Problem, variableOrderer: VariableOrderer = MinD
   /** Throws if no clique contains `vars`.
     * @return Normalized belief over given variables in encoding specified by problem ring. */
   def cliqueBelief(vars: Array[Var]): FastFactor = {
+    val containingClique: FastFactor = calibratedCliques(ssetCliques.superSetsOf(vars.toSet).minBy(_.size))
     FastFactor.multiplyRetain(problem.ring)(problem.domains)(
-      Seq(calibratedCliques(ssetCliques.superSetsOf(vars.toSet).head)),
+      Seq(containingClique),
       vars).normalize(problem.ring)
   }
 

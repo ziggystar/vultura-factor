@@ -5,6 +5,7 @@ import vultura.fastfactors._
 import vultura.util._
 import vultura.fastfactors.inference.{ParFunI, JointMargI, JunctionTree}
 import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.BOBYQAOptimizer
+import scalaz.Memo
 
 trait UnconstraintDifferentiableFunction {
   def dimension: Int
@@ -22,9 +23,15 @@ object UnconstraintDifferentiableFunction {
 
     override def initialGuess: IndexedSeq[Double] = avg(fs.map(_.initialGuess))
 
-    override def gradient(theta: IndexedSeq[Double]): IndexedSeq[Double] = avg(fs.map(_.gradient(theta)))
+    override def gradient(theta: IndexedSeq[Double]): IndexedSeq[Double] = {
+      val result = avg(fs.par.map(_.gradient(theta)).seq)
+      result
+    }
 
-    override def value(theta: IndexedSeq[Double]): Double = fs.map(_.value(theta)).mean
+    override def value(theta: IndexedSeq[Double]): Double = {
+      val result = fs.par.map(_.value(theta)).seq.mean
+      result
+    }
   }
 }
 
@@ -98,15 +105,21 @@ case class MObsAvgLogLikelihood(problem: Problem,
     val p: Problem = buildProblem(theta)
     val unconditioned = inferer(p)
 
+    val unconditionedCliqueBeliefs = Memo.mutableHashMapMemo[IndexedSeq[Int],FastFactor](vars => unconditioned.decodedCliqueBelief(vars.toArray))
+
     val expectationMatrix = data.map{ d =>
       val conditioned = inferer(p.condition(d))
+      val conditionedCliqueBeliefs = Memo.mutableHashMapMemo[IndexedSeq[Int],FastFactor](vars => conditioned.decodedCliqueBelief(vars.toArray))
       //every element in target corresponds to one parameter
       target.map{ features =>
       //the average expected value over all features tied for this parameter; note that the feature might already
       //be evaluated completely by the data `d`
-        features.map(f => f.condition(d).map(conditionedFeature =>
-          math.exp(conditioned.cliqueBelief(conditionedFeature.variables).eval(conditionedFeature.point,p.domains))
-        ).getOrElse(0d)).mean
+        features.toIndexedSeq.map(f =>
+          f.condition(d).map{
+            case cf if cf.variables.isEmpty => 1d
+            case cf => conditionedCliqueBeliefs(cf.variables).eval(cf.point,p.domains)
+          }.getOrElse(0d)
+        ).mean
       }
     }
 
@@ -114,13 +127,12 @@ case class MObsAvgLogLikelihood(problem: Problem,
 
     //average (over tied features) of the feature expectations without observations
     val parameterExpectations: IndexedSeq[Double] = target.map{ features =>
-      features.map(f => math.exp(unconditioned.cliqueBelief(f.variables).eval(f.point,p.domains))).mean
+      features.map(f => unconditionedCliqueBeliefs(f.variables).eval(f.point,p.domains)).mean
     }
 
     val gradient = empiricalParameterExpectations.zip(parameterExpectations).map{
       case (condExpect, uncondExpect) => condExpect - uncondExpect
     }
-
     gradient
   }
 
@@ -178,7 +190,7 @@ case class SingleDataSoftObsLogLikelihood(domains: Array[Int],
     val observed = inferer(observedProblem(theta))
 
     val featureExpectations: IndexedSeq[Double] = target.map(
-      _.map(f =>
+      _.toSeq.map(f =>
         f
           .condition(observedCondition)
           .map(conditionedFeature => math.exp(observed.cliqueBelief(conditionedFeature.variables).eval(conditionedFeature.point,domains)))
