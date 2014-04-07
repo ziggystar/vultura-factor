@@ -6,6 +6,7 @@ import vultura.util._
 import vultura.fastfactors.inference.{ParFunI, JointMargI, JunctionTree}
 import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.BOBYQAOptimizer
 import scalaz.Memo
+import org.apache.commons.math3.analysis.solvers.BrentSolver
 
 trait UnconstraintDifferentiableFunction {
   def dimension: Int
@@ -37,7 +38,7 @@ object UnconstraintDifferentiableFunction {
 
 object Optimization {
   /* @return the found maximizing function values and the result. */
-  def maximize(f: UnconstraintDifferentiableFunction, tol: Double = 1e-9, maxSteps: Int = 100, useGradient: Boolean = true): (IndexedSeq[Double],Double) = {
+  def maximize(f: UnconstraintDifferentiableFunction, tol: Double = 1e-5, maxSteps: Int = 100, useGradient: Boolean = true, bracketingStep: Double = 3d): (IndexedSeq[Double],Double) = {
     import org.apache.commons.math3.analysis.{MultivariateVectorFunction, MultivariateFunction}
     import org.apache.commons.math3.optim._
     import nonlinear.scalar.gradient.NonLinearConjugateGradientOptimizer
@@ -47,8 +48,8 @@ object Optimization {
     val result = if(useGradient)
       new NonLinearConjugateGradientOptimizer(
         Formula.POLAK_RIBIERE,
-        new SimpleValueChecker(0, tol, maxSteps)).optimize(
-          new BracketingStep(1),
+        new SimpleValueChecker(tol, tol, maxSteps)).optimize(
+          new BracketingStep(bracketingStep),
           new ObjectiveFunctionGradient(new MultivariateVectorFunction {
             override def value(point: Array[Double]): Array[Double] = f.gradient(point).toArray
           }),
