@@ -7,12 +7,33 @@ import vultura.fastfactors.inference.{ParFunI, JointMargI, JunctionTree}
 import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.BOBYQAOptimizer
 import scalaz.Memo
 import org.apache.commons.math3.analysis.solvers.BrentSolver
+import java.util.logging.Logger
 
-trait UnconstraintDifferentiableFunction {
+trait UnconstraintDifferentiableFunction { outer =>
   def dimension: Int
   def value(theta: IndexedSeq[Double]): Double
   def gradient(theta: IndexedSeq[Double]): IndexedSeq[Double]
   def initialGuess: IndexedSeq[Double]
+
+  def withLogging(logger: Logger) = new UnconstraintDifferentiableFunction{
+    override def initialGuess: IndexedSeq[Double] = {
+      val guess = outer.initialGuess
+      logger.fine(s"initial guess: ${pretty(guess)}")
+      guess
+    }
+    override def gradient(theta: IndexedSeq[Double]): IndexedSeq[Double] = {
+      val gr = outer.gradient(theta)
+      logger.finer(s"gradient: ${pretty(gr)} @ ${pretty(theta)}")
+      gr
+    }
+    override def value(theta: IndexedSeq[Double]): Double = {
+      val v = outer.value(theta)
+      logger.fine(s"value: $v @ ${pretty(theta)}")
+      v
+    }
+    override def dimension: Int = outer.dimension
+    def pretty(xs: IndexedSeq[Double]): String = s"[${xs.map("%.5f".format(_)).mkString(" ")}]"
+  }
 }
 
 object UnconstraintDifferentiableFunction {
