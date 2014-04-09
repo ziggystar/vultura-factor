@@ -107,7 +107,7 @@ object Optimization {
   */
 case class MObsAvgLogLikelihood(problem: Problem,
                                 data: Seq[Map[Var,Val]], 
-                                target: IndexedSeq[Set[Feature]],
+                                target: IndexedSeq[Seq[Feature]],
                                 inferer: Problem => JointMargI with ParFunI = new JunctionTree(_)) extends UnconstraintDifferentiableFunction {
 
   val simplifiedLogProblem: Problem = problem.simplify.toRing(LogD)
@@ -177,7 +177,7 @@ case class SingleDataSoftObsLogLikelihood(domains: Array[Int],
                                           ring: RingZ[Double],
                                           fixedFeatures: Seq[(Feature,Double)],
                                           observations: Seq[(Feature,Double)],
-                                          target: IndexedSeq[Set[Feature]],
+                                          target: IndexedSeq[Seq[Feature]],
                                           inferer: Problem => JointMargI with ParFunI = new JunctionTree(_)) extends UnconstraintDifferentiableFunction{
   require(ring == LogD)
 
@@ -212,7 +212,7 @@ case class SingleDataSoftObsLogLikelihood(domains: Array[Int],
     val observed = inferer(observedProblem(theta))
 
     val featureExpectations: IndexedSeq[Double] = target.map(
-      _.toSeq.map(f =>
+      _.map(f =>
         f
           .condition(observedCondition)
           .map(conditionedFeature => math.exp(observed.cliqueBelief(conditionedFeature.variables).eval(conditionedFeature.point,domains)))
