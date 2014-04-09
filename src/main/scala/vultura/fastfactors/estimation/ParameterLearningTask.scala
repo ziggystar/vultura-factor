@@ -15,7 +15,7 @@ trait UnconstraintDifferentiableFunction { outer =>
   def gradient(theta: IndexedSeq[Double]): IndexedSeq[Double]
   def initialGuess: IndexedSeq[Double]
 
-  def withLogging(logger: Logger) = new UnconstraintDifferentiableFunction{
+  def withLogging(logger: Logger): UnconstraintDifferentiableFunction  = new UnconstraintDifferentiableFunction{
     override def initialGuess: IndexedSeq[Double] = {
       val guess = outer.initialGuess
       logger.fine(s"initial guess: ${pretty(guess)}")
@@ -34,27 +34,37 @@ trait UnconstraintDifferentiableFunction { outer =>
     override def dimension: Int = outer.dimension
     def pretty(xs: IndexedSeq[Double]): String = s"[${xs.map("%.5f".format(_)).mkString(" ")}]"
   }
+
+  def setGuess(guess: IndexedSeq[Double]): UnconstraintDifferentiableFunction = new UnconstraintDifferentiableFunction {
+    require(guess.size == outer.dimension, "initial guess must have dimensionality of function")
+    override def initialGuess: IndexedSeq[Double] = guess
+
+    override def dimension: Int = outer.dimension
+    override def value(theta: IndexedSeq[Double]): Double = outer.value(theta)
+    override def gradient(theta: IndexedSeq[Double]): IndexedSeq[Double] = outer.gradient(theta)
+  }
 }
 
 object UnconstraintDifferentiableFunction {
-  def average(fs: Seq[UnconstraintDifferentiableFunction]) = new UnconstraintDifferentiableFunction{
-    override def dimension: Int = fs.head.dimension
-    require(fs.forall(_.dimension == dimension), "all function must have the same dimension")
+  def average(fs: Seq[UnconstraintDifferentiableFunction]): UnconstraintDifferentiableFunction  =
+    new UnconstraintDifferentiableFunction{
+      override def dimension: Int = fs.head.dimension
+      require(fs.forall(_.dimension == dimension), "all function must have the same dimension")
 
-    def avg(xss: Seq[IndexedSeq[Double]]): IndexedSeq[Double] = xss.transpose.map(_.mean)(collection.breakOut)
+      def avg(xss: Seq[IndexedSeq[Double]]): IndexedSeq[Double] = xss.transpose.map(_.mean)(collection.breakOut)
 
-    override def initialGuess: IndexedSeq[Double] = avg(fs.map(_.initialGuess))
+      override def initialGuess: IndexedSeq[Double] = avg(fs.map(_.initialGuess))
 
-    override def gradient(theta: IndexedSeq[Double]): IndexedSeq[Double] = {
-      val result = avg(fs.par.map(_.gradient(theta)).seq)
-      result
+      override def gradient(theta: IndexedSeq[Double]): IndexedSeq[Double] = {
+        val result = avg(fs.par.map(_.gradient(theta)).seq)
+        result
+      }
+
+      override def value(theta: IndexedSeq[Double]): Double = {
+        val result = fs.par.map(_.value(theta)).seq.mean
+        result
+      }
     }
-
-    override def value(theta: IndexedSeq[Double]): Double = {
-      val result = fs.par.map(_.value(theta)).seq.mean
-      result
-    }
-  }
 }
 
 object Optimization {
