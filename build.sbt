@@ -1,4 +1,4 @@
-name := "vultura.util"
+name := "vultura-util"
 
 organization := "de.uni-ulm"
 
@@ -7,6 +7,14 @@ organization := "de.uni-ulm"
 18: refactoring, remove some stuff
 */
 version := "18-SNAPSHOT"
+
+homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
+
+startYear := Some(2011)
+
+description := "Tools for probabilistic inference in discrete-values factor graphs with dense factors."
+
+licenses += "MIT" -> url("http://opensource.org/licenses/MIT")
 
 scalaVersion := "2.10.4"
 
