@@ -77,13 +77,18 @@ case class Problem(factors: IndexedSeq[FastFactor], domains: Array[Int], ring: R
 }
 
 object Problem{
-  import resource._
-
   def fromUaiString(s: String): Problem = parseUAIProblem(new StringReader(s)).right.get
   def loadUaiFile(s: String): Either[String,Problem] = loadUaiFile(new File(s))
-  def loadUaiFile(f: File): Either[String,Problem] =
-    (for(reader <- managed(new FileReader(f))) yield parseUAIProblem(reader))
-      .either.fold(err => Left(err.mkString("\n")),identity)
+  def loadUaiFile(f: File): Either[String,Problem] = {
+    val reader = new FileReader(f)
+    try {
+      parseUAIProblem(reader)
+    } catch  {
+      case e: Exception => Left("Error while reading file: \n " + e.toString)
+    } finally {
+      reader.close()
+    }
+  }
 
   def parseUAIProblem(in: InputStream): Either[String, Problem] = parseUAIProblem(new InputStreamReader(in))
   def parseUAIProblem(in: Reader): Either[String,Problem] = {

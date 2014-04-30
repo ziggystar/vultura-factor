@@ -34,10 +34,7 @@ class packageTest extends Specification with FastFactorMatchers {
     }, "unbalanced feature selected for training")
 
     val target = MObsAvgLogLikelihood(Feature.buildProblem(problem.domains,problem.ring,keptFeatures), data, droppedFeatures.map(fv => Seq(fv._1)))
-    val (optimized, ll) = Optimization.maximize(target)
-
-    println(s"estimated\n${target.buildProblem(optimized).map(_.normalize(LogD))}")
-    println(s"original\n${problem.map(_.normalize(LogD))}")
+    val (optimized, _) = Optimization.maximize(target)
 
     optimized must beCloseTo(droppedFeatures.map(_._2))
   }

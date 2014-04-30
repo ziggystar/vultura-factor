@@ -12,19 +12,17 @@ homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 
 startYear := Some(2011)
 
-description := "Tools for probabilistic inference in discrete-values factor graphs with dense factors."
+description := "Tools for probabilistic inference in discrete-valued factor graphs with dense factors."
 
 licenses += "MIT" -> url("http://opensource.org/licenses/MIT")
 
-scalaVersion := "2.10.4"
+scalaVersion := "2.11.0"
 
+//asserions are only used in tests
 scalacOptions in Compile += "-Xdisable-assertions"
 
 //scalaz
-libraryDependencies += "org.scalaz" % "scalaz-core_2.10" % "7.0.3"
-
-//scala-arm
-libraryDependencies += "com.jsuereth" %% "scala-arm" % "1.3"
+libraryDependencies += "org.scalaz" % "scalaz-core_2.11" % "7.0.6"
 
 // --------------- Java libraries ------------------------------
 libraryDependencies += "net.sf.trove4j" % "trove4j" % "3.0.3"
@@ -33,9 +31,9 @@ libraryDependencies += "org.apache.commons" % "commons-math3" % "3.2"
 // --------------- Publishing ----------------------------------
 
 //testing dependencies
-libraryDependencies += "org.specs2" % "specs2_2.10" % "2.3.4" % "test"
+libraryDependencies += "org.specs2" %% "specs2" % "2.3.11" % "test"
 
-libraryDependencies += "org.scalacheck" % "scalacheck_2.10" % "1.11.0" % "test"
+libraryDependencies += "org.scalacheck" % "scalacheck_2.11" % "1.11.3" % "test"
 
 publishMavenStyle := true
 

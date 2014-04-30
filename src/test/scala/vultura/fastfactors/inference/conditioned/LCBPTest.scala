@@ -59,15 +59,6 @@ class LCBPTest extends Specification {
   def lcbpCorrectionAnalysis(problem: Problem, scheme: GScheme, tol: Double, maxIterations: Int): MatchResult[AnyVal] = {
     val lcbp = new LCBP(problem, scheme, tol = 1e-11, maxIterations = 100000, exactConditions = false)
     val lcbpCorrected: LCBP = new LCBP(problem, scheme, maxIterations = 100000, exactConditions = true)
-    println("problem:\n\t" + problem.factors.mkString("\n\t"))
-    println("# LCBP-corrected")
-    println(lcbpCorrected.calibrator.report)
-    println("# LCBP-uncorrected")
-    println(lcbp.calibrator.report)
-    println("\n\ntrue logz: " + problem.logZ)
-    println("lcbp-corrected: " + lcbpCorrected.logZ)
-    println("lcbp:\t" + lcbp.logZ)
-    println(lcbpCorrected.calibrator.isCalibrated + "/" + lcbp.calibrator.isCalibrated)
     (lcbpCorrected.calibrator.isCalibrated must beTrue) and (lcbp.calibrator.isCalibrated must beTrue) and
       (lcbpCorrected.logZ must beCloseTo(lcbp.logZ, 1e-4))
   }
