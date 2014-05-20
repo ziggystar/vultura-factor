@@ -24,7 +24,7 @@ class LCBPTest extends Specification {
   val overlappingGrid = GridProblem(6,1,2,1d,4)
   val overlappingGridSmall = GridProblem(width = 3,margin=0,influence=2,coupling = 1d,numConditioned = 4)
 
-  // todo: create matcher that checks for convergence
+  //TODO create matcher that checks for convergence
   override def is: Fragments =
     "unconditioned" ^
       "yield same result as BP" ^
@@ -37,31 +37,11 @@ class LCBPTest extends Specification {
       "random structure" ! convergedAndExactTo(new LCBP(rand1,fullyConditioned(rand1,0),1e-9,10000), 1e-2) ^
       p^
     "locally conditioned" ^
-      "grid" ! convergedAndExactTo(new LCBP(p2,slightlyConditioned(p2,0), maxIterations = 100000, exactConditions = false),5e-3).orSkip ^
-      "compare lcbp with and without correction" ^
-        "4x1 grid" ! {
-          val problem = grid(4,1,2,expGauss(1),new Random(1)).simplify
-          val scheme = slightlyConditioned(problem, 0)
-          lcbpCorrectionAnalysis(problem, scheme, 1e-4, 100000)
-        } ^
-        "4x1 attractive grid" ! {
-          val problem = grid(4,1,2,attractive(4),new Random(1)).simplify
-          val scheme = slightlyConditioned(problem, 0)
-          lcbpCorrectionAnalysis(problem, scheme, 1e-4, 100000)
-        }
-      "random structure" ! convergedAndExactTo(new LCBP(rand1,slightlyConditioned(rand1,0),1e-9,10000, exactConditions = false), 1e-2) ^
-      "random structure (exact)" ! convergedAndExactTo(new LCBP(rand1,slightlyConditioned(rand1,0),1e-9,10000,exactConditions = true), 1e-2) ^
+      "grid" ! convergedAndExactTo(new LCBP(p2,slightlyConditioned(p2,0), maxIterations = 100000),5e-3).orSkip ^
+      "random structure" ! convergedAndExactTo(new LCBP(rand1,slightlyConditioned(rand1,0),1e-9,10000), 1e-2) ^
       "overlapping influences" ^
       "bug, threw an exception" ! convergedAndExactTo(new LCBP(overlappingGrid.problem,overlappingGrid.gscheme, maxIterations = 100000),0.1) ^
       "small grid" ! convergedAndExactTo(new LCBP(overlappingGridSmall.problem,overlappingGridSmall.gscheme, maxIterations = 100000),0.1)
-
-
-  def lcbpCorrectionAnalysis(problem: Problem, scheme: GScheme, tol: Double, maxIterations: Int): MatchResult[AnyVal] = {
-    val lcbp = new LCBP(problem, scheme, tol = 1e-11, maxIterations = 100000, exactConditions = false)
-    val lcbpCorrected: LCBP = new LCBP(problem, scheme, maxIterations = 100000, exactConditions = true)
-    (lcbpCorrected.calibrator.isCalibrated must beTrue) and (lcbp.calibrator.isCalibrated must beTrue) and
-      (lcbpCorrected.logZ must beCloseTo(lcbp.logZ, 1e-4))
-  }
 
   def convergedAndExactTo(lcbp:LCBP, tol: Double) = (lcbp.calibrator.isCalibrated must beTrue) and (lcbp.logZ must beCloseTo(lcbp.problem.logZ, tol))
 }
