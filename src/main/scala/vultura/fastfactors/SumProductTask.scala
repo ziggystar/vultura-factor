@@ -36,8 +36,7 @@ case class SumProductTask(remainingVars: Array[Int],
   val counterTL = new ThreadLocal[Array[Int]]{ override def initialValue(): Array[Int] = new Array[Int](cliqueOrdering.size)}
   val factorPointersTL = new ThreadLocal[Array[Int]]{ override def initialValue(): Array[Int] = new Array[Int](numFactors)}
 
-  def sumProduct(factorValues: Array[Array[Double]],
-                       result: Array[Double]) {
+  def sumProduct(factorValues: IndexedSeq[Array[Double]], result: Array[Double]) {
     var margTemp = margTempTL.get
     val prodTemp: Array[Double] = prodTempTL.get
     val counter: Array[Int] = counterTL.get
@@ -69,7 +68,7 @@ case class SumProductTask(remainingVars: Array[Int],
     }
   }
 
-  def increment(count: Int, reg: Array[Int]): Int = {
+  private final def increment(count: Int, reg: Array[Int]): Int = {
     var overflow = 0
     val size: Int = reg.length
     while(overflow < size){
