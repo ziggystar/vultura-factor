@@ -34,15 +34,3 @@ libraryDependencies += "org.apache.commons" % "commons-math3" % "3.2"
 libraryDependencies += "org.specs2" %% "specs2" % "2.3.11" % "test"
 
 libraryDependencies += "org.scalacheck" % "scalacheck_2.11" % "1.11.3" % "test"
-
-publishMavenStyle := true
-
-publishTo <<= version { version: String =>
-  val repoInfo = "tgeier releases" -> "/media/SFB-Space/SambaLDAP/HOMES/tgeier/public_html/mvn"
-  val user = System.getProperty("user.name")
-  val keyFile = (Path.userHome / ".ssh" / "id_rsa").asFile
-  Some(Resolver.ssh(
-    repoInfo._1,
-    "companion.informatik.uni-ulm.de",
-    repoInfo._2) as(user, keyFile) withPermissions("0644"))
-}
