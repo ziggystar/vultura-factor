@@ -26,6 +26,7 @@ trait RingZ[@specialized(Double) T]{
   def logExpectation(p: Array[T], f: Array[T]): Double = ???
   def decode(p: Array[T]): Array[Double] = ???
   def encode(p: Array[Double]): Array[T] = ???
+  def log(x: T): Double = ???
 }
 
 /** This ring only accepts the array invocations with a single element and returns this singe element.
@@ -109,6 +110,7 @@ object NormalD extends RingZ[Double]{
 
   /** @return In normal representation (not log). */
   override def expectation(p: Array[Double], f: Array[Double]): Double = expectationR(p,f)
+  override def log(x: Double): Double = math.log(x)
 
   override def toString: String = "normal domain"
 }
@@ -205,6 +207,7 @@ object LogD extends RingZ[Double] {
 
   override def decode(p: Array[Double]): Array[Double] = p.map(math.exp)
   override def encode(p: Array[Double]): Array[Double] = p.map(math.log)
+  override def log(x: Double): Double = x
 
   override def toString: String = "log domain"
 }

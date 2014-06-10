@@ -21,7 +21,7 @@ trait MarginalI extends Inferer {
 /** Trait that is implemented by inference algorithms that can compute the partition function. */
 trait ParFunI extends Inferer {
   /** @return Natural logarithm of partition function. */
-  def logZ: Double = math.log(problem.ring.decode(Array(Z))(0))
+  def logZ: Double = problem.ring.log(Z)
   /** @return Partition function in encoding specified by `ring`. */
   def Z: Double
   def decodedZ: Double = problem.ring.decode(Array(Z))(0)
