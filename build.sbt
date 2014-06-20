@@ -5,8 +5,9 @@ organization := "de.uni-ulm"
 /*
 17: add parameter learning
 18: refactoring, remove some stuff
+19: extract statistics stuff into vultura.util.stats._
 */
-version := "18-SNAPSHOT"
+version := "19.0.0"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 

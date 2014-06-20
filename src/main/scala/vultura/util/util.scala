@@ -126,18 +126,6 @@ package object util {
       a + math.log1p(math.exp(b - a))
   def addLogApproximate(a: Double, b: Double): Double = if(math.abs(a - b) > 15)  a max b else addLog(a,b)
 
-  implicit def statisticsPimper[A: Numeric](xs: Iterable[A]) = new {
-      def mean: Double = implicitly[Numeric[A]].toDouble(xs.sum) / xs.size
-
-      def variance: Double = {
-        if (xs.size == 1) return 0
-        val mean_s: Double = mean
-        xs.map(implicitly[Numeric[A]].toDouble(_) - mean_s).map(x => x * x).sum / (xs.size - 1)
-      }
-
-      def sd: Double = math.sqrt(variance)
-    }
-
   /** Create several Random objects in a deterministic way from an initial one. */
   implicit def random2RichRandom(r: Random) = new {
     def split(i: Int): Seq[Random] = {

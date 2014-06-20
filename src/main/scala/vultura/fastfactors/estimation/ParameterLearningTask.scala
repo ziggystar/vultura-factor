@@ -2,7 +2,7 @@ package vultura.fastfactors.estimation
 
 import scala.language.reflectiveCalls
 import vultura.fastfactors._
-import vultura.util._
+import vultura.util.stats._
 import vultura.fastfactors.inference.{ParFunI, JointMargI, JunctionTree}
 import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.BOBYQAOptimizer
 import scalaz.Memo
