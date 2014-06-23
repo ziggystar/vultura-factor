@@ -16,12 +16,13 @@ trait Edge {
   * Is able to write the result directly into a provided container.
   */
 trait MEdge extends Edge {
-  def mCompute(ins: IndexedSeq[InEdge#TOut], result: TOut): Unit
+  /** These computations don't have to be thread-safe. */
+  def mCompute(): (IndexedSeq[InEdge#TOut], TOut) => Unit
   def create: TOut
   def copy(t: TOut): TOut
   override def compute(ins: IndexedSeq[InEdge#TOut]): TOut = {
     val c = create
-    mCompute(ins,c)
+    mCompute()(ins,c)
     c
   }
 }
@@ -32,7 +33,7 @@ trait Diff[-E,-T]{
 
 object MaxDiff extends Diff[Any,Array[Double]]{
   override def diff(e: Any)(oldValue: Array[Double], newValue: Array[Double]): Double =
-    (for((v1,v2) <- oldValue zip newValue) yield math.abs(v1-v2)).max
+    vultura.util.maxDiff(oldValue, newValue)
 }
 
 trait CProb[E <: Edge]{
@@ -64,12 +65,19 @@ class MutableFIFOCalibrator[E <: MEdge](differ: Diff[E, E#TOut],
                                         maxSteps: Int = 1000000,
                                         problem: CProb[E],
                                         initialize: EdgeValues[E] = EdgeValues.empty) extends Calibrated[E]{
+  class EdgeData[ET <: E](val e: ET){
+    val inputSpace = new mutable.ArraySeq[e.InEdge#TOut](e.inputs.size)
+    val computation: (IndexedSeq[e.InEdge#TOut], e.TOut) => Unit = e.mCompute()
+  }
+
   type Out = E#TOut
   val edgeIndex: SIIndex[E] = new SIIndex(problem.edges.toSet)
   //edge index
   type EI = edgeIndex.Idx
   val numEdges: Int = edgeIndex.size
   val edges: IndexedSeq[E] = edgeIndex.elements
+
+  val edgeData: IndexedSeq[EdgeData[E]] = edges.map(new EdgeData(_))
 
   //the predecessors of an edge
   val predecessors: IndexedSeq[Array[EI]] = edgeIndex.createArrayLookup(_.inputs.map(_.asInstanceOf[E]))
@@ -103,11 +111,25 @@ class MutableFIFOCalibrator[E <: MEdge](differ: Diff[E, E#TOut],
   /** Assumes that `e` is already dequeued, and steps is incremented. */
   private def updateEdge(ei: Int): Boolean = {
     val e: E = edgeIndex.backward(ei)
-    val input: IndexedSeq[e.InEdge#TOut] = predecessors(ei).map(i => state(i).asInstanceOf[e.InEdge#TOut])
+    val eData: EdgeData[e.type] = edgeData(ei).asInstanceOf[EdgeData[e.type]]
+    val input: mutable.ArraySeq[e.InEdge#TOut] =
+    {
+      val preds: Array[EI] = predecessors(ei)
+      val b = eData.inputSpace
+      var i = 0
+      while(i < b.length){
+        b(i) = state(preds(i)).asInstanceOf[e.InEdge#TOut]
+        i += 1
+      }
+      b
+    }
+//    IndexedSeq[e.InEdge#TOut] = {
+//      predecessors(ei).map(i => state(i).asInstanceOf[e.InEdge#TOut])
+//    }
     val newVal = pool(ei).asInstanceOf[e.TOut]
     val oldVal = state(ei).asInstanceOf[e.TOut]
     //recalculate
-    e.mCompute(input,newVal)
+    eData.computation(input,newVal)
     val diff = differ.diff(e)(oldVal, newVal)
     if(diff > tol) {
       //save new state
