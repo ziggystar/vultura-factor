@@ -23,6 +23,7 @@ trait RingZ[@specialized(Double) T]{
   def entropy(a: Array[T]): Double = ???
   /** @return In normal representation (not log). */
   def expectation(p: Array[T], f: Array[T]): Double = ???
+  /** @return the expectation of the second array given the measure of the first, as both arrays are in the given encoding. */
   def logExpectation(p: Array[T], f: Array[T]): Double = ???
   def decode(p: Array[T]): Array[Double] = ???
   def encode(p: Array[Double]): Array[T] = ???
@@ -110,6 +111,10 @@ object NormalD extends RingZ[Double]{
 
   /** @return In normal representation (not log). */
   override def expectation(p: Array[Double], f: Array[Double]): Double = expectationR(p,f)
+
+  /** @return the expectation of the second array given the measure of the first, as both arrays are in the given encoding. */
+  override def logExpectation(p: Array[Double], f: Array[Double]): Double = expectation(p, f.map(math.log))
+
   override def log(x: Double): Double = math.log(x)
 
   override def toString: String = "normal domain"
@@ -204,6 +209,9 @@ object LogD extends RingZ[Double] {
     val normalized = normalize(p)
     normalized.zip(f).foldLeft(0d){case (e,(lnp,f)) => e + math.exp(lnp) * f}
   }
+
+  /** @return the expectation of the second array given the measure of the first, as both arrays are in the given encoding. */
+  override def logExpectation(p: Array[Double], f: Array[Double]): Double = expectation(p, f)
 
   override def decode(p: Array[Double]): Array[Double] = p.map(math.exp)
   override def encode(p: Array[Double]): Array[Double] = p.map(math.log)

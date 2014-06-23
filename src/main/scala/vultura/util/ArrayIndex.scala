@@ -3,14 +3,16 @@ package vultura.util
 import gnu.trove.map.hash.TObjectIntHashMap
 import scala.reflect.ClassTag
 
-trait Index[T] extends (T => Int) {
+trait Index[T] {
+  type Idx = Int
   def elements: IndexedSeq[T]
-  def forward(t: T): Int
-  def backward(i: Int): T
-  override def apply(v1: T): Int = forward(v1)
+  def forward(t: T): Idx
+  def backward(i: Idx): T
   def size: Int = elements.size
   def indices: Range = 0 until size
   def contains(t: T): Boolean
+  def createArrayLookup(f: T => Seq[T]): IndexedSeq[Array[Idx]] =
+    elements.map(e => f(e).map(forward)(collection.breakOut): Array[Idx])
 }
 
 /**
@@ -29,7 +31,7 @@ class ArrayIndex[T: ClassTag](values: Set[T]) extends Index[T] {
     m
   }
   @inline
-  override def apply(v1: T): Int = forwardMap.get(v1)
+  def apply(v1: T): Int = forwardMap.get(v1)
   @inline
   def backward(index: Int): T = backwardMap(index)
   @inline
@@ -57,7 +59,7 @@ class SIIndex[T](values: Set[T]) extends Index[T] {
     m
   }
   @inline
-  override def apply(v1: T): Int = forwardMap.get(v1)
+  def apply(v1: T): Int = forwardMap.get(v1)
   @inline
   def backward(index: Int): T = backwardMap(index)
   @inline

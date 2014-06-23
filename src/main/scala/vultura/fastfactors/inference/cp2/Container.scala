@@ -16,7 +16,6 @@ trait Edge {
   * Is able to write the result directly into a provided container.
   */
 trait MEdge extends Edge {
-  /** Mutable container type. */
   def mCompute(ins: IndexedSeq[InEdge#TOut], result: TOut): Unit
   def create: TOut
   def copy(t: TOut): TOut
@@ -58,6 +57,7 @@ trait Calibrated[E <: Edge] extends EdgeValues[E] {
   def isConverged: Boolean
   def iteration: Int
 }
+
 /** Calibrator that supports mutable message updates. */
 class MutableFIFOCalibrator[E <: MEdge](differ: Diff[E, E#TOut],
                                         tol: Double = 1e-9,
@@ -65,15 +65,14 @@ class MutableFIFOCalibrator[E <: MEdge](differ: Diff[E, E#TOut],
                                         problem: CProb[E],
                                         initialize: EdgeValues[E] = EdgeValues.empty) extends Calibrated[E]{
   type Out = E#TOut
-  //edge index
-  type EI = Int
   val edgeIndex: SIIndex[E] = new SIIndex(problem.edges.toSet)
+  //edge index
+  type EI = edgeIndex.Idx
   val numEdges: Int = edgeIndex.size
-  val edges = edgeIndex.elements
+  val edges: IndexedSeq[E] = edgeIndex.elements
 
   //the predecessors of an edge
-  val predecessors: IndexedSeq[Array[EI]] =
-    edgeIndex.elements.map(_.inputs.map(e => edgeIndex(e.asInstanceOf[E]))(collection.breakOut): Array[EI])
+  val predecessors: IndexedSeq[Array[EI]] = edgeIndex.createArrayLookup(_.inputs.map(_.asInstanceOf[E]))
 
   //the successors of an edge
   val successors: IndexedSeq[Array[EI]] = {

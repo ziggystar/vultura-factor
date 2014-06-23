@@ -1,5 +1,6 @@
 package vultura.fastfactors.inference.cp2
 
+import vultura.fastfactors.inference.MargParI
 import vultura.fastfactors.{SumProductTask, FastFactor, Problem}
 
 case class LBP(problem: Problem) {
@@ -52,4 +53,33 @@ case class LBP(problem: Problem) {
 
     def init(e: BPMessage): Array[Double] = FastFactor.maxEntropy(Array(e.v),problem.domains,problem.ring).values
   }
+}
+
+object LBP{
+  /** Convenient inference method. */
+  def infer(problem: Problem, maxIterations: Int = 1000000, tol: Double = 1e-10) = {
+    val lbp = LBP(problem)
+    val cp = new MutableFIFOCalibrator[lbp.BPMessage](MaxDiff, tol, maxIterations, lbp.cp)
+    BPResult(problem, (v,f) => FastFactor(Array(v),cp.edgeValue(lbp.V2F(v,f))), (f,v) => FastFactor(Array(v),cp.edgeValue(lbp.F2V(f,v))))
+  }
+}
+
+case class BPResult(problem: Problem, v2f: (Int,FastFactor) => FastFactor, f2v: (FastFactor,Int) => FastFactor) extends MargParI {
+  /** @return marginal distribution of variable in encoding specified by `ring`. */
+  override def variableBelief(vi: Int): FastFactor =
+    FastFactor.multiply(problem.ring)(problem.domains)(problem.factorsOfVariable(vi).map(f => f2v(f,vi))).normalize(problem.ring)
+
+  def factorBelief(f: FastFactor): FastFactor =
+    FastFactor.multiply(problem.ring)(problem.domains)(f.variables.map(v => v2f(v,f)) :+ f).normalize(problem.ring)
+
+  /** @return Partition function in encoding specified by `ring`. */
+  override def logZ: Double = {
+    val factorEntropies = problem.factors.map(f => problem.ring.entropy(factorBelief(f).values))
+    val variableEntropies = problem.variables.map(v => problem.ring.entropy(variableBelief(v).values) * (1 - problem.degreeOfVariable(v)))
+    val factorExpectations = problem.factors.map(f => problem.ring.logExpectation(factorBelief(f).values, f.values))
+    factorEntropies.sum + variableEntropies.sum + factorExpectations.sum
+  }
+
+  /** @return Partition function in encoding specified by `ring`. */
+  override def Z: Double = math.exp(logZ)
 }
