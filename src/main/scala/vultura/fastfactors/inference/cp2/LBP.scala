@@ -7,11 +7,12 @@ case class LBP(problem: Problem) {
   sealed trait BPMessage extends MEdge {
     def v: Int
     final type TOut = Array[Double]
+    def create: TOut = new Array[Double](problem.domains(v))
+    override def copy(t: TOut): TOut = t.clone()
   }
 
   case class V2F(v: Int, f: FastFactor) extends BPMessage {
     override type InEdge = F2V
-    def create: TOut = new Array[Double](problem.domains(v))
     override def inputs: IndexedSeq[InEdge] = for(nf <- problem.factorsOfVariable(v) if nf != f) yield F2V(nf,v)
     //this must be lazy, otherwise inputs gets called indefinitely
     lazy val spTask = SumProductTask(
@@ -28,7 +29,6 @@ case class LBP(problem: Problem) {
 
   case class F2V(f: FastFactor, v: Int) extends BPMessage {
     override type InEdge = V2F
-    def create: TOut = new Array[Double](problem.domains(v))
     override def inputs: IndexedSeq[InEdge] = for(nv <- f.variables if nv != v) yield V2F(nv,f)
     override def mCompute(ins: IndexedSeq[Array[Double]], result: Array[Double]): Unit = {
       spTask.sumProduct(ins :+ f.values,result)
