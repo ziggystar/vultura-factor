@@ -82,8 +82,7 @@ class SinglyLCMF(val problem: Problem, val scheme: SimpleScheme, val tol: Double
 
   /** Create the estimated distribution over some given variables under a certain condition. */
   def estimatedDistribution(scope: Array[Int], condition: Condition = Map()): FastFactor = {
-    /**
-     * Forms the linear combination of the conditioned marginals.
+    /* Forms the linear combination of the conditioned marginals.
      * @return The estimated marginal distribution over `variable` under the given condition. */
     def getMarginal(variable: Int, condition: Condition): FastFactor = {
       //there is either none or one conditioned variable having an effect on `variable`
