@@ -17,7 +17,7 @@ description := "Tools for probabilistic inference in discrete-valued factor grap
 
 licenses += "MIT" -> url("http://opensource.org/licenses/MIT")
 
-scalaVersion := "2.11.0"
+scalaVersion := "2.11.1"
 
 //asserions are only used in tests
 scalacOptions in Compile += "-Xdisable-assertions"
