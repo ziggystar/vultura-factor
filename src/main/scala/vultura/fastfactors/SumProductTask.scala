@@ -37,6 +37,7 @@ case class SumProductTask(remainingVars: Array[Int],
   val factorPointers: Array[Int] = new Array[Int](numFactors)
 
   final def sumProduct(factorValues: IndexedSeq[Array[Double]], result: Array[Double]) {
+    //TODO maybe the clearing is not needed
     SumProductTask.arrayClear(counter)
     SumProductTask.arrayClear(factorPointers)
     var remainIdx = 0

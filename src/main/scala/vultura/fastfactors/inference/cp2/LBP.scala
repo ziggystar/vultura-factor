@@ -87,10 +87,24 @@ case class BPResult(problem: Problem, v2f: (Int,FastFactor) => FastFactor, f2v: 
 
   /** @return Partition function in encoding specified by `ring`. */
   override def logZ: Double = {
-    val factorEntropies = problem.factors.map(f => problem.ring.entropy(factorBelief(f).values))
-    val variableEntropies = problem.variables.map(v => problem.ring.entropy(variableBelief(v).values) * (1 - problem.degreeOfVariable(v)))
-    val factorExpectations = problem.factors.map(f => problem.ring.logExpectation(factorBelief(f).values, f.values))
-    factorEntropies.sum + variableEntropies.sum + factorExpectations.sum
+    var result: Double = 0
+
+    //factor entropies and factor log-expectations
+    var i = 0
+    while(i < problem.factors.length){
+      val f = problem.factors(i)
+      result = result +
+        problem.ring.entropy(factorBelief(f).values) +
+        problem.ring.logExpectation(factorBelief(f).values, f.values)
+      i += 1
+    }
+
+    //variable entropies
+    problem.variables.foreach{v =>
+      result = result + problem.ring.entropy(variableBelief(v).values) * (1 - problem.degreeOfVariable(v))
+    }
+
+    result
   }
 
   /** @return Partition function in encoding specified by `ring`. */
