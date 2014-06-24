@@ -102,7 +102,7 @@ class MutableFIFOCalibrator[E <: MEdge](differ: Diff[E, E#TOut],
   private val lastCalibrated: Array[Long] = Array.fill(numEdges)(-1)
 
   //TODO optimization Could be replaced by parallel arrays
-  private val dirtyEdges: mutable.Queue[(EI,Long)] = mutable.Queue((for(e <- 0 until numEdges) yield e -> 0L): _*)
+  private val dirtyEdges: MutableArrayQueue[(Int, Long)] = MutableArrayQueue((for(e <- 0 until numEdges) yield e -> 0L))
 
   private var steps: Long = 0
 
@@ -112,6 +112,7 @@ class MutableFIFOCalibrator[E <: MEdge](differ: Diff[E, E#TOut],
   private def updateEdge(ei: Int): Boolean = {
     val e: E = edgeIndex.backward(ei)
     val eData: EdgeData[e.type] = edgeData(ei).asInstanceOf[EdgeData[e.type]]
+
     val input: mutable.ArraySeq[e.InEdge#TOut] =
     {
       val preds: Array[EI] = predecessors(ei)
@@ -123,9 +124,7 @@ class MutableFIFOCalibrator[E <: MEdge](differ: Diff[E, E#TOut],
       }
       b
     }
-//    IndexedSeq[e.InEdge#TOut] = {
-//      predecessors(ei).map(i => state(i).asInstanceOf[e.InEdge#TOut])
-//    }
+
     val newVal = pool(ei).asInstanceOf[e.TOut]
     val oldVal = state(ei).asInstanceOf[e.TOut]
     //recalculate
