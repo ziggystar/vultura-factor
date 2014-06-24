@@ -56,13 +56,13 @@ object EdgeValues {
 
 trait Calibrated[E <: Edge] extends EdgeValues[E] {
   def isConverged: Boolean
-  def iteration: Int
+  def iteration: Long
 }
 
 /** Calibrator that supports mutable message updates. */
 class MutableFIFOCalibrator[E <: MEdge](differ: Diff[E, E#TOut],
                                         tol: Double = 1e-9,
-                                        maxSteps: Int = 1000000,
+                                        maxSteps: Long = 1000000,
                                         problem: CProb[E],
                                         initialize: EdgeValues[E] = EdgeValues.empty) extends Calibrated[E]{
   class EdgeData[ET <: E](val e: ET){
@@ -99,12 +99,12 @@ class MutableFIFOCalibrator[E <: MEdge](differ: Diff[E, E#TOut],
   private val pool: mutable.Buffer[Out] = edges.map(_.create).toBuffer
 
   //when was an edge calibrated the last time?
-  private val lastCalibrated: Array[Int] = Array.fill(numEdges)(-1)
+  private val lastCalibrated: Array[Long] = Array.fill(numEdges)(-1)
 
   //TODO optimization Could be replaced by parallel arrays
-  private val dirtyEdges: mutable.Queue[(EI,Int)] = mutable.Queue((for(e <- 0 until numEdges) yield e -> 0): _*)
+  private val dirtyEdges: mutable.Queue[(EI,Long)] = mutable.Queue((for(e <- 0 until numEdges) yield e -> 0L): _*)
 
-  private var steps: Int = 0
+  private var steps: Long = 0
 
   calibrate()
 
@@ -136,7 +136,9 @@ class MutableFIFOCalibrator[E <: MEdge](differ: Diff[E, E#TOut],
       pool(ei) = oldVal
       state(ei) = newVal
       //awake dependent edges
-      dirtyEdges.enqueue(successors(ei).map(e => e -> steps):_*)
+      successors(ei).foreach{e =>
+        dirtyEdges.enqueue((e,steps))
+      }
       lastCalibrated(ei) = steps
       true
     }
@@ -147,16 +149,17 @@ class MutableFIFOCalibrator[E <: MEdge](differ: Diff[E, E#TOut],
     while(dirtyEdges.nonEmpty && steps < maxSteps){
       val (ei,lastUpdate) = dirtyEdges.dequeue()
       if(lastUpdate > lastCalibrated(ei)) {
-        //recompute
+        //side-effect
         val wasChanged: Boolean = updateEdge(ei)
-        if(wasChanged) //side-effect
+        if(wasChanged)
           steps = steps + 1
       }
     }
   }
 
-  def iteration: Int = steps
+  def iteration: Long = steps
   def edgeValue(n: E): n.TOut = state(edgeIndex(n)).asInstanceOf[n.TOut]
   def hasEdge(e: E): Boolean = edgeIndex.contains(e)
   def isConverged = dirtyEdges.isEmpty
 }
+
