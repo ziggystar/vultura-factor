@@ -45,12 +45,6 @@ class MutableArrayQueueTest extends Specification {
     q.enqueue(2)
     q.size === 2
   } ^
-  "grown queue must report correct capacity" ! {
-    val q = queue(1)
-    q.enqueue(1)
-    q.enqueue(1)
-    q.capacity === 3
-  } ^
   "grow queue" ! {
     val q = queue(1)
     q.enqueue(1)
@@ -61,5 +55,21 @@ class MutableArrayQueueTest extends Specification {
     val q = queue(1)
     (0 until 10).foreach(q.enqueue)
     q.toList === (0 until 10).toList
+  } ^
+  "wrap around" ! {
+    val q = queue(2)
+    q.enqueue(1)
+    q.enqueue(2)
+    q.dequeue()
+    q.enqueue(3)
+    (q.capacity === 2) and (q.toList === List(2,3))
+  } ^
+  "correct size after wrap" ! {
+    val q = queue(2)
+    q.enqueue(1)
+    q.enqueue(2)
+    q.dequeue()
+    q.enqueue(3)
+    q.size === 2
   }
 }

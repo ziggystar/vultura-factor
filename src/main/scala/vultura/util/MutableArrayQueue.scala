@@ -20,17 +20,23 @@ class MutableArrayQueue[T](initialSize: Int) extends IndexedSeq[T] {
       data(end) = t
       end = incP(end)
     } else {
-      val newData = new mutable.ArraySeq[T](data.size*2)
-      var to = 0
-      while(start != end){
-        newData(to) = data(start)
-        to = to + 1
-        start = incP(start)
-      }
-      newData(to) = t
-      data = newData
-      start = 0
-      end = incP(end)
+      val newCol = new MutableArrayQueue[T](data.size * 2)
+      this.foreach(newCol.enqueue)
+      this.start = newCol.start
+      this.end = newCol.end
+      this.data = newCol.data
+      this.enqueue(t)
+//      val newData = new mutable.ArraySeq[T](data.size*2)
+//      var to = 0
+//      while(start != end){
+//        newData(to) = data(start)
+//        to = to + 1
+//        start = incP(start)
+//      }
+//      newData(to) = t
+//      data = newData
+//      start = 0
+//      end = incP(end)
     }
   }
   /** @throws RuntimeException if the queue is empty. */
@@ -49,9 +55,11 @@ class MutableArrayQueue[T](initialSize: Int) extends IndexedSeq[T] {
     if(r >= 0)
       r
     else
-      r + capacity
+      r + data.size
   }
   override def isEmpty: Boolean = start == end
+
+  override def nonEmpty: Boolean = !isEmpty
 
   override def length: Int = size
 
