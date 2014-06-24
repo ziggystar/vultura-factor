@@ -23,27 +23,29 @@ case class SumProductTask(remainingVars: Array[Int],
     val mv: Array[Int] = allVars.filterNot(remainingVars.contains)
     (mv ++ remainingVars,mv)
   }
-
   val lookups: Array[Array[Int]] = factorVariables.map(FastFactor.buildLookup(cliqueOrdering,domainSizes,_))(collection.breakOut)
-
   val margSize: Int = FastFactor.mapMultiply(margVars,domainSizes)
-
   //domain sizes ordered by the appearance of variables in the clique ordering (for efficient access when counting)
   val cliqueDomains: Array[Int] = cliqueOrdering.map(domainSizes)
+  val counterSize: Int = cliqueOrdering.length
 
+  /** Holds the temporary values that get summed, get overwritten before being read in sumProduct. */
   val margTemp: Array[Double] = new Array[Double](margSize)
+  /** Holds the temporary values that get multiplied. Get written to before being read in sumProduct. */
   val prodTemp: Array[Double] = new Array[Double](numFactors)
-  val counter: Array[Int] = new Array[Int](cliqueOrdering.size)
+  val counter: Array[Int] = new Array[Int](counterSize)
   val factorPointers: Array[Int] = new Array[Int](numFactors)
 
   final def sumProduct(factorValues: IndexedSeq[Array[Double]], result: Array[Double]) {
+    SumProductTask.arrayClear(counter)
+    SumProductTask.arrayClear(factorPointers)
     var remainIdx = 0
     var cnt = 0
     while(remainIdx < remainSize){
       var margIdx = 0
       while(margIdx < margSize){
         //increment counter
-        val overflow = increment(cnt, counter)
+        val overflow = increment(cnt)
         cnt += 1
         //calculate the factor contributions
         //NOTE: we collect the factor values for the counter state before its update in this loop!
@@ -63,19 +65,34 @@ case class SumProductTask(remainingVars: Array[Int],
     }
   }
 
+  /** Increments the counter.
+    * Mutates the `counter` member.
+    * @param count The current step number of the counter.
+    * @return The counter figure where the overflow occurred.
+    */
   @inline
-  private final def increment(count: Int, reg: Array[Int]): Int = {
+  private final def increment(count: Int): Int = {
     var overflow = 0
-    val size: Int = reg.length
-    while(overflow < size){
-      reg(overflow) += 1
-      if(reg(overflow) == cliqueDomains(overflow)){
-        reg(overflow) = 0
+
+    while(overflow < counterSize){
+      counter(overflow) += 1
+      if(counter(overflow) == cliqueDomains(overflow)){
+        counter(overflow) = 0
         overflow += 1
       } else {
         return overflow
       }
     }
     overflow
+  }
+}
+
+object SumProductTask{
+  final def arrayClear(da: Array[Int]): Unit = {
+    var i = 0
+    while(i < da.length){
+      da(i) = 0
+      i += 1
+    }
   }
 }
