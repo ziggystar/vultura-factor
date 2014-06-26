@@ -17,8 +17,8 @@ class ConditionedInference[State,LSI,VSI](val problem: Problem,
                                           val cbpSolver: CBPSolverPlugin[State] = HybridSolver(ExactSolver.maxMinDegreeJT(2),BPSolverPlugin()),
                                           val simplifier: Conditioner = SimpleConditioner,
                                           val runInitially: Int = 0)(
-  val hLeaf: LeafHeuristic[LSI],
-  val hVariable: VariableSelection[VSI])(
+  val hLeaf: LeafHeuristic[LSI] = HL_MaxZ,
+  val hVariable: VariableSelection[VSI] = HV_MaxDegree)(
   implicit val state2ls: State <:< LSI,
            val state2vs: State <:< VSI) extends MargParI {
 
@@ -30,7 +30,11 @@ class ConditionedInference[State,LSI,VSI](val problem: Problem,
   
   var iterations: Int = 0
 
-  private val fringe: mutable.SortedSet[Leaf] = mutable.SortedSet(Leaf(problem,cbpSolver.create(problem)))(Ordering.by(_.h))
+  private val fringe: mutable.PriorityQueue[Leaf] =
+    mutable.PriorityQueue(Leaf(problem,cbpSolver.create(problem)))(Ordering.by(_.h))
+
+  //run initially
+  runFor(runInitially)
 
   /** Side-effecting function that applies one more step of conditioning.
     * @return `true` if the obtained result is exact, and the computation can be stopped.
@@ -40,14 +44,14 @@ class ConditionedInference[State,LSI,VSI](val problem: Problem,
     next.state match {
       case Left(_) => true //only exact leaves remaining
       case Right(state) =>
-        fringe.remove(next)
+        fringe.dequeue()
         iterations = iterations + 1
         val branches: Set[GCondition] = hVariable(state,next.p)
         //apply condition and simplify
         val simplified: Seq[Problem] = branches.toSeq.map(cond => simplifier.conditionSimplify(next.p,cond))
         //insert into fringe
         simplified.foreach { newProblem =>
-          fringe add Leaf(newProblem, cbpSolver.incremental(state, next.p, newProblem))
+          fringe += Leaf(newProblem, cbpSolver.incremental(state, next.p, newProblem))
         }
         fringe.head.isExact
     }
@@ -58,6 +62,11 @@ class ConditionedInference[State,LSI,VSI](val problem: Problem,
       step()
       run(p,acc + 1)
     } else acc
+
+  def runFor(n: Int): Int = {
+    val now = iterations
+    run(_.iterations < (now + n))
+  }
 
   def isExact: Boolean = fringe.size == fringe.count(_.isExact)
   /** @return returns ratio between 1 and 0. 1 means exact, 0 means all (possible) leafs are estimates. */
