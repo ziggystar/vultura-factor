@@ -1,7 +1,8 @@
 package vultura.fastfactors
 
 import scala.reflect.ClassTag
-import vultura.util.IntDomainCPI
+import vultura.util.{CrossProductIndexer, IntDomainCPI}
+import scala.util.Random
 
 /**
  * Created by IntelliJ IDEA.
@@ -71,6 +72,23 @@ case class FastFactor(variables: Array[Int], values: Array[Double]){
   override def toString: String = f"FastFactor(VAR: ${variables.mkString(",")},VAL: ${values.mkString(",")})"
   def toBriefString: String = f"${variables.mkString(",")} | ${values.map("%.2f".format(_)).mkString(",")}"
   def map(f: Double => Double): FastFactor = this.copy(values = values.map(f))
+
+  def index(values: Array[Val], domains: Array[Int]): Int =
+    values.zip(variables.map(domains)).foldLeft((0,1)){
+    case ((acc,stride),(value,domainSize)) => (acc + value * stride, stride * domainSize)}._1
+
+  def cpi(domains: Array[Int]): CrossProductIndexer = new CrossProductIndexer(variables.map(domains))
+
+  def eval(vals: Array[Val], domains: Array[Int]): Double = values(index(vals,domains))
+  def set(vals: Array[Val], domains: Array[Int], to: Double): FastFactor =
+    copy(values = {
+      val newArray: Array[Double] = this.values.clone()
+      newArray(index(vals,domains)) = to
+      newArray
+    })
+
+  def sample(r: Random, domains: Array[Int], ring: RingZ[Double]): Array[Val] =
+    cpi(domains)(vultura.util.wheelOfFortune(ring.decode(values), r))
 }
 
 object FastFactor{
@@ -91,6 +109,8 @@ object FastFactor{
     def zero: Double = sys.error("operation not supported")
 
     def one: Double = sys.error("operation not supported")
+
+    override def productInverse(x: Double): Double = sys.error("operation not supported")
 
     def sum(s1: Double, s2: Double): Double = if(s1 == s2) s1 else Double.NaN
 

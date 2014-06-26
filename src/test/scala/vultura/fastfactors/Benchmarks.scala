@@ -1,8 +1,9 @@
 package vultura.fastfactors
 
-import vultura.fastfactors
+import scala.language.reflectiveCalls
 import scala.util.Random
-import vultura.util._
+import vultura.fastfactors
+import vultura.util.stats._
 
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>

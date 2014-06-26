@@ -1,10 +1,12 @@
 package vultura
 
+import scala.language.implicitConversions
 import scala.util.Random
 import collection.mutable.ArrayBuffer
 import scala.reflect.ClassTag
 import scala.collection.TraversableLike
 import scala.collection.generic.CanBuildFrom
+
 
 /**
  * Utility functions.
@@ -61,6 +63,18 @@ package object util {
     }
   }
 
+  def wheelOfFortune(xs: IndexedSeq[Double], random: Random, partition: Option[Double] = None): Int = {
+    val z = partition.getOrElse(xs.sum)
+    val sample = random.nextDouble() * z
+    var i = 0
+    var sum = xs(i)
+    while(sum <= sample){
+      i = i + 1
+      sum = sum + xs(i)
+    }
+    i
+  }
+
   class RichRandomSeq[A](val s: IndexedSeq[A]) {
     def pickRandom(r: Random): A = s(r.nextInt(s.size))
     def pickRandomOpt(r: Random): Option[A] = if(s.isEmpty) None else Some(s(r.nextInt(s.size)))
@@ -111,18 +125,6 @@ package object util {
     else
       a + math.log1p(math.exp(b - a))
   def addLogApproximate(a: Double, b: Double): Double = if(math.abs(a - b) > 15)  a max b else addLog(a,b)
-
-  implicit def statisticsPimper[A: Numeric](xs: Iterable[A]) = new {
-      def mean: Double = implicitly[Numeric[A]].toDouble(xs.sum) / xs.size
-
-      def variance: Double = {
-        if (xs.size == 1) return 0
-        val mean_s: Double = mean
-        xs.map(implicitly[Numeric[A]].toDouble(_) - mean_s).map(x => x * x).sum / (xs.size - 1)
-      }
-
-      def sd: Double = math.sqrt(variance)
-    }
 
   /** Create several Random objects in a deterministic way from an initial one. */
   implicit def random2RichRandom(r: Random) = new {

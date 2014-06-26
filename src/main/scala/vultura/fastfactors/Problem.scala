@@ -5,15 +5,12 @@ import scala.util.Random
 import vultura.util.TreeWidth._
 import scalaz.Tree
 import java.io._
-import vultura.fastfactors.algorithms.CalibratedJunctionTree
+import vultura.fastfactors.inference.{VariableElimination, JunctionTree}
 import vultura.util.SSet
 
-/**
- * Created by IntelliJ IDEA.
- * User: Thomas Geier
- * Date: 6/14/13
- */
-case class Problem(factors: IndexedSeq[FastFactor],domains: Array[Int],ring: RingZ[Double]){
+/** A problem is basically a collection of factors, together with a domain and a ring.
+  * It provides several inference methods based on the exact junction tree algorithm. */
+case class Problem(factors: IndexedSeq[FastFactor], domains: Array[Int], ring: RingZ[Double]){
   lazy val factorsOfVariable: collection.Map[Int,IndexedSeq[FastFactor]] =
     variables.map(v => v -> factors.filter(_.variables.contains(v)))(collection.breakOut): mutable.HashMap[Int, IndexedSeq[FastFactor]]
   lazy val variables: Set[Int] = (for (f <- factors; v <- f.variables) yield v)(collection.breakOut)
@@ -39,6 +36,7 @@ case class Problem(factors: IndexedSeq[FastFactor],domains: Array[Int],ring: Rin
     ).mkString("\n")
   }
 
+  @deprecated("get rid of this","18")
   def minDegreeJunctionTrees(random: Random): Seq[Tree[(Set[Int], Seq[FastFactor])]] =
     compactJTrees(minDegreeJTs(factors.map(f => f.variables.toSet -> f)))
 
@@ -60,30 +58,41 @@ case class Problem(factors: IndexedSeq[FastFactor],domains: Array[Int],ring: Rin
   def toBriefString: String = f"(Problem: ${variables.size} variables, ${factors.size} factors, ring: $ring"
 
   /** @return Exact log Z obtained by junction tree algorithm. */
-  def logZ: Double = CalibratedJunctionTree.logZ(this)
+  lazy val logZ: Double = VariableElimination(this).logZ
   
   /** merges factors into other factors where possible */
   def simplify: Problem = {
-    val variablesToFactors: Map[Set[Int], IndexedSeq[FastFactor]] = factors.groupBy(_.variables.toSet)
-    val sSet: SSet[Int] = new SSet(variablesToFactors.keySet)
-    val maximalSets: Set[Set[Int]] = sSet.maximalSets
-    val maximalSetToSets: Map[Set[Int], Iterable[Set[Int]]] = variablesToFactors.keys.groupBy(sSet.superSetsOf(_).intersect(maximalSets).head)
-    val values: Map[Set[Int], FastFactor] = maximalSetToSets.mapValues(sets => FastFactor.multiply(ring)(domains)(sets.flatMap(variablesToFactors).toIndexedSeq))
-    Problem(values.values.toIndexedSeq, domains, ring)
+    val sset: SSet[Int] = new SSet(factors.map(_.variables.toSet)(collection.breakOut))
+    val groupedFactors: Iterator[IndexedSeq[FastFactor]] =
+      factors.groupBy(f => sset.maximalSuperSetsOf(f.variables.toSet).maxBy(_.size)).valuesIterator
+    val aggregatedFactors: IndexedSeq[FastFactor] = groupedFactors.map(FastFactor.multiply(ring)(domains)).toIndexedSeq
+    copy(factors = aggregatedFactors)
   }
+
+  /** Set some variables to values and simplify the problem.
+    * @param condition Maps variables to the values they shall assume.
+    * @return The resulting problem. It will contain a constant representing the product over the now assigned factors.
+    */
+  def condition(condition: Map[Var,Val]): Problem = map(_.condition(condition,domains)).simplify
 }
 
 object Problem{
-  import resource._
-
   def fromUaiString(s: String): Problem = parseUAIProblem(new StringReader(s)).right.get
   def loadUaiFile(s: String): Either[String,Problem] = loadUaiFile(new File(s))
-  def loadUaiFile(f: File): Either[String,Problem] =
-    (for(reader <- managed(new FileReader(f))) yield parseUAIProblem(reader))
-      .either.fold(err => Left(err.mkString("\n")),identity)
+  def loadUaiFile(f: File): Either[String,Problem] = {
+    val reader = new FileReader(f)
+    try {
+      parseUAIProblem(reader)
+    } catch  {
+      case e: Exception => Left("Error while reading file: \n " + e.toString)
+    } finally {
+      reader.close()
+    }
+  }
 
   def parseUAIProblem(in: InputStream): Either[String, Problem] = parseUAIProblem(new InputStreamReader(in))
-  def parseUAIProblem(in: Reader): Either[String,Problem] = {
+  /** @return first: the parsed problem; second: true if the input was a bayeschen network ("BAYES"). */
+  def parseBayesOrMarkov(in: Reader): Either[String,(Problem,Boolean)] = {
     import scalaz._
     val tokenStream = new BufferedReader(in)
 
@@ -95,8 +104,13 @@ object Problem{
       .filterNot(_.isEmpty)
 
     //first token must be 'MARKOV'
-    val asVal: Validation[String, Problem] = for{
-      _ <- if(tokens.next().toUpperCase.matches("MARKOV")) Success() else Failure("file must begin with 'MARKOV'")
+    val asVal: Validation[String, (Problem, Boolean)] = for{
+      problemType <- Success(tokens.next().toUpperCase)
+      isBayes <- problemType match {
+        case "BAYES" => Success(true)
+        case "MARKOV" => Success(false)
+        case _ => Failure("problem file must start with 'BAYES' or 'MARKOV'")
+      }
       numVars = tokens.next().toInt
       domains: Array[Int] = Array.fill(numVars)(tokens.next().toInt)
       numFactors = tokens.next().toInt
@@ -109,8 +123,9 @@ object Problem{
         Array.fill(nv)(tokens.next().toDouble)
       }
       factors = (factorVars,factorValues).zipped.map{case (vars,values) => FastFactor.orderIfNecessary(vars.reverse,values,domains)}
-    } yield Problem(factors.toIndexedSeq,domains,NormalD)
+    } yield (Problem(factors.toIndexedSeq,domains,NormalD), isBayes)
 
     asVal.toEither
   }
+  def parseUAIProblem(in: Reader): Either[String,Problem] = parseBayesOrMarkov(in).right.map(_._1)
 }

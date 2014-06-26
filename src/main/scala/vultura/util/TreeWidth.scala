@@ -157,6 +157,24 @@ object TreeWidth {
       case _ => None
     })
 
+  def junctionTreesFromOrder[A](cliques: Seq[(Set[Int],A)], order: Seq[Int]): Seq[Tree[(Set[Int],Seq[A])]] = {
+    //the first set contains variables to propagate upwards, the second set contains those in the local clique
+    //the first set does not contain the eliminated vertex, the second one does; that's the reason for the two sets
+    def jtRec(leafs: Seq[Tree[(Set[Int], Set[Int], Seq[A])]], order: List[Int]): Seq[Tree[(Set[Int], Seq[A])]] = order match {
+      case Nil =>
+        require(leafs.forall(_.rootLabel._1.isEmpty), "given order did not eliminate all variables")
+        leafs.map(tree => tree.map{case (_,c,a) => (c,a)})
+
+      case next :: rest =>
+        val (elim, remain) = leafs.partition(_.rootLabel._1.contains(next))
+        val elimClique: Set[Int] = elim.map(_.rootLabel._1).flatten.toSet
+        val newTree = node((elimClique - next, elimClique, Seq()), elim.toStream)
+        jtRec(remain :+ newTree, rest)
+    }
+
+    jtRec(cliques.map{case (vars, a) => leaf((vars, vars, Seq(a)))}, order.toList)
+  }
+
   def minDegreeJTs[A](_cliques: IndexedSeq[(Set[Int],A)]): Seq[Tree[(Set[Int],Seq[A])]] = {
     //convert the scala sets to BitSets
     val cliques = _cliques.map(c => intSet2BS(c._1))
@@ -277,25 +295,4 @@ object TreeWidth {
   def printJTs[A](trees: Seq[Tree[A]]): String = trees.map(_.map(_.toString).drawTree).mkString("\n---\n")
 
   def minDegreeOrdering(cliques: Seq[Set[Int]]): List[Int] = minDegreeOrderingAndWidth(cliques.toIndexedSeq)._1
-
-  import xml.{NodeSeq, Elem}
-
-  def treeAsGraphML[A](tree: Tree[A])(elemContent: A => NodeSeq = (_: A) => NodeSeq.Empty): Elem = {
-    val index = tree.flatten.zipWithIndex.toMap.mapValues("n" + _)
-
-    def toNode(a: A): Elem = <node id={index(a)}>{elemContent(a)}</node>
-    def toEdge(src: A, dst: A): Elem = <edge source={index(src)} target={index(dst)} />
-
-    //assumes the root is already there
-    def treeToXml(t: Tree[A]): NodeSeq = t.subForest.map{ subTree =>
-      toNode(subTree.rootLabel) ++
-        toEdge(t.rootLabel,subTree.rootLabel) ++
-        treeToXml(subTree)
-    }.foldLeft(NodeSeq.Empty)(_ ++ _)
-
-    <graph id="G" edgedefault="directed">
-      {toNode(tree.rootLabel)}
-      {treeToXml(tree)}
-    </graph>
-  }
 }

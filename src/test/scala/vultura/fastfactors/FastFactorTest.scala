@@ -74,5 +74,11 @@ class FastFactorTest extends Specification with FastFactorMatchers {
       "partial condition" !
         (FastFactor.deterministicMaxEntropy(Array(0,1),Map(0 -> 0),Array(2,2),NormalD) must haveValuesCloseTo(FF(VARS(0), VALS(0.5,0,0.5,0)))) ^
       "some condition" !
-        (FastFactor.deterministicMaxEntropy(Array(1),Map(1->0),Array(2,2,2),NormalD) must haveValuesCloseTo(FF(VARS(1),VALS(1,0))))
+        (FastFactor.deterministicMaxEntropy(Array(1),Map(1->0),Array(2,2,2),NormalD) must haveValuesCloseTo(FF(VARS(1),VALS(1,0)))) ^
+      p^
+    "eval method" ^
+      (FastFactor.fromFunction(Array(0,1,2),Array(2,3,4), _.sum).eval(Array(1,2,3), domains = Array(2,3,4)) === 6) ^
+      (FastFactor.fromFunction(Array(0,1,2),Array(2,3,4), _.sum).eval(Array(0,1,1), domains = Array(2,3,4)) === 2) ^
+      (FastFactor.fromFunction(Array(0,1,2),Array(2,3,4), _.sum).eval(Array(1,1,1), domains = Array(2,3,4)) === 3)
+
 }

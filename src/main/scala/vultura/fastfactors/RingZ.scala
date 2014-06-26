@@ -1,6 +1,5 @@
 package vultura.fastfactors
 
-import scala.reflect.ClassTag
 import scala.annotation.tailrec
 
 /**
@@ -9,6 +8,7 @@ import scala.annotation.tailrec
 trait RingZ[@specialized(Double) T]{
   def zero: T
   def one: T
+  def productInverse(x: T): T
   def sum(s1: T, s2: T): T
   def prod(f1: T, f2: T): T
   def sumA(ss: Array[T]): T = ss.foldLeft(zero)(sum)
@@ -23,15 +23,18 @@ trait RingZ[@specialized(Double) T]{
   def entropy(a: Array[T]): Double = ???
   /** @return In normal representation (not log). */
   def expectation(p: Array[T], f: Array[T]): Double = ???
+  /** @return the expectation of the second array given the measure of the first, as both arrays are in the given encoding. */
   def logExpectation(p: Array[T], f: Array[T]): Double = ???
   def decode(p: Array[T]): Array[Double] = ???
   def encode(p: Array[Double]): Array[T] = ???
+  def log(x: T): Double = ???
 }
 
 /** This ring only accepts the array invocations with a single element and returns this singe element.
   * It can be used where the true ring is not known.
   */
 object SafeD extends RingZ[Double]{
+  def productInverse(x: Double): Double = sys.error("Safe ring has no product inverse")
   def zero: Double = sys.error("Safe ring has no zero")
   def one: Double = sys.error("Safe ring has no one")
   def sum(s1: Double, s2: Double): Double = sys.error("safe ring has no binary ops")
@@ -45,8 +48,9 @@ object SafeD extends RingZ[Double]{
 }
 
 object NormalD extends RingZ[Double]{
-  final val zero: Double = 0d
-  final val one: Double = 1d
+  val zero: Double = 0d
+  val one: Double = 1d
+  def productInverse(x: Double): Double = 1/x
   def sum(s1: Double, s2: Double): Double = s1 + s2
   def prod(f1: Double, f2: Double): Double = f1 * f2
   override def sumA(ss: Array[Double]): Double = {
@@ -108,12 +112,19 @@ object NormalD extends RingZ[Double]{
   /** @return In normal representation (not log). */
   override def expectation(p: Array[Double], f: Array[Double]): Double = expectationR(p,f)
 
+  /** @return the expectation of the second array given the measure of the first, as both arrays are in the given encoding. */
+  override def logExpectation(p: Array[Double], f: Array[Double]): Double = expectation(p, f.map(math.log))
+
+  override def log(x: Double): Double = math.log(x)
+
   override def toString: String = "normal domain"
 }
 
 object LogD extends RingZ[Double] {
   final val zero: Double = Double.NegativeInfinity
   final val one: Double = 0d
+
+  override def productInverse(x: Double): Double = -x
 
   @inline
   def sum(s1: Double, s2: Double): Double =
@@ -199,8 +210,12 @@ object LogD extends RingZ[Double] {
     normalized.zip(f).foldLeft(0d){case (e,(lnp,f)) => e + math.exp(lnp) * f}
   }
 
+  /** @return the expectation of the second array given the measure of the first, as both arrays are in the given encoding. */
+  override def logExpectation(p: Array[Double], f: Array[Double]): Double = expectation(p, f)
+
   override def decode(p: Array[Double]): Array[Double] = p.map(math.exp)
   override def encode(p: Array[Double]): Array[Double] = p.map(math.log)
+  override def log(x: Double): Double = x
 
   override def toString: String = "log domain"
 }

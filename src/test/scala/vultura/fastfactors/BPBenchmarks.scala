@@ -1,8 +1,11 @@
 package vultura.fastfactors
 
+import vultura.fastfactors.inference.cp2.LBP
+
+import scala.language.reflectiveCalls
 import scala.util.Random
-import vultura.fastfactors.algorithms.{RoundRobinCalibrator, CalibrationProblem, BeliefPropagation}
-import vultura.util._
+import vultura.fastfactors.inference.{CalibrationProblem, RoundRobinCalibrator, BeliefPropagation}
+import vultura.util.stats._
 
 
 /**
@@ -12,15 +15,19 @@ import vultura.util._
 object BPBenchmarks {
 
   val problems: Seq[(String,Problem)] = Seq(
-    "grid5x5x2" -> generators.grid(5,5,2,generators.expGauss(1),new Random(0)),
     "grid10x10x2" -> generators.grid(10,10,2,generators.expGauss(1),new Random(0)),
+    "grid10x50x2" -> generators.grid(10,50,2,generators.expGauss(1),new Random(0)),
+    "grid5x5x2" -> generators.grid(5,5,2,generators.expGauss(1),new Random(0)),
     "grid10x10x4" -> generators.grid(10,10,4,generators.expGauss(1),new Random(0)),
-    "grid10x10x10" -> generators.grid(10,10,10,generators.expGauss(1),new Random(0))
+    "grid10x50x4" -> generators.grid(10,50,4,generators.expGauss(1),new Random(0)),
+    "grid10x10x10" -> generators.grid(10,10,10,generators.expGauss(1),new Random(0)),
+    "grid10x50x10" -> generators.grid(10,50,10,generators.expGauss(1),new Random(0))
   )
 
-  val algs: Seq[(String, Problem => Unit)] = Seq(
-    "bp" -> {p => new BeliefPropagation(p,new Random(0),1e-7,10000)}
-//    "bp-cp" -> {p => new RoundRobinCalibrator(CalibrationProblem.betheCalibrationProblem(p),10,1e-7,new Random(0))}
+  val algs: Seq[(String, Problem => Any)] = Seq(
+    "bp" ->     {p => new BeliefPropagation(p,new Random(0),1e-7,1000000)},
+//    "bp-cp" ->  {p => new RoundRobinCalibrator(CalibrationProblem.betheCalibrationProblem(p),10,1e-7,new Random(0))},
+    "bp-cp2" -> {p => LBP.infer(p,tol = 1e-7, maxIterations = 1000000)}
   )
 
   def main(args: Array[String]) {
@@ -43,9 +50,10 @@ object BPBenchmarks {
 
   def warmup(task: () => Unit): Unit = {
     var times: Seq[Double] = null
+    var startTime = System.nanoTime
     do{
       times = Seq.fill(5)(measure(task()))
-    } while(times.sd > 0.01)
+    } while(times.sd > 0.05 && (System.nanoTime - startTime > 5e9))
   }
 
   def measure(task: => Unit): Double = {
