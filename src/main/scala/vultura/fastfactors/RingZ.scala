@@ -30,6 +30,12 @@ trait RingZ[@specialized(Double) T]{
   def log(x: T): Double = ???
 }
 
+object RingZ{
+  /** @return product of the arguments. If the first one is zero, zero is returned (wins against infinity). */
+  @inline
+  final def safeProd(x1: Double, x2: Double): Double = if(x1 == 0) 0 else x1 * x2
+}
+
 /** This ring only accepts the array invocations with a single element and returns this singe element.
   * It can be used where the true ring is not known.
   */
@@ -98,7 +104,7 @@ object NormalD extends RingZ[Double]{
     var e = 0d
     while(i < a.length){
       if(a(i) != 0)
-        e -= a(i) * math.log(a(i))
+        e -= RingZ.safeProd(a(i), math.log(a(i)))
       i += 1
     }
     e
@@ -107,7 +113,7 @@ object NormalD extends RingZ[Double]{
   /** @return In normal representation (not log). */
   @tailrec
   final def expectationR(p: Array[Double], f: Array[Double], accZ: Double = 0d, i: Int = 0, acc: Double = 0): Double =
-    if(i < p.length) expectationR(p,f,accZ + p(i),i + 1, acc + p(i) * f(i)) else acc/accZ
+    if(i < p.length) expectationR(p,f,accZ + p(i),i + 1, acc + RingZ.safeProd(p(i), f(i))) else acc/accZ
 
   /** @return In normal representation (not log). */
   override def expectation(p: Array[Double], f: Array[Double]): Double = expectationR(p,f)
@@ -201,13 +207,13 @@ object LogD extends RingZ[Double] {
   /** @return In normal representation (not log). */
   override def entropy(a: Array[Double]): Double = {
     val normalized = normalize(a)
-    normalized.foldLeft(0d){case (h, lnp) => h - math.exp(lnp) * lnp}
+    normalized.foldLeft(0d){case (h, lnp) => h - RingZ.safeProd(math.exp(lnp), lnp)}
   }
 
   /** @return In normal representation (not log). */
   override def expectation(p: Array[Double], f: Array[Double]): Double = {
     val normalized = normalize(p)
-    normalized.zip(f).foldLeft(0d){case (e,(lnp,f)) => e + math.exp(lnp) * f}
+    normalized.zip(f).foldLeft(0d){case (e,(lnp,fv)) => e + RingZ.safeProd(math.exp(lnp), fv)}
   }
 
   /** @return the expectation of the second array given the measure of the first, as both arrays are in the given encoding. */
