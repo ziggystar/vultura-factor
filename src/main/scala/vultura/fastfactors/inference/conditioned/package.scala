@@ -5,6 +5,7 @@ package vultura.fastfactors.inference
  */
 package object conditioned {
   type Condition = Map[Int,Int]
+  type GCondition = Map[Int,Set[Int]]
   implicit class RichCondition(val c: Condition) extends AnyVal {
     def limit(scope: Set[Int]): Condition = c.filterKeys(scope)
     def isCompatibleWith(other: Condition): Boolean = c.keySet.intersect(other.keySet).forall(v => c(v) == other(v))

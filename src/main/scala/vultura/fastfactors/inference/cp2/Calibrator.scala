@@ -60,10 +60,10 @@ trait Calibrated[E <: Edge] extends EdgeValues[E] {
 }
 
 /** Calibrator that supports mutable message updates. */
-class MutableFIFOCalibrator[E <: MEdge](differ: Diff[E, E#TOut],
+class MutableFIFOCalibrator[E <: MEdge](problem: CProb[E])(
+                                        differ: Diff[E, E#TOut],
                                         tol: Double = 1e-9,
                                         maxSteps: Long = 1000000,
-                                        problem: CProb[E],
                                         initialize: EdgeValues[E] = EdgeValues.empty) extends Calibrated[E]{
   class EdgeData[ET <: E](val e: ET){
     val inputSpace = new mutable.ArraySeq[e.InEdge#TOut](e.inputs.size)
@@ -156,6 +156,7 @@ class MutableFIFOCalibrator[E <: MEdge](differ: Diff[E, E#TOut],
     }
   }
 
+  def lastUpdateOf(e: E): Long = lastCalibrated(edgeIndex(e))
   def iteration: Long = steps
   def edgeValue(n: E): n.TOut = state(edgeIndex(n)).asInstanceOf[n.TOut]
   def hasEdge(e: E): Boolean = edgeIndex.contains(e)

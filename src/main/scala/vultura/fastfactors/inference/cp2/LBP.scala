@@ -72,12 +72,20 @@ object LBP{
   /** Convenient inference method. */
   def infer(problem: Problem, maxIterations: Int = 1000000, tol: Double = 1e-10) = {
     val lbp = LBP(problem)
-    val cp = new MutableFIFOCalibrator[lbp.BPMessage](MaxDiff, tol, maxIterations, lbp.cp)
-    BPResult(problem, (v,f) => FastFactor(Array(v),cp.edgeValue(lbp.V2F(v,f))), (f,v) => FastFactor(Array(v),cp.edgeValue(lbp.F2V(f,v))))
+    val cp = new MutableFIFOCalibrator(lbp.cp)(MaxDiff, tol, maxIterations)
+    new BPResult{
+      override def v2f(m: (Int, FastFactor)): FastFactor = FastFactor(Array(m._1),cp.edgeValue(lbp.V2F(m._1,m._2)))
+      override def f2v(m: (FastFactor, Int)): FastFactor = FastFactor(Array(m._2),cp.edgeValue(lbp.F2V(m._1,m._2)))
+      override def problem: Problem = problem
+    }
   }
 }
 
-case class BPResult(problem: Problem, v2f: (Int,FastFactor) => FastFactor, f2v: (FastFactor,Int) => FastFactor) extends MargParI {
+/** A mixin to calculate variable beliefs and the log partition function from BP messages. */
+trait BPResult extends MargParI {
+  def v2f(m: (Int,FastFactor)): FastFactor
+  def f2v(m: (FastFactor,Int)): FastFactor
+  def problem: Problem
   /** @return marginal distribution of variable in encoding specified by `ring`. */
   override def variableBelief(vi: Int): FastFactor =
     FastFactor.multiply(problem.ring)(problem.domains)(problem.factorsOfVariable(vi).map(f => f2v(f,vi))).normalize(problem.ring)
