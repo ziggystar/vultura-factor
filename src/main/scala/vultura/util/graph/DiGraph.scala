@@ -26,6 +26,48 @@ case class EdgeMapDiGraph[N](nodes: Set[N], diSuccessors: Map[N,Set[N]]){
 
   def subgraph(p: N => Boolean): EdgeMapDiGraph[N] =
     EdgeMapDiGraph(nodes.filter(p),edges.filter{case (a,b) => p(a) && p(b)})
+
+  /** Strongly connected components. */
+  def scc: Map[N,N] = {
+    require(false, "need to respect unconnected nodes")
+    //`dfs` finds all strongly connected components below `node`
+    //`path` holds the the depth for all nodes above the current one
+    //'sccs' holds the representatives found so far; the accumulator
+    def dfs(node: N, path: Map[N,Int], sccs: Map[N,N]): Map[N,N] = {
+      //returns the earliest encountered node of both arguments
+      //for the case both aren't on the path, `old` is returned
+      def shallowerNode(old: N,candidate: N): N =
+        (path.get(old),path.get(candidate)) match {
+          case (_,None) => old
+          case (None,_) => candidate
+          case (Some(dOld),Some(dCand)) =>  if(dCand < dOld) candidate else old
+        }
+
+      //handle the child nodes
+      val children: Set[N] = diSuccessors(node)
+      //the initially known shallowest back-link is `node` itself
+      val (newState,shallowestBackNode) = children.foldLeft((sccs,node)){
+        case ((foldedSCCs,shallowest),child) =>
+          if(path.contains(child))
+            (foldedSCCs, shallowerNode(shallowest,child))
+          else {
+            val sccWithChildData = dfs(child,path + (node -> path.size),foldedSCCs)
+            val shallowestForChild = sccWithChildData(child)
+            (sccWithChildData, shallowerNode(shallowest, shallowestForChild))
+          }
+      }
+
+      newState + (node -> shallowestBackNode)
+    }
+
+    //run the above function, so every node gets visited
+    diSuccessors.keys.foldLeft(Map[N,N]()){ case (sccs,nextNode) =>
+      if(sccs.contains(nextNode))
+        sccs
+      else
+        dfs(nextNode,Map(),sccs)
+    }
+  }
 }
 
 object EdgeMapDiGraph{
