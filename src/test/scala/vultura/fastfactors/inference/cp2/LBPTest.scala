@@ -24,6 +24,6 @@ class LBPTest extends Specification {
     "reusing old messages needs no updates" ! (increment1_p1.iteration === 0) ^
     "reusing old messages needs no updates small problem" ! (increment_small.iteration === 0) ^
     "cp2.LBP must infer correct result on tree" ! (LBP.infer(tree).logZ must beCloseTo(tree.logZ,1e-12)) ^
-    "cp2.LBP must infer same logZ as old LBP" ! (LBP.infer(p1).logZ must beCloseTo(new BeliefPropagation(p1, tol = 1e-10, runInitially = 10000).logZ, 1e-7))
+    "cp2.LBP must infer same logZ as old LBP" ! (LBP.infer(p1).logZ must beCloseTo(new BeliefPropagation(p1, tol = 1e-10, runInitially = 1000).logZ, 1e-7))
   }
 }

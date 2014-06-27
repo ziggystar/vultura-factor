@@ -101,9 +101,11 @@ trait BPResult extends MargParI {
     var i = 0
     while(i < problem.factors.length){
       val f = problem.factors(i)
+      val fb: Array[Double] = factorBelief(f).values
       result = result +
-        problem.ring.entropy(factorBelief(f).values) +
-        problem.ring.logExpectation(factorBelief(f).values, f.values)
+        problem.ring.entropy(fb) +
+        problem.ring.logExpectation(fb, f.values)
+      if(result.isNaN) throw new RuntimeException("whoops")
       i += 1
     }
 
