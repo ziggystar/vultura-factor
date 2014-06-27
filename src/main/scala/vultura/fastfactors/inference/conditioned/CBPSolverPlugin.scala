@@ -36,8 +36,9 @@ object ExactSolver{
   def maxMinDegreeJT(maxWidth: Int): ExactSolver = new ExactSolver {
     override val name: String = s"Max-MinDegree-JT($maxWidth)"
     override def attempt(p: Problem): Option[MargParI] = {
-      val (ordering,width) = TreeWidth.minDegreeOrderingAndWidth(p.factors.map(_.variables.toSet))
-      if(width <= maxWidth) Some(new JunctionTree(p, VariableOrderer.fromOrder(ordering)))
+      val prob = p.fixUncoveredVariables
+      val (ordering,width) = TreeWidth.minDegreeOrderingAndWidth(prob.factors.map(_.variables.toSet))
+      if(width <= maxWidth) Some(new JunctionTree(prob, VariableOrderer.fromOrder(ordering)))
       else None
     }
   }

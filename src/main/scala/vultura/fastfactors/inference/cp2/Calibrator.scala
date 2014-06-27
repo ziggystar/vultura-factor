@@ -161,5 +161,11 @@ class MutableFIFOCalibrator[E <: MEdge](problem: CProb[E])(
   def edgeValue(n: E): n.TOut = state(edgeIndex(n)).asInstanceOf[n.TOut]
   def hasEdge(e: E): Boolean = edgeIndex.contains(e)
   def isConverged = dirtyEdges.isEmpty
+  def result: EdgeValues[E] = new EdgeValues[E] {
+    private val index: SIIndex[E] = edgeIndex
+    private val values: mutable.Buffer[Out] = state
+    override def hasEdge(e: E): Boolean = index.contains(e)
+    override def edgeValue(e: E): e.type#TOut = values(index(e)).asInstanceOf[e.TOut]
+  }
 }
 

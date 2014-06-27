@@ -93,8 +93,9 @@ trait BPResult extends MargParI {
   def factorBelief(f: FastFactor): FastFactor =
     FastFactor.multiply(problem.ring)(problem.domains)(f.variables.map(v => v2f(v,f)) :+ f).normalize(problem.ring)
 
-  /** @return Partition function in encoding specified by `ring`. */
-  override val logZ: Double = {
+  /** This is lazy to prevent accessing elements in derived classes early.
+   * @return Partition function in encoding specified by `ring`. */
+  override lazy val logZ: Double = {
     var result: Double = 0
 
     //factor entropies and factor log-expectations
@@ -105,13 +106,14 @@ trait BPResult extends MargParI {
       result = result +
         problem.ring.entropy(fb) +
         problem.ring.logExpectation(fb, f.values)
-      if(result.isNaN) throw new RuntimeException("whoops")
       i += 1
     }
 
     //variable entropies
-    problem.variables.foreach{v =>
-      result = result + problem.ring.entropy(variableBelief(v).values) * (1 - problem.degreeOfVariable(v))
+    i = 0
+    while(i < problem.numVariables){
+      result = result + problem.ring.entropy(variableBelief(i).values) * (1 - problem.degreeOfVariable(i))
+      i = i + 1
     }
 
     result

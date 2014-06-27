@@ -1,11 +1,12 @@
 package vultura.fastfactors.inference.conditioned
 
-import vultura.fastfactors.inference.{MargParI, ParFunI}
+import vultura.fastfactors.inference.{Result, MargParI, ParFunI}
 import vultura.fastfactors.{FastFactor, LogD, Problem}
 import vultura.util._
 
 import scala.annotation.tailrec
 import scala.collection.mutable
+import scala.ref.SoftReference
 
 /** Incremental CBP implementation using the cp2.LBP BP implementation.
   *
@@ -13,25 +14,34 @@ import scala.collection.mutable
   * @param hLeaf Leaf selection heuristic.
   * @param hVariable Variable selection heuristic; this value is minimized.
   */
-class ConditionedInference[State,LSI,VSI](val problem: Problem,
-                                          val cbpSolver: CBPSolverPlugin[State] = HybridSolver(ExactSolver.maxMinDegreeJT(2),BPSolverPlugin()),
-                                          val simplifier: Conditioner = SimpleConditioner,
-                                          val runInitially: Int = 0)(
+class ConditionedInference[State <: AnyRef,LSI,VSI](val problem: Problem,
+                                                    val cbpSolver: CBPSolverPlugin[State] = HybridSolver(ExactSolver.maxMinDegreeJT(8),BPSolverPlugin(maxSteps = 50000)),
+                                                    val simplifier: Conditioner = SimpleConditioner,
+                                                    val runInitially: Int = 0)(
   val hLeaf: LeafHeuristic[LSI] = HL_MaxZ,
   val hVariable: VariableSelection[VSI] = HV_MaxDegree)(
   implicit val state2ls: State <:< LSI,
-           val state2vs: State <:< VSI) extends MargParI {
+  val state2vs: State <:< VSI) extends MargParI {
 
-  case class Leaf(p: Problem, state: Either[MargParI,State]){
-    val h = state.fold(_ => Double.PositiveInfinity, hLeaf(_, p))
-    def result: MargParI = state.fold(identity,cbpSolver.result2mpi)
-    def isExact: Boolean = state.isLeft
+  class Leaf(oldProblem: Problem, condition: GCondition, oldState: Option[State]){
+    val problem: Problem = simplifier.conditionSimplify(oldProblem,condition)
+    val (result: Result, info: Option[(SoftReference[State], Double, Set[GCondition])]) = {
+      val newResult: Either[MargParI, State] = oldState.map(cbpSolver.incremental(_,oldProblem,problem)).getOrElse(cbpSolver.create(problem))
+      newResult match {
+        case Left(r)         => (r.toResult, None)
+        case Right(newState) => (cbpSolver.result2mpi(newState).toResult, Some((new SoftReference(newState), hLeaf(state2ls(newState),problem), hVariable(state2vs(newState),problem))))
+      }
+    }
+    def isExact: Boolean = info.isEmpty
+    def h: Double = info.map(_._2).getOrElse(Double.PositiveInfinity)
+    def branches: Set[GCondition] = info.get._3
+    def branch(c: GCondition): Leaf = new Leaf(problem, c, info.map(_._1.get).flatten)
   }
   
   var iterations: Int = 0
 
   private val fringe: mutable.PriorityQueue[Leaf] =
-    mutable.PriorityQueue(Leaf(problem,cbpSolver.create(problem)))(Ordering.by((_: Leaf).isExact).andThen(Ordering.by(_.h)).reverse)
+    mutable.PriorityQueue(new Leaf(problem, Map(), None))(Ordering.by((_: Leaf).isExact).andThen(Ordering.by(_.h)).reverse)
 
   //run initially
   runFor(runInitially)
@@ -40,20 +50,19 @@ class ConditionedInference[State,LSI,VSI](val problem: Problem,
     * @return `true` if the obtained result is exact, and the computation can be stopped.
     */
   def step(): Boolean = {
+    println(s"stepping $iterations: $logZ / exact: $exactShare")
     val next = fringe.head
-    next.state match {
-      case Left(_) => true //only exact leaves remaining
-      case Right(state) =>
-        fringe.dequeue()
-        iterations = iterations + 1
-        val branches: Set[GCondition] = hVariable(state,next.p)
-        //apply condition and simplify
-        val simplified: Seq[Problem] = branches.toSeq.map(cond => simplifier.conditionSimplify(next.p,cond))
-        //insert into fringe
-        simplified.foreach { newProblem =>
-          fringe += Leaf(newProblem, cbpSolver.incremental(state, next.p, newProblem))
-        }
-        fringe.head.isExact
+    if(next.isExact)
+      true
+    else{
+      fringe.dequeue()
+      iterations = iterations + 1
+      val branches: Set[GCondition] = next.branches
+      //insert into fringe
+      branches.foreach { cond =>
+        fringe += next.branch(cond)
+      }
+      fringe.head.isExact
     }
   }
 
@@ -73,7 +82,7 @@ class ConditionedInference[State,LSI,VSI](val problem: Problem,
   /** @return returns ratio between 1 and 0. 1 means exact, 0 means all (possible) leafs are estimates. */
   def exactShare: Double = {
     val exactLogZ = LogD.sumA(fringe.toArray.collect{case l if l.isExact => l.result.logZ})
-    val approxLogZ = LogD.sumA(fringe.toArray.collect{case l if l.isExact => l.result.logZ})
+    val approxLogZ = LogD.sumA(fringe.toArray.collect{case l if !l.isExact => l.result.logZ})
     math.exp(exactLogZ - LogD.sum(exactLogZ,approxLogZ))
   }
 
