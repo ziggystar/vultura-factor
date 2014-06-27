@@ -82,7 +82,8 @@ object NormalD extends RingZ[Double]{
 
   override def normalize(a: Array[Double]): Array[Double] = {
     val sum = sumA(a)
-    a.map(_ / sum)
+    if(sum == zero) a.clone()
+    else a.map(_ / sum)
   }
 
   override def decode(p: Array[Double]): Array[Double] = p
@@ -91,6 +92,8 @@ object NormalD extends RingZ[Double]{
 
   override def normalizeInplace(a: Array[Double]) {
     val z = sumA(a)
+    if(z == zero)
+      return
     var i = 0
     while(i < a.length){
       a(i) = a(i) / z
@@ -113,7 +116,8 @@ object NormalD extends RingZ[Double]{
   /** @return In normal representation (not log). */
   @tailrec
   final def expectationR(p: Array[Double], f: Array[Double], accZ: Double = 0d, i: Int = 0, acc: Double = 0): Double =
-    if(i < p.length) expectationR(p,f,accZ + p(i),i + 1, acc + RingZ.safeProd(p(i), f(i))) else acc/accZ
+    if(i < p.length) expectationR(p,f,accZ + p(i),i + 1, acc + RingZ.safeProd(p(i), f(i))) else
+      if(accZ == 0) 0d else acc/accZ
 
   /** @return In normal representation (not log). */
   override def expectation(p: Array[Double], f: Array[Double]): Double = expectationR(p,f)
@@ -191,12 +195,15 @@ object LogD extends RingZ[Double] {
 
   override def normalize(a: Array[Double]): Array[Double] = {
     val z = sumA(a)
-    a.map(_ - z)
+    if(z == zero) a.clone()
+    else a.map(_ - z)
   }
 
 
   override def normalizeInplace(a: Array[Double]) {
     val z = sumA(a)
+    if(z == zero)
+      return
     var i = 0
     while(i < a.length){
       a(i) -= z
