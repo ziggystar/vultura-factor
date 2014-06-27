@@ -1,12 +1,14 @@
 package vultura.fastfactors
 
+import java.io._
+
+import vultura.fastfactors.inference.VariableElimination
+import vultura.util.SSet
+import vultura.util.TreeWidth._
+
 import scala.collection.mutable
 import scala.util.Random
-import vultura.util.TreeWidth._
 import scalaz.Tree
-import java.io._
-import vultura.fastfactors.inference.{VariableElimination, JunctionTree}
-import vultura.util.SSet
 
 /** A problem is basically a collection of factors, together with a domain and a ring.
   * It provides several inference methods based on the exact junction tree algorithm. */

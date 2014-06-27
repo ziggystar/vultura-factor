@@ -224,4 +224,15 @@ package object util {
       s2 <- sset if s1 != s2
     } yield s1 intersect s2).forall(_.isEmpty)
   }
+
+  implicit class RichOrdering[T](val o: Ordering[T]) extends AnyVal {
+    def andThen(other: Ordering[T]): Ordering[T] = new Ordering[T]{
+      override def compare(x: T, y: T): Int = {
+        val c1 = o.compare(x,y)
+        if(c1 == 0)
+          other.compare(x,y)
+        else c1
+      }
+    }
+  }
 }
