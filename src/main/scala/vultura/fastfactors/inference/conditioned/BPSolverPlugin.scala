@@ -41,5 +41,4 @@ trait ExtendedBPResult extends MargParI {
   def messageValue(m: Message): FastFactor
   def lastUpdate(edge: Message): Long
   def iterations: Long
-  def logZ: Double
 }

@@ -70,13 +70,13 @@ case class LBP(problem: Problem) {
 
 object LBP{
   /** Convenient inference method. */
-  def infer(problem: Problem, maxIterations: Int = 1000000, tol: Double = 1e-10) = {
-    val lbp = LBP(problem)
+  def infer(p: Problem, maxIterations: Int = 1000000, tol: Double = 1e-10) = {
+    val lbp = LBP(p)
     val cp = new MutableFIFOCalibrator(lbp.cp)(MaxDiff, tol, maxIterations)
     new BPResult{
       override def v2f(m: (Int, FastFactor)): FastFactor = FastFactor(Array(m._1),cp.edgeValue(lbp.V2F(m._1,m._2)))
       override def f2v(m: (FastFactor, Int)): FastFactor = FastFactor(Array(m._2),cp.edgeValue(lbp.F2V(m._1,m._2)))
-      override def problem: Problem = problem
+      override def problem: Problem = p
     }
   }
 }
@@ -94,7 +94,7 @@ trait BPResult extends MargParI {
     FastFactor.multiply(problem.ring)(problem.domains)(f.variables.map(v => v2f(v,f)) :+ f).normalize(problem.ring)
 
   /** @return Partition function in encoding specified by `ring`. */
-  override def logZ: Double = {
+  override val logZ: Double = {
     var result: Double = 0
 
     //factor entropies and factor log-expectations

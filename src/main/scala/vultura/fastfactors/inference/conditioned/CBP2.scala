@@ -1,10 +1,10 @@
 package vultura.fastfactors.inference.conditioned
 
-import vultura.fastfactors.inference.{ParFunI, VariableOrderer, JunctionTree, MargParI}
-import vultura.fastfactors.inference.cp2.{BPResult, MaxDiff, LBP, MutableFIFOCalibrator}
-import vultura.fastfactors.{LogD, FastFactor, Problem}
-import vultura.util.TreeWidth
+import vultura.fastfactors.inference.{MargParI, ParFunI}
+import vultura.fastfactors.{FastFactor, LogD, Problem}
+import vultura.util._
 
+import scala.annotation.tailrec
 import scala.collection.mutable
 
 /** Incremental CBP implementation using the cp2.LBP BP implementation.
@@ -31,7 +31,7 @@ class ConditionedInference[State,LSI,VSI](val problem: Problem,
   var iterations: Int = 0
 
   private val fringe: mutable.PriorityQueue[Leaf] =
-    mutable.PriorityQueue(Leaf(problem,cbpSolver.create(problem)))(Ordering.by(_.h))
+    mutable.PriorityQueue(Leaf(problem,cbpSolver.create(problem)))(Ordering.by((_: Leaf).isExact).andThen(Ordering.by(_.h)).reverse)
 
   //run initially
   runFor(runInitially)
@@ -57,8 +57,9 @@ class ConditionedInference[State,LSI,VSI](val problem: Problem,
     }
   }
 
-  def run(p: ConditionedInference[_,_,_] => Boolean, acc: Int = 0): Int =
-    if(p(this) && !isExact) {
+  @tailrec
+  final def run(p: ConditionedInference[_,_,_] => Boolean, acc: Int = 0): Int =
+    if(p(this) && !this.isExact) {
       step()
       run(p,acc + 1)
     } else acc
@@ -68,7 +69,7 @@ class ConditionedInference[State,LSI,VSI](val problem: Problem,
     run(_.iterations < (now + n))
   }
 
-  def isExact: Boolean = fringe.size == fringe.count(_.isExact)
+  def isExact: Boolean = fringe.head.isExact
   /** @return returns ratio between 1 and 0. 1 means exact, 0 means all (possible) leafs are estimates. */
   def exactShare: Double = {
     val exactLogZ = LogD.sumA(fringe.toArray.collect{case l if l.isExact => l.result.logZ})
@@ -101,6 +102,15 @@ trait Conditioner{
 }
 
 object SimpleConditioner extends Conditioner {
+  def simplifyDeterminism(p: Problem, vars: Set[Int]): Problem = {
+    val assign = for{
+      v <- vars
+      marg = FastFactor.multiplyRetain(p.ring)(p.domains)(p.factorsOfVariable(v),Array(v)).normalize(p.ring)
+      value <- 0 until p.domains(v) if marg.values(value) == p.ring.one
+    } yield v -> value
+    //todo no check for inconsistency!!!
+    p.condition(assign.toMap)
+  }
   def name = "SimpleConditioner"
   override def conditionSimplify(p: Problem, c: GCondition): Problem = {
     val factors = c.map{case (v,values) =>
@@ -108,12 +118,9 @@ object SimpleConditioner extends Conditioner {
         .fromFunction(Array(v),p.domains,vs => if(values.contains(vs(0))) p.ring.one else p.ring.zero)
         .normalize(p.ring)
     }
-    p.copy(factors = p.factors ++ factors).simplify
+    simplifyDeterminism(p.copy(factors = p.factors ++ factors), c.keySet).simplify
   }
 }
-
-
-
 
 
 trait LeafHeuristic[-I] {
