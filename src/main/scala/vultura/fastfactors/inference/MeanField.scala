@@ -22,7 +22,7 @@ class MeanField(val problem: Problem, val tol: Double = 1e-9, val maxIter: Int =
 
   /** The logarithmic factors of the problem adjacent to each variable. */
   val logFactors: Map[Int,IndexedSeq[FastFactor]] =
-    problem.variables.map(v => v -> problem.factorsOfVariable(v).map(f => f.map(math.log)))(collection.breakOut)
+    problem.variables.map(v => v -> problem.factorsOfVariable(v).map(f => f.map(math.log))(collection.breakOut))(collection.breakOut)
 
   calibrate(tol,maxIter)
 

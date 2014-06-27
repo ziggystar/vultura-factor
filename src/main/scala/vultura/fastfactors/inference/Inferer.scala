@@ -28,7 +28,7 @@ trait ParFunI extends Inferer {
 }
 
 trait MargParI extends MarginalI with ParFunI{
-  def toResult = Result(problem,Z,problem.variables.map(v => v -> variableBelief(v))(collection.breakOut))
+  def toResult = new Result(this)
 }
 
 trait JointMargI extends MarginalI {
@@ -55,7 +55,13 @@ trait MPEI { self: Inferer =>
   def mpe: Map[Var,Val]
 }
 
-case class Result(problem: Problem, Z: Double, variableBeliefs: Map[Int,FastFactor]) extends MarginalI with ParFunI {
+class Result(mpi: MargParI) extends MargParI {
+  override val problem: Problem = mpi.problem
+  def lookupFromMPI(x: MargParI): Array[Array[Double]] = (0 until x.problem.variables.size).map(v => x.variableBelief(v).values)(collection.breakOut)
+  val marginals: Array[Array[Double]] = lookupFromMPI(mpi)
+  override val logZ = mpi.logZ
   /** @return marginal distribution of variable in encoding specified by `ring`. */
-  def variableBelief(vi: Int): FastFactor = variableBeliefs(vi)
+  def variableBelief(vi: Int): FastFactor = FastFactor(Array(vi),marginals(vi))
+  /** @return Partition function in encoding specified by `ring`. */
+  override def Z: Double = math.exp(logZ)
 }

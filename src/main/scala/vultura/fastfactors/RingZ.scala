@@ -150,6 +150,8 @@ object LogD extends RingZ[Double] {
   def prod(f1: Double, f2: Double): Double = f1 + f2
 
   override def sumA(ss: Array[Double]): Double = {
+    if(ss.length == 0)
+      return zero
     if(ss.length == 1)
       return ss(0)
     else if(ss.length == 2)
