@@ -17,6 +17,7 @@ object BPBenchmarks {
   val problems: Seq[(String,Problem)] = Seq(
     "grid10x10x2" -> generators.grid(10,10,2,generators.expGauss(1),new Random(0)),
     "grid10x50x2" -> generators.grid(10,50,2,generators.expGauss(1),new Random(0)),
+    "grid10x50x2/log" -> generators.grid(10,50,2,generators.expGauss(1),new Random(0)).toRing(LogD),
     "grid5x5x2" -> generators.grid(5,5,2,generators.expGauss(1),new Random(0)),
     "grid10x10x4" -> generators.grid(10,10,4,generators.expGauss(1),new Random(0)),
     "grid10x50x4" -> generators.grid(10,50,4,generators.expGauss(1),new Random(0)),
@@ -25,9 +26,9 @@ object BPBenchmarks {
   )
 
   val algs: Seq[(String, Problem => Any)] = Seq(
-    "bp" ->     {p => new BeliefPropagation(p,new Random(0),1e-7,1000000)},
+    "bp" ->     {p => new BeliefPropagation(p,new Random(0),1e-7,1000000).logZ},
 //    "bp-cp" ->  {p => new RoundRobinCalibrator(CalibrationProblem.betheCalibrationProblem(p),10,1e-7,new Random(0))},
-    "bp-cp2" -> {p => LBP.infer(p,tol = 1e-7, maxIterations = 1000000)}
+    "bp-cp2" -> {p => LBP.infer(p,tol = 1e-7, maxIterations = 1000000).logZ}
   )
 
   def main(args: Array[String]) {
