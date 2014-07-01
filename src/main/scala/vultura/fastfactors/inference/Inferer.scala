@@ -64,4 +64,11 @@ class Result(mpi: MargParI) extends MargParI {
   def variableBelief(vi: Int): FastFactor = FastFactor(Array(vi),marginals(vi))
   /** @return Partition function in encoding specified by `ring`. */
   override def Z: Double = math.exp(logZ)
+
+  override def hashCode(): Int = (problem,logZ,marginals.deep).hashCode
+
+  override def equals(obj: scala.Any): Boolean = obj match {
+    case r: Result => r.logZ == this.logZ && r.problem == this.problem && this.marginals.deep == r.marginals.deep
+    case _ => false
+  }
 }

@@ -46,5 +46,13 @@ class RingZTest extends Specification {
       val d = Array(ring.zero)
       val v = Array(ring.one)
       ring.logExpectation(d,v) === 0
+    } ^
+    "summing over zeros must yield zero" ! {
+      val d = Array.fill(4)(ring.zero)
+      ring.sumA(d) === ring.zero
+    } ^
+    "entropy of inconsistent distribution is zero" ! {
+      val d = Array.fill(4)(ring.zero)
+      ring.entropy(d) === 0d
     }
 }

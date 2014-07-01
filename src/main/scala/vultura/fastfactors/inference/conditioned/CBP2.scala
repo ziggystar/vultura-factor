@@ -50,7 +50,6 @@ class ConditionedInference[State <: AnyRef,LSI,VSI](val problem: Problem,
     * @return `true` if the obtained result is exact, and the computation can be stopped.
     */
   def step(): Boolean = {
-    println(s"stepping $iterations: $logZ / exact: $exactShare")
     val next = fringe.head
     if(next.isExact)
       true

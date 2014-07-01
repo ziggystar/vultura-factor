@@ -1,6 +1,5 @@
 package vultura.fastfactors.inference.conditioned
 
-import sun.jdbc.odbc.OdbcDef
 import vultura.fastfactors.inference.cp2._
 import vultura.fastfactors.{Problem, FastFactor}
 import vultura.fastfactors.inference.MargParI
