@@ -174,9 +174,8 @@ object FastFactor{
   }
 
   /** Merge some sorted sequences of integers into a new array. */
-  def merge(xxs: Seq[Array[Int]], exclude: Array[Int] = Array()): Array[Int] = {
-    xxs.flatten.distinct.sorted.filterNot(exclude.contains).toArray
-  }
+  def merge(xxs: Seq[Array[Int]], exclude: Array[Int] = Array()): Array[Int] =
+    xxs.flatten.toArray.distinct.filterNot(exclude.contains).sorted
 
   def multiply(ring: RingZ[Double])(domains: Array[Int])(factors: IndexedSeq[FastFactor]): FastFactor = {
     val variables = merge(factors.map(_.variables))
