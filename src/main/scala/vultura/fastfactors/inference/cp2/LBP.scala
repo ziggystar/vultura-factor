@@ -96,26 +96,37 @@ trait BPResult extends MargParI {
   /** This is lazy to prevent accessing elements in derived classes early.
    * @return Partition function in encoding specified by `ring`. */
   override lazy val logZ: Double = {
-    var result: Double = 0
-
-    //factor entropies and factor log-expectations
-    var i = 0
-    while(i < problem.factors.length){
-      val f = problem.factors(i)
-      val fb: Array[Double] = factorBelief(f).values
-      result = result +
-        problem.ring.entropy(fb) +
-        problem.ring.logExpectation(fb, f.values)
-      i += 1
-    }
+    var logExp: Double = 0d
+    var factorEntropy = 0d
+    var variableEntropy = 0d
 
     //variable entropies
-    i = 0
-    while(i < problem.numVariables){
-      result = result + problem.ring.entropy(variableBelief(i).values) * (1 - problem.degreeOfVariable(i))
-      i = i + 1
+    {
+      var i = 0
+      while (i < problem.numVariables) {
+        val vb: Array[Double] = variableBelief(i).values
+        val entropy: Double = problem.ring.entropy(vb)
+        //check whether we are inconsistent
+        if(entropy == 0d && problem.ring.sumA(vb) == problem.ring.zero)
+          logExp = Double.NegativeInfinity
+        variableEntropy = variableEntropy + entropy * (1 - problem.degreeOfVariable(i))
+        i = i + 1
+      }
     }
 
+    {
+      //factor entropies and factor log-expectations
+      var i = 0
+      while (i < problem.factors.length) {
+        val f = problem.factors(i)
+        val fb: Array[Double] = factorBelief(f).values
+        factorEntropy = factorEntropy + problem.ring.entropy(fb)
+        logExp = logExp + problem.ring.logExpectation(fb, f.values)
+        i += 1
+      }
+    }
+
+    val result = logExp + factorEntropy + variableEntropy
     result
   }
 
