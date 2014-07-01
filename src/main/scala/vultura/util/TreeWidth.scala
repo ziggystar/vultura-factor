@@ -138,16 +138,15 @@ object TreeWidth {
   /** Contract edges of a tree using the `join` function. */
   def partialFoldTree[A](t: Tree[A])(join: (A,A) => Option[A]): Tree[A] = t match {
     case leaf@Node(a, sf) if sf.isEmpty => leaf
-    case Node(a,subForest) => {
+    case Node(a,subForest) =>
       val (newA, newChildren, changed) = subForest.foldLeft((a,List[Tree[A]](),false)){ case ((accA,accChildren,accChange),child@Node(childLabel,childChildren)) =>
         join(accA,childLabel).map(joinedA => (joinedA,childChildren ++: accChildren,true)).getOrElse((accA,child :: accChildren,accChange))
       }
-      //do we have to pocess the same node again, because we pulled up some children?
+      //do we have to process the same node again, because we pulled up some children?
       if(changed)
         partialFoldTree(node(newA,newChildren.toStream))(join)
       else
         node(newA,newChildren.map(partialFoldTree(_)(join)).toStream)
-    }
   }
 
   def compactJTrees[A](trees: Seq[Tree[(Set[Int],Seq[A])]]): Seq[Tree[(Set[Int],Seq[A])]] =
