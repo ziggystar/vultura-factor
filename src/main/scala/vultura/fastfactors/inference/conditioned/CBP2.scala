@@ -15,7 +15,7 @@ import scala.ref.SoftReference
   * @param hVariable Variable selection heuristic; this value is minimized.
   */
 class ConditionedInference[State <: AnyRef,LSI,VSI](val problem: Problem,
-                                                    val cbpSolver: CBPSolverPlugin[State] = HybridSolver(ExactSolver.maxMinDegreeJT(8),BPSolverPlugin(maxSteps = 50000)),
+                                                    val cbpSolver: CBPSolverPlugin[State] = HybridSolver(ExactSolver.maxMinDegreeJT(2),BPSolverPlugin(maxSteps = 50000)),
                                                     val simplifier: Conditioner = SimpleConditioner,
                                                     val runInitially: Int = 0)(
   val hLeaf: LeafHeuristic[LSI] = HL_MaxZ,
@@ -90,7 +90,7 @@ class ConditionedInference[State <: AnyRef,LSI,VSI](val problem: Problem,
     val f = fringe.toArray
     val weights = LogD.decode(LogD.normalize(f.map(_.result.logZ)))
     val weightedBeliefs: Array[Array[Double]] = for{
-      (l,w) <- f zip weights
+      (l,w) <- f zip weights if w > 0d
     } yield l.result.decodedVariableBelief(vi).values.map(_ * w)
     FastFactor(Array(vi), weightedBeliefs.transpose.map(_.sum))
   }
@@ -111,13 +111,16 @@ trait Conditioner{
 
 object SimpleConditioner extends Conditioner {
   def simplifyDeterminism(p: Problem, vars: Set[Int]): Problem = {
-    val assign = for{
+    val conditions: Set[((Int, Int), FastFactor)] = for{
       v <- vars
-      marg = FastFactor.multiplyRetain(p.ring)(p.domains)(p.factorsOfVariable(v),Array(v)).normalize(p.ring)
+      f <- p.factorsOfVariable(v)
+      factorMargs = p.factorsOfVariable(v).map(f => FastFactor.multiplyRetain(p.ring)(p.domains)(Array(f),Array(v)).normalize(p.ring))
+      marg: FastFactor = FastFactor.multiplyRetain(p.ring)(p.domains)(factorMargs,Array(v)).normalize(p.ring)
       value <- 0 until p.domains(v) if marg.values(value) == p.ring.one
-    } yield v -> value
+    } yield (v -> value, marg)
     //todo no check for inconsistency!!!
-    p.condition(assign.toMap)
+    val conditionedProblem = p.condition(conditions.map(_._1).toMap).simplify
+    conditionedProblem.copy(factors = conditionedProblem.factors ++ conditions.map(_._2))
   }
   def name = "SimpleConditioner"
   override def conditionSimplify(p: Problem, c: GCondition): Problem = {
@@ -126,7 +129,7 @@ object SimpleConditioner extends Conditioner {
         .fromFunction(Array(v),p.domains,vs => if(values.contains(vs(0))) p.ring.one else p.ring.zero)
         .normalize(p.ring)
     }
-    simplifyDeterminism(p.copy(factors = p.factors ++ factors), c.keySet).simplify
+    simplifyDeterminism(p.copy(factors = p.factors ++ factors), c.keySet)
   }
 }
 
@@ -156,10 +159,4 @@ object HV_MaxDegree extends VariableSelection[Any]{
     val v = p.variables.maxBy(v => p.degreeOfVariable(v))
     (0 until p.domains(v)).map(value => Map(v -> Set(value))).toSet
   }
-}
-
-
-object ConditionedInference{
-
-  //object HV_MaxDegree extends VariableSelection[]
 }
