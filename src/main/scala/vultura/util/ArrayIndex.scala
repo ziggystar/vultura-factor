@@ -10,9 +10,13 @@ trait Index[T] {
   def backward(i: Idx): T
   def size: Int = elements.size
   def indices: Range = 0 until size
-  def contains(t: T): Boolean
+  def contains(t: T): Boolean = elements.contains(t)
   def createArrayLookup(f: T => Seq[T]): IndexedSeq[Array[Idx]] =
     elements.map(e => f(e).map(forward)(collection.breakOut): Array[Idx])
+}
+
+object Index{
+  def apply[A](values: Set[A]): SIIndex[A] = new SIIndex[A](values.toSet)
 }
 
 /**
