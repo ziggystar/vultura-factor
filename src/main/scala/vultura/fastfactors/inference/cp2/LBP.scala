@@ -9,6 +9,7 @@ case class LBP(problem: Problem) {
 
   sealed trait BPMessage extends MEdge {
     def v: Int
+    def f: FastFactor
     final type TOut = Array[Double]
     def create: TOut = new Array[Double](problem.domains(v))
     override def copy(t: TOut): TOut = t.clone()

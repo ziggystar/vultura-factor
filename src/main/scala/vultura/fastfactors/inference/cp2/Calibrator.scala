@@ -89,11 +89,13 @@ class MutableFIFOCalibrator[E <: MEdge](problem: CProb[E])(
     ((0 until numEdges) map fromTo.groupByMap(_._1,_._2).withDefaultValue(IndexedSeq())).map(_.toArray)
   }
 
-  //the current values of the edges
-  private val state: mutable.Buffer[Out] = edges.map(e =>
-    if(initialize.hasEdge(e)) e.copy(initialize.edgeValue(e))
+  def computeInitializedState(ev: EdgeValues[E]): mutable.Buffer[Out] = edges.map(e =>
+    if(initialize.hasEdge(e)) e.copy(ev.edgeValue(e))
     else problem.init(e)
   ).toBuffer
+
+  //the current values of the edges
+  private val state: mutable.Buffer[Out] = computeInitializedState(initialize)
 
   //object pool for calculating new values
   private val pool: mutable.Buffer[Out] = edges.map(_.create).toBuffer
@@ -101,7 +103,6 @@ class MutableFIFOCalibrator[E <: MEdge](problem: CProb[E])(
   //when was an edge calibrated the last time?
   private val lastCalibrated: Array[Long] = Array.fill(numEdges)(-1)
 
-  //TODO optimization Could be replaced by parallel arrays
   private val dirtyEdges: MutableArrayQueue[(Int, Long)] = MutableArrayQueue((for(e <- 0 until numEdges) yield e -> 0L))
 
   private var steps: Long = 0
