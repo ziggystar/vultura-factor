@@ -44,6 +44,7 @@ case class Problem(factors: IndexedSeq[FastFactor], domains: Array[Int], ring: R
     result
   }
 
+  def variableRange: Range = (0 until numVariables)
   def variables: Set[Int] = (0 until numVariables).toSet
 
   /** @return The set of all neighbouring variables for a given variable, excluding itself. */
