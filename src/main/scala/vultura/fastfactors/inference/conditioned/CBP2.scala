@@ -1,10 +1,12 @@
 package vultura.fastfactors.inference.conditioned
 
+import com.sun.xml.internal.org.jvnet.fastinfoset.ExternalVocabulary
 import vultura.fastfactors.inference.{Result, MargParI, ParFunI}
 import vultura.fastfactors.{FastFactor, LogD, Problem}
 import vultura.util._
 
 import scala.annotation.tailrec
+import scala.collection.immutable.IndexedSeq
 import scala.collection.mutable
 import scala.ref.SoftReference
 
@@ -19,7 +21,7 @@ class ConditionedInference[State <: AnyRef,LSI,VSI](val problem: Problem,
                                                     val simplifier: Conditioner = SimpleConditioner,
                                                     val runInitially: Int = 0)(
   val hLeaf: LeafHeuristic[LSI] = HL_MaxZ,
-  val hVariable: VariableSelection[VSI] = HV_MaxDegree)(
+  val hVariable: VariableSelection[VSI] = VariableSelection.HV_MaxDegree)(
   implicit val state2ls: State <:< LSI,
   val state2vs: State <:< VSI) extends MargParI {
 
@@ -153,10 +155,46 @@ trait VariableSelection[-I] {
   def apply(information: I, p: Problem): Set[GCondition]
 }
 
-object HV_MaxDegree extends VariableSelection[Any]{
-  override def name: String = "Max Degree"
-  override def apply(information: Any, p: Problem): Set[GCondition] = {
-    val v = p.variables.maxBy(v => p.degreeOfVariable(v))
+trait CompleteSplitVariableSelection[-I] extends VariableSelection[I]{
+  final override def apply(information: I, p: Problem): Set[GCondition] = {
+    val v = selectVariable(information,p)
     (0 until p.domains(v)).map(value => Map(v -> Set(value))).toSet
   }
+  def selectVariable(information: I, p: Problem): Int
+}
+
+/** Variable selection heuristics that work by assigning a numeric value to each variable and pick an extreme one.
+  * @param heuristic Assigns larger values to variables that appear more attractive. */
+case class NumericVariableHeuristic[-I](name: String, heuristic: (I,Problem) => Int => Double) extends CompleteSplitVariableSelection[I]{
+  override def selectVariable(information: I, p: Problem): Int = p.variables.maxBy(heuristic(information,p))
+}
+
+case class MaxMedianHeuristic[-I](heuristics: Seq[NumericVariableHeuristic[I]], quantile: Double) extends CompleteSplitVariableSelection[I]{
+  require(quantile >= 0 && quantile < 1)
+  /** @return The proportion of the range of values that gets cut off when reducing from 1 to `quantile` quantile.
+    * This is larger for "good" heuristics. */
+  def quantileRatio(values: Array[Double]): Double = {
+    val sorted = values.sorted
+    val q: Double = sorted(math.round(math.floor(sorted.size * quantile)).toInt)
+    (sorted.last - q)/(sorted.last - sorted.head)
+  }
+  override def name: String = s"MaxMedian(${heuristics.map(_.name).mkString(",")})"
+  override def selectVariable(information: I, p: Problem): Int = {
+    val results: Seq[Array[Double]] = heuristics.map(h => p.variableRange.map(h.heuristic(information,p))(collection.breakOut): Array[Double])
+    val bestH: Array[Double] = results.maxBy(quantileRatio)
+    bestH.zipWithIndex.maxBy(_._1)._2
+  }
+}
+
+object VariableSelection{
+  val HV_MaxDegree = NumericVariableHeuristic("Max Degree", (_: Any,p) => v => p.degreeOfVariable(v).toDouble)
+  val HV_TTC = NumericVariableHeuristic[ExtendedBPResult]("TTC", (bp,p) => v =>
+    p.factorsOfVariable(v).map(f =>
+      math.max(bp.lastUpdate(Left((v,f))), bp.lastUpdate(Right((f,v))))
+    ).max.toDouble)
+  val HV_TTC_Mean = NumericVariableHeuristic[ExtendedBPResult]("TTC-Mean", (bp,p) => v =>
+    p.factorsOfVariable(v).foldLeft(0d){case (acc, f) =>
+      acc + bp.lastUpdate(Left((v,f))) + bp.lastUpdate(Right((f,v)))
+    } / p.factorsOfVariable(v).size
+  )
 }
