@@ -1,12 +1,10 @@
 package vultura.fastfactors.inference.conditioned
 
-import com.sun.xml.internal.org.jvnet.fastinfoset.ExternalVocabulary
-import vultura.fastfactors.inference.{Result, MargParI, ParFunI}
+import vultura.fastfactors.inference.{MargParI, ParFunI, Result}
 import vultura.fastfactors.{FastFactor, LogD, Problem}
 import vultura.util._
 
 import scala.annotation.tailrec
-import scala.collection.immutable.IndexedSeq
 import scala.collection.mutable
 import scala.ref.SoftReference
 

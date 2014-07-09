@@ -103,7 +103,7 @@ class MutableFIFOCalibrator[E <: MEdge](problem: CProb[E])(
   //when was an edge calibrated the last time?
   private val lastCalibrated: Array[Long] = Array.fill(numEdges)(-1)
 
-  private val dirtyEdges: MutableArrayQueue[(Int, Long)] = MutableArrayQueue((for(e <- 0 until numEdges) yield e -> 0L))
+  private val dirtyEdges: MutableArrayQueue[(Int, Long)] = MutableArrayQueue(for (e <- 0 until numEdges) yield e -> 0L)
 
   private var steps: Long = 0
 
