@@ -11,7 +11,7 @@ case class BPSolverPlugin(tol: Double = 1e-10, maxSteps: Long = 10000) extends A
   override def result2mpi: <:<[ExtendedBPResult, MargParI] = implicitly[ExtendedBPResult <:< MargParI]
 
   //TODO make this incremental
-  override def increment(oldState: ExtendedBPResult, oldProblem: Problem, newProblem: Problem): ExtendedBPResult = {
+  override def increment(oldState: ExtendedBPResult, newProblem: Problem): ExtendedBPResult = {
     create(newProblem)
 //    val lbp: LBP = LBP(newProblem)
 //    val cal = new MutableFIFOCalibrator(lbp.cp)(MaxDiff, tol, maxSteps, new EdgeValues[lbp.BPMessage] {

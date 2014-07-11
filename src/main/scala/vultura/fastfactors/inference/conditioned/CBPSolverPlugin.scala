@@ -12,7 +12,7 @@ trait CBPSolverPlugin[S]{
   def name: String
   implicit def result2mpi: S <:< MargParI
   def create(p: Problem): Either[MargParI,S]
-  def incremental(oldState: S, oldProblem: Problem, newProblem: Problem): Either[MargParI,S] = create(newProblem)
+  def incremental(oldState: S, newProblem: Problem): Either[MargParI,S] = create(newProblem)
 }
 
 /** A CBPSolverPlugin that is build through a combination of an exact and an (incremental) approximate solver. */
@@ -21,8 +21,8 @@ case class HybridSolver[S](exact: ExactSolver, approximate: ApproximateSolver[S]
   override implicit def result2mpi: <:<[S, MargParI] = approximate.result2mpi
   override def create(p: Problem): Either[MargParI, S] =
     exact.attempt(p).map(Left(_)).getOrElse(Right(approximate.create(p)))
-  override def incremental(oldState: S, oldProblem: Problem, newProblem: Problem): Either[MargParI, S] =
-    exact.attempt(newProblem).map(Left(_)).getOrElse(Right(approximate.increment(oldState, oldProblem, newProblem)))
+  override def incremental(oldState: S, newProblem: Problem): Either[MargParI, S] =
+    exact.attempt(newProblem).map(Left(_)).getOrElse(Right(approximate.increment(oldState, newProblem)))
 }
 
 /** Attempts to solve a problem exactly. Currently no means of threading state. */
@@ -48,5 +48,5 @@ trait ApproximateSolver[S]{
   def name: String
   def result2mpi: S <:< MargParI
   def create(p: Problem): S
-  def increment(oldState: S, oldProblem: Problem, newProblem: Problem): S
+  def increment(oldState: S, newProblem: Problem): S
 }

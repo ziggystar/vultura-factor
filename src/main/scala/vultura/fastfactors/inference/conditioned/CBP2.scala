@@ -23,10 +23,9 @@ class ConditionedInference[State <: AnyRef,LSI,VSI](val problem: Problem,
   implicit val state2ls: State <:< LSI,
   val state2vs: State <:< VSI) extends MargParI {
 
-  class Leaf(oldProblem: Problem, condition: GCondition, oldState: Option[State]){
-    val problem: Problem = simplifier.conditionSimplify(oldProblem,condition)
+  class Leaf(problem: Problem, oldState: Option[State]){
     val (result: Result, info: Option[(SoftReference[State], Double, Set[GCondition])]) = {
-      val newResult: Either[MargParI, State] = oldState.map(cbpSolver.incremental(_,oldProblem,problem)).getOrElse(cbpSolver.create(problem))
+      val newResult: Either[MargParI, State] = oldState.map(cbpSolver.incremental(_,problem)).getOrElse(cbpSolver.create(problem))
       newResult match {
         case Left(r)         => (r.toResult, None)
         case Right(newState) => (cbpSolver.result2mpi(newState).toResult, Some((new SoftReference(newState), hLeaf(state2ls(newState),problem), hVariable(state2vs(newState),problem))))
@@ -35,13 +34,13 @@ class ConditionedInference[State <: AnyRef,LSI,VSI](val problem: Problem,
     def isExact: Boolean = info.isEmpty
     def h: Double = info.map(_._2).getOrElse(Double.PositiveInfinity)
     def branches: Set[GCondition] = info.get._3
-    def branch(c: GCondition): Leaf = new Leaf(problem, c, info.map(_._1.get).flatten)
+    def branch(c: GCondition): Leaf = new Leaf(simplifier.conditionSimplify(problem,c,Some(result)), info.flatMap(_._1.get))
   }
   
   var iterations: Int = 0
 
   private val fringe: mutable.PriorityQueue[Leaf] =
-    mutable.PriorityQueue(new Leaf(problem, Map(), None))(Ordering.by((_: Leaf).isExact).andThen(Ordering.by(_.h)).reverse)
+    mutable.PriorityQueue(new Leaf(problem, None))(Ordering.by((_: Leaf).isExact).andThen(Ordering.by(_.h)).reverse)
 
   //run initially
   runFor(runInitially)
@@ -106,7 +105,8 @@ class ConditionedInference[State <: AnyRef,LSI,VSI](val problem: Problem,
 
 trait Conditioner{
   def name: String
-  def conditionSimplify(p: Problem, c: GCondition): Problem
+  /** @param zeroMarginals Maybe marginals of which only zeros are correct. */
+  def conditionSimplify(p: Problem, c: GCondition, zeroMarginals: Option[MargParI] = None): Problem
 }
 
 object SimpleConditioner extends Conditioner {
@@ -123,7 +123,7 @@ object SimpleConditioner extends Conditioner {
     conditionedProblem.copy(factors = conditionedProblem.factors ++ conditions.map(_._2))
   }
   def name = "SimpleConditioner"
-  override def conditionSimplify(p: Problem, c: GCondition): Problem = {
+  override def conditionSimplify(p: Problem, c: GCondition, zeroMarginals: Option[MargParI] = None): Problem = {
     val factors = c.map{case (v,values) =>
       FastFactor
         .fromFunction(Array(v),p.domains,vs => if(values.contains(vs(0))) p.ring.one else p.ring.zero)

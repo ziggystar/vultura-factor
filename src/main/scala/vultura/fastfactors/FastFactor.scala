@@ -29,7 +29,7 @@ case class FastFactor(variables: Array[Int], values: Array[Double]){
     }
   }
 
-  def condition(condition: Map[Int,Int], domains: Array[Int]) = {
+  def condition(condition: Map[Int,Int], domains: Array[Int]): FastFactor = {
     val (hitVars,remVars) = this.variables.partition(condition.contains)
     val remDomains = remVars.map(domains)
     val strides: Array[Int] = this.variables.map(domains).scanLeft(1)(_ * _)
