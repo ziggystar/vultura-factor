@@ -104,7 +104,11 @@ case class Problem(factors: IndexedSeq[FastFactor], domains: Array[Int], ring: R
     * @param condition Maps variables to the values they shall assume.
     * @return The resulting problem. It will contain a constant representing the product over the now assigned factors.
     */
-  def condition(condition: Map[Var,Val]): Problem = map(_.condition(condition,domains))
+  def condition(condition: Map[Var,Val]): Problem = {
+    val newP = map(_.condition(condition,domains))
+
+    newP.copy(factors = newP.factors ++ condition.map(kv => FastFactor.deterministicMaxEntropy(Array(kv._1),Map(kv),domains,ring)))
+  }
 
   def fixUncoveredVariables: Problem = {
     val newFactors = for{
