@@ -1,6 +1,7 @@
 package vultura.fastfactors.inference.conditioned
 
 import vultura.util._
+
 import scalaz._
 
 /**
@@ -33,8 +34,9 @@ sealed trait LScheme {
   }
 
   def partialAssignments: Stream[Map[Int, Int]] = {
-    import scalaz.Scalaz._
     import vultura.util.ScalazUtils._
+
+import scalaz.Scalaz._
     linearize.map(_.fold(Map[Int,Int]())(Map(_))).pushPathToLeafs(implicitly[Monoid[Map[Int,Int]]]).leafs
   }
 }

@@ -1,8 +1,8 @@
 package vultura.fastfactors
 
+import scala.language.implicitConversions
 import scala.util.Random
 import scala.util.parsing.combinator.JavaTokenParsers
-import language.implicitConversions
 
 /**
  * Created by IntelliJ IDEA.
@@ -97,7 +97,7 @@ package object generators {
   }
 
   def generateFromString(desc: String): Either[String,Long => Problem] = {
-    import GeneratorParser._
+    import vultura.fastfactors.generators.GeneratorParser._
     (parseAll(problemGen,desc): ParseResult[Long => Problem]) match {
       case Success(gen,_) => Right(gen)
       case NoSuccess(msg,_) => Left(msg)

@@ -1,7 +1,8 @@
 package vultura.cnf
 
-import dimacs.DIMACSParser
 import java.io.File
+
+import vultura.cnf.dimacs.DIMACSParser
 
 /**
  * A CNF representation that uses arrays of integers as clauses. Each variable is an integer and

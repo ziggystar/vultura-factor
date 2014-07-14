@@ -1,9 +1,10 @@
 package vultura.fastfactors.inference.conditioned
 
-import scala.collection.mutable
 import vultura.fastfactors._
 import vultura.fastfactors.inference.MargParI
 import vultura.util.IntDomainCPI
+
+import scala.collection.mutable
 
 /** Just one set of variables gets conditioned. */
 class SinglyLCMF(val problem: Problem, val scheme: SimpleScheme, val tol: Double = 1e-9, maxIterations: Int = 1000) extends MargParI {

@@ -1,7 +1,7 @@
 package vultura.util
 
-import scalaz.{Monoid, Tree}
 import scalaz.Tree._
+import scalaz.{Monoid, Tree}
 
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>

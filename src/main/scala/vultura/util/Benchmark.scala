@@ -1,6 +1,6 @@
 package vultura.util
 
-import management.ManagementFactory
+import java.lang.management.ManagementFactory
 
 /**
  * Contains functions for simple benchmarking.

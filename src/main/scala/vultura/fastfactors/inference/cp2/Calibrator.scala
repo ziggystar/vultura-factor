@@ -1,7 +1,8 @@
 package vultura.fastfactors.inference.cp2
 
-import scala.collection.mutable
 import vultura.util._
+
+import scala.collection.mutable
 
 trait Edge {
   //the type of the parent edges

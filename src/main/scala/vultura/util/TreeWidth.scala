@@ -1,11 +1,12 @@
 package vultura.util
 
-import scalaz._
-import Scalaz._
-import scalaz.Tree._
-import annotation.tailrec
-import scala.util.Random
 import java.util
+
+import scala.annotation.tailrec
+import scala.util.Random
+import scalaz.Scalaz._
+import scalaz.Tree._
+import scalaz._
 
 /**
  * @author Thomas Geier

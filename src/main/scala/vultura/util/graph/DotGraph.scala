@@ -1,6 +1,7 @@
 package vultura.util.graph
 
-import java.io.{File, PrintStream, FileOutputStream}
+import java.io.{File, FileOutputStream, PrintStream}
+
 import scala.sys.process._
 
 case class DotGraph[N](edges: Iterable[(N,N)],

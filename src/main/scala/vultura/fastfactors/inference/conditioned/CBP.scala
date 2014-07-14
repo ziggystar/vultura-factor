@@ -1,10 +1,11 @@
 package vultura.fastfactors.inference.conditioned
 
+import vultura.fastfactors.inference._
+import vultura.fastfactors.{FastFactor, Problem}
+import vultura.util.seq2randomSeq
+
 import scala.collection.mutable
 import scala.util.Random
-import vultura.fastfactors.{Problem, FastFactor}
-import vultura.util.seq2randomSeq
-import vultura.fastfactors.inference._
 
 /**
  * Conditioned Belief Propagation.
@@ -70,7 +71,7 @@ class CBP(val problem: Problem,
 
   /** @return right is exact solution. */
   def processPA(assignment: Map[Int,Int]): Either[BeliefPropagation, MargParI] = {
-    import CBP.CLAMP_METHOD._
+    import vultura.fastfactors.inference.conditioned.CBP.CLAMP_METHOD._
     val clampFactor: IndexedSeq[FastFactor] => IndexedSeq[FastFactor] = clampMethod match {
       case CONDITION => _.map(_.condition(assignment,domains))
       case CONDITION_SIMPLIFY => _.map(_.condition(assignment,domains).simplify(domains))

@@ -1,7 +1,8 @@
 package vultura.fastfactors
 
-import scala.reflect.ClassTag
 import vultura.util.{CrossProductIndexer, IntDomainCPI}
+
+import scala.reflect.ClassTag
 import scala.util.Random
 
 /**

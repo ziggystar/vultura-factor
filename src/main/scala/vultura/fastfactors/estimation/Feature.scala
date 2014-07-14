@@ -1,6 +1,7 @@
 package vultura.fastfactors.estimation
 
 import vultura.fastfactors._
+
 import scala.util.hashing.MurmurHash3
 
 case class Feature(variables: Array[Var], point: Array[Val]) {

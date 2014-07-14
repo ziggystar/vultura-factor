@@ -1,7 +1,7 @@
 package vultura.fastfactors.inference.calibration
 
-import vultura.fastfactors.{FastFactor, Problem}
 import vultura.fastfactors.inference.MargParI
+import vultura.fastfactors.{FastFactor, Problem}
 
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>

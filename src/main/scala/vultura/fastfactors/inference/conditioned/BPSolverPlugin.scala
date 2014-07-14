@@ -1,8 +1,8 @@
 package vultura.fastfactors.inference.conditioned
 
-import vultura.fastfactors.inference.cp2._
-import vultura.fastfactors.{Problem, FastFactor}
 import vultura.fastfactors.inference.MargParI
+import vultura.fastfactors.inference.cp2._
+import vultura.fastfactors.{FastFactor, Problem}
 import vultura.util.SIIndex
 
 /** Approximate BP solver plugin based on cp2 implementation. */

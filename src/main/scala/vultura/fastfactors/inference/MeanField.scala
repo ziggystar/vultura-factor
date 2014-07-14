@@ -1,6 +1,7 @@
 package vultura.fastfactors.inference
 
 import vultura.fastfactors._
+
 import scala.collection.mutable
 
 /**

@@ -1,9 +1,10 @@
 package vultura.fastfactors.inference
 
+import gnu.trove.map.hash.TLongObjectHashMap
+import vultura.fastfactors.{FastFactor, LogD, Problem, RingZ}
+
 import scala.collection.mutable
 import scala.util.Random
-import vultura.fastfactors.{Problem, LogD, RingZ, FastFactor}
-import gnu.trove.map.hash.TLongObjectHashMap
 
 /**
  * Belief Propagation on loopy graphs using `FastFactor` operations.

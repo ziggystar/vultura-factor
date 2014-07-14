@@ -1,8 +1,9 @@
 package vultura.fastfactors.inference.calibration
 
-import scala.collection.mutable
 import vultura.util._
 import vultura.util.graph.DotGraph
+
+import scala.collection.mutable
 
 /** A CEdge describes the functional dependency of a target node on a set of other nodes. Note that a CEdge
   * describes both a directed hyper-edge *and* the target node.

@@ -1,14 +1,14 @@
 package vultura.fastfactors.inference
 
 import vultura.fastfactors._
+import vultura.util.ScalazUtils._
 import vultura.util.TreeWidth._
-import scalaz._
-import scalaz.Tree._
-import scala.collection.mutable
 import vultura.util._
-import ScalazUtils._
+
+import scala.collection.mutable
 import scala.util.Random
-import java.util.concurrent.ConcurrentLinkedQueue
+import scalaz.Tree._
+import scalaz._
 
 /** Ordinary Shanoy-Shafer (1990) junction tree algorithm. */
 class JunctionTree(val problem: Problem, variableOrderer: VariableOrderer = MinDegreeOrderer) extends MargParI with JointMargI {

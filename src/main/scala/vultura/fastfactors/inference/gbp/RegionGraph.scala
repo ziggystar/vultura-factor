@@ -1,9 +1,10 @@
 package vultura.fastfactors.inference.gbp
 
-import vultura.fastfactors.{Problem, FastFactor}
+import vultura.fastfactors.{FastFactor, Problem}
 import vultura.util.SSet
-import scala.util.Random
 import vultura.util.graph.EdgeMapDiGraph
+
+import scala.util.Random
 
 case class Region(cr: Double, variables: Set[Int], factors: Set[FastFactor]){
   /** @return true if the union of factor scopes is a subset of the variables. */

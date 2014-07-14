@@ -1,6 +1,7 @@
 package vultura.util
 
 import gnu.trove.map.hash.TObjectIntHashMap
+
 import scala.reflect.ClassTag
 
 trait Index[T] {

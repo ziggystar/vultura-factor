@@ -1,9 +1,9 @@
 package vultura.fastfactors.inference
 
 import vultura.fastfactors.{FastFactor, Problem}
-import scala.util.Random
+
 import scala.collection.immutable.IntMap
-import scala._
+import scala.util.Random
 
 /**
  * Describes a propagation problem by a directed graph with messages as nodes and weighted edges. Nodes without incoming

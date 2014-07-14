@@ -1,7 +1,8 @@
 package vultura.fastfactors.inference
 
-import vultura.fastfactors.{Var, Problem}
+import vultura.fastfactors.{Problem, Var}
 import vultura.util.TreeWidth
+
 import scala.util.Random
 
 /** Computes a variable ordering for a given problem.

@@ -1,8 +1,7 @@
 package vultura.fastfactors.inference.conditioned
 
-import vultura.fastfactors.{FastFactor, Problem}
-import vultura.fastfactors.inference.cp2.{BPResult, MaxDiff, MutableFIFOCalibrator, LBP}
-import vultura.fastfactors.inference.{VariableOrderer, JunctionTree, MargParI}
+import vultura.fastfactors.Problem
+import vultura.fastfactors.inference.{JunctionTree, MargParI, VariableOrderer}
 import vultura.util.TreeWidth
 
 /** A `CBPSolverPlugin` handles the inference within an instance of [[ConditionedInference]].

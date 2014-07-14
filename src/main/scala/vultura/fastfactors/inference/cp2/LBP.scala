@@ -1,7 +1,7 @@
 package vultura.fastfactors.inference.cp2
 
 import vultura.fastfactors.inference.MargParI
-import vultura.fastfactors.{SumProductTask, FastFactor, Problem}
+import vultura.fastfactors.{FastFactor, Problem, SumProductTask}
 
 import scala.collection.mutable
 

@@ -1,11 +1,11 @@
 package vultura
 
-import scala.language.implicitConversions
-import scala.util.Random
-import collection.mutable.ArrayBuffer
-import scala.reflect.ClassTag
 import scala.collection.TraversableLike
 import scala.collection.generic.CanBuildFrom
+import scala.collection.mutable.ArrayBuffer
+import scala.language.implicitConversions
+import scala.reflect.ClassTag
+import scala.util.Random
 
 
 /**

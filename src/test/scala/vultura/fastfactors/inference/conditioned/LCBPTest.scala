@@ -2,13 +2,11 @@ package vultura.fastfactors.inference.conditioned
 
 import org.specs2.Specification
 import org.specs2.specification.Fragments
-
-import vultura.fastfactors.generators._
-import scala.util.Random
-import vultura.fastfactors.inference.{JunctionTree, BeliefPropagation}
 import vultura.fastfactors.Problem
-import org.specs2.matcher.MatchResult
-import vultura.fastfactors.inference.calibration.BP_Cal
+import vultura.fastfactors.generators._
+import vultura.fastfactors.inference.BeliefPropagation
+
+import scala.util.Random
 
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>

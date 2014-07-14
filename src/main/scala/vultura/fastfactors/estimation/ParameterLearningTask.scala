@@ -1,13 +1,14 @@
 package vultura.fastfactors.estimation
 
-import scala.language.reflectiveCalls
-import vultura.fastfactors._
-import vultura.util.stats._
-import vultura.fastfactors.inference.{ParFunI, JointMargI, JunctionTree}
-import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.BOBYQAOptimizer
-import scalaz.Memo
-import org.apache.commons.math3.analysis.solvers.BrentSolver
 import java.util.logging.Logger
+
+import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.BOBYQAOptimizer
+import vultura.fastfactors._
+import vultura.fastfactors.inference.{JointMargI, JunctionTree, ParFunI}
+import vultura.util.stats._
+
+import scala.language.reflectiveCalls
+import scalaz.Memo
 
 trait UnconstraintDifferentiableFunction { outer =>
   def dimension: Int
@@ -70,11 +71,11 @@ object UnconstraintDifferentiableFunction {
 object Optimization {
   /* @return the found maximizing function values and the result. */
   def maximize(f: UnconstraintDifferentiableFunction, tol: Double = 1e-5, maxSteps: Int = 100, useGradient: Boolean = true, bracketingStep: Double = 3d): (IndexedSeq[Double],Double) = {
-    import org.apache.commons.math3.analysis.{MultivariateVectorFunction, MultivariateFunction}
+    import org.apache.commons.math3.analysis.{MultivariateFunction, MultivariateVectorFunction}
     import org.apache.commons.math3.optim._
-    import nonlinear.scalar.gradient.NonLinearConjugateGradientOptimizer
-    import nonlinear.scalar.{ObjectiveFunction, GoalType, ObjectiveFunctionGradient}
-    import NonLinearConjugateGradientOptimizer._
+    import org.apache.commons.math3.optim.nonlinear.scalar.gradient.NonLinearConjugateGradientOptimizer
+    import org.apache.commons.math3.optim.nonlinear.scalar.gradient.NonLinearConjugateGradientOptimizer._
+    import org.apache.commons.math3.optim.nonlinear.scalar.{GoalType, ObjectiveFunction, ObjectiveFunctionGradient}
 
     val result = if(useGradient)
       new NonLinearConjugateGradientOptimizer(

@@ -1,9 +1,9 @@
 package vultura.fastfactors.inference.conditioned
 
-import vultura.util._
 import vultura.fastfactors._
-import vultura.fastfactors.inference.calibration.{Calibrator, CEdge}
 import vultura.fastfactors.inference.MargParI
+import vultura.fastfactors.inference.calibration.{CEdge, Calibrator}
+import vultura.util._
 import vultura.util.graph.DotGraph
 
 /**

@@ -2,6 +2,7 @@ package vultura.fastfactors.inference.conditioned
 
 import vultura.fastfactors.{FastFactor, Problem}
 import vultura.util.DomainCPI
+
 import scala.util.Random
 
 /**
