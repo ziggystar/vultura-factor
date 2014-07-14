@@ -11,7 +11,7 @@ import scalaz.Tree._
 import scalaz._
 
 /** Ordinary Shanoy-Shafer (1990) junction tree algorithm. */
-class JunctionTree(val problem: Problem, variableOrderer: VariableOrderer = MinDegreeOrderer) extends MargParI with JointMargI {
+class JunctionTree(val problem: Problem, val variableOrderer: VariableOrderer = MinDegreeOrderer) extends MargParI with JointMargI {
 
   val variableOrder: VariableOrder = variableOrderer(problem)
 

@@ -84,6 +84,9 @@ class ConditionedInference[State <: AnyRef,LSI,VSI](val problem: Problem,
     math.exp(exactLogZ - LogD.sum(exactLogZ,approxLogZ))
   }
 
+  /** @return The number of leafs that are not exactly solved. */
+  def openLeafs: Int = fringe.count(!_.isExact)
+
   /** @return marginal distribution of variable in encoding specified by `ring`. */
   override def decodedVariableBelief(vi: Int): FastFactor = {
     val f = fringe.toArray
