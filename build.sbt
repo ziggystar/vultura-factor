@@ -8,8 +8,9 @@ organization := "de.uni-ulm"
 19:     extract statistics stuff into vultura.util.stats._
 20.0.0: add new ConditionedInference implementation and new faster LBP
 20.0.1: a little work on CI inference stuff
+20.0.2: fix soft-factor normalization and some refactoring
 */
-version := "20.0.1"
+version := "20.0.2"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 
