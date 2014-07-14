@@ -9,9 +9,15 @@ import vultura.util.TreeWidth._
 import scala.util.Random
 import scalaz.Tree
 
+trait BasicProblem {
+  def domains: Array[Int]
+  def factors: IndexedSeq[FastFactor]
+  def ring: RingZ[Double]
+}
+
 /** A problem is basically a collection of factors, together with a domain and a ring.
   * It provides several inference methods based on the exact junction tree algorithm. */
-case class Problem(factors: IndexedSeq[FastFactor], domains: Array[Int], ring: RingZ[Double]){
+case class Problem(factors: IndexedSeq[FastFactor], domains: Array[Int], ring: RingZ[Double]) extends BasicProblem {
   val numVariables = domains.size
 
   private val degrees: Array[Int] = {
@@ -44,7 +50,7 @@ case class Problem(factors: IndexedSeq[FastFactor], domains: Array[Int], ring: R
     result
   }
 
-  def variableRange: Range = (0 until numVariables)
+  def variableRange: Range = 0 until numVariables
   def variables: Set[Int] = (0 until numVariables).toSet
 
   /** @return The set of all neighbouring variables for a given variable, excluding itself. */
@@ -121,6 +127,7 @@ case class Problem(factors: IndexedSeq[FastFactor], domains: Array[Int], ring: R
 }
 
 object Problem{
+  def fromProblem(bp: BasicProblem): Problem = Problem(bp.factors, bp.domains, bp.ring)
   def fromUaiString(s: String): Problem = parseUAIProblem(new StringReader(s)).right.get
   def loadUaiFile(s: String): Either[String,Problem] = loadUaiFile(new File(s))
   def loadUaiFile(f: File): Either[String,Problem] = {
