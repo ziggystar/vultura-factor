@@ -127,7 +127,6 @@ object SimpleConditioner extends Conditioner {
     val factors = c.map{case (v,values) =>
       FastFactor
         .fromFunction(Array(v),p.domains,vs => if(values.contains(vs(0))) p.ring.one else p.ring.zero)
-        .normalize(p.ring)
     }
     simplifyDeterminism(p.copy(factors = p.factors ++ factors), c.keySet)
   }
