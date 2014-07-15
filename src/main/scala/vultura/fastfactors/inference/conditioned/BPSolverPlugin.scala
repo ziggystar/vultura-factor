@@ -12,16 +12,15 @@ case class BPSolverPlugin(tol: Double = 1e-10, maxSteps: Long = 10000) extends A
 
   //TODO make this incremental
   override def increment(oldState: ExtendedBPResult, newProblem: Problem): ExtendedBPResult = {
-    create(newProblem)
-//    val lbp: LBP = LBP(newProblem)
-//    val cal = new MutableFIFOCalibrator(lbp.cp)(MaxDiff, tol, maxSteps, new EdgeValues[lbp.BPMessage] {
-//      override def hasEdge(e: lbp.BPMessage): Boolean = oldState.problem.factorsOfVariable(e.v).contains(e.f)
-//      override def edgeValue(e: lbp.BPMessage): e.type#TOut = e match {
-//        case lbp.V2F(v,f) => oldState.messageValue(Left((v,f))).values
-//        case lbp.F2V(f,v) => oldState.messageValue(Right((f,v))).values
-//      }
-//    })
-//    createResult(lbp)(cal)
+    val lbp: LBP = LBP(newProblem)
+    val cal = new MutableFIFOCalibrator(lbp.cp)(MaxDiff, tol, maxSteps, new EdgeValues[lbp.BPMessage] {
+      override def hasEdge(e: lbp.BPMessage): Boolean = oldState.problem.factorsOfVariable(e.v).contains(e.f)
+      override def edgeValue(e: lbp.BPMessage): e.type#TOut = e match {
+        case lbp.V2F(v,f) => oldState.messageValue(Left((v,f))).values
+        case lbp.F2V(f,v) => oldState.messageValue(Right((f,v))).values
+      }
+    })
+    createResult(lbp)(cal)
   }
   override def create(p: Problem): ExtendedBPResult = {
     val lbp: LBP = LBP(p)
@@ -36,7 +35,7 @@ case class BPSolverPlugin(tol: Double = 1e-10, maxSteps: Long = 10000) extends A
       v <- f.variables
       (m,e) <- Seq(Left((v,f)) -> lbp.V2F(v,f),Right((f,v)) -> lbp.F2V(f,v))
     } yield m -> (cal.edgeValue(e), cal.lastUpdateOf(e)))(collection.breakOut)
-    CalResult(p,(f,i) => {
+    new CalResult(p,(f,i) => {
       val m = lbp.F2V(f,i)
       (cal.edgeValue(m),cal.lastUpdateOf(m))
     },(i,f) => {
@@ -46,12 +45,38 @@ case class BPSolverPlugin(tol: Double = 1e-10, maxSteps: Long = 10000) extends A
   }
 }
 
-case class CalResult(problem: Problem, f2v: (FastFactor,Int) => (Array[Double],Long), v2f: (Int,FastFactor) => (Array[Double],Long), iterations: Long) extends ExtendedBPResult with BPResult {
+class CalResult(val problem: Problem, f2v: (FastFactor,Int) => (Array[Double],Long), v2f: (Int,FastFactor) => (Array[Double],Long), val iterations: Long) extends ExtendedBPResult with BPResult {
   val factorIndex: SIIndex[FastFactor] = new SIIndex(problem.factors.toSet)
-  val msgF2V: Array[Array[Array[Double]]] = factorIndex.elements.map(f => f.variables.map(v => f2v(f,v)._1)(collection.breakOut): Array[Array[Double]])(collection.breakOut)
-  val msgV2F: Array[Array[Array[Double]]] = factorIndex.elements.map(f => f.variables.map(v => v2f(v,f)._1)(collection.breakOut): Array[Array[Double]])(collection.breakOut)
-  val updF2V: Array[Array[Long]] = factorIndex.elements.map(f => f.variables.map(v => f2v(f,v)._2)(collection.breakOut): Array[Long])(collection.breakOut)
-  val updV2F: Array[Array[Long]] = factorIndex.elements.map(f => f.variables.map(v => v2f(v,f)._2)(collection.breakOut): Array[Long])(collection.breakOut)
+  val msgF2V: Array[Array[Array[Double]]] = factorIndex.elements.map(f => f.variables.map(v => new Array[Double](problem.domains(v)))(collection.breakOut): Array[Array[Double]])(collection.breakOut)
+  val msgV2F: Array[Array[Array[Double]]] = factorIndex.elements.map(f => f.variables.map(v => new Array[Double](problem.domains(v)))(collection.breakOut): Array[Array[Double]])(collection.breakOut)
+  val updF2V: Array[Array[Long]] = factorIndex.elements.map(f => new Array[Long](f.variables.size))(collection.breakOut)
+  val updV2F: Array[Array[Long]] = factorIndex.elements.map(f => new Array[Long](f.variables.size))(collection.breakOut)
+
+  {//copy stuff; this is not functional to avoid closing on `v2f` and `f2v`; and for performance
+    var fi = 0
+    while(fi < factorIndex.size){
+      val f = factorIndex.backward(fi)
+      var vi = 0
+      while(vi < f.variables.size){
+        val v = f.variables(vi)
+
+        {
+          val (f2v_r, f2v_i) = f2v(f, v)
+          msgF2V(fi)(vi) = f2v_r
+          updF2V(fi)(vi) = f2v_i
+        }
+
+        {
+          val (v2f_r, v2f_i) = v2f(v, f)
+          msgV2F(fi)(vi) = v2f_r
+          updV2F(fi)(vi) = v2f_i
+        }
+
+        vi = vi + 1
+      }
+      fi = fi + 1
+    }
+  }
 
   type Msg = Either[(Int,FastFactor),(FastFactor,Int)]
   def varOfMsg(m: Msg): Int = m.fold(_._1,_._2)

@@ -61,10 +61,10 @@ trait Calibrated[E <: Edge] extends EdgeValues[E] {
 }
 
 /** Calibrator that supports mutable message updates. */
-class MutableFIFOCalibrator[E <: MEdge](problem: CProb[E])(
-                                        differ: Diff[E, E#TOut],
-                                        tol: Double = 1e-9,
-                                        maxSteps: Long = 1000000,
+class MutableFIFOCalibrator[E <: MEdge](val problem: CProb[E])(
+                                        val differ: Diff[E, E#TOut],
+                                        val tol: Double = 1e-9,
+                                        val maxSteps: Long = 1000000,
                                         initialize: EdgeValues[E] = EdgeValues.empty) extends Calibrated[E]{
   class EdgeData[ET <: E](val e: ET){
     val inputSpace = new mutable.ArraySeq[e.InEdge#TOut](e.inputs.size)
@@ -76,12 +76,13 @@ class MutableFIFOCalibrator[E <: MEdge](problem: CProb[E])(
   //edge index
   type EI = edgeIndex.Idx
   val numEdges: Int = edgeIndex.size
-  val edges: IndexedSeq[E] = edgeIndex.elements
+  final def edges: IndexedSeq[E] = edgeIndex.elements
 
-  val edgeData: IndexedSeq[EdgeData[E]] = edges.map(new EdgeData(_))
+  //immutable
+  private val edgeData: Array[EdgeData[E]] = edges.map(new EdgeData(_))(collection.breakOut)
 
-  //the predecessors of an edge
-  val predecessors: IndexedSeq[Array[EI]] = edgeIndex.createArrayLookup(_.inputs.map(_.asInstanceOf[E]))
+  //the predecessors of an edge; immutable
+  private val predecessors: Array[Array[EI]] = edgeIndex.createArrayLookup(_.inputs.map(_.asInstanceOf[E]))
 
   //the successors of an edge
   val successors: IndexedSeq[Array[EI]] = {
@@ -91,7 +92,7 @@ class MutableFIFOCalibrator[E <: MEdge](problem: CProb[E])(
   }
 
   def computeInitializedState(ev: EdgeValues[E]): mutable.Buffer[Out] = edges.map(e =>
-    if(initialize.hasEdge(e)) e.copy(ev.edgeValue(e))
+    if(ev.hasEdge(e)) e.copy(ev.edgeValue(e))
     else problem.init(e)
   ).toBuffer
 
