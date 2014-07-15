@@ -9,8 +9,9 @@ organization := "de.uni-ulm"
 20.0.0: add new ConditionedInference implementation and new faster LBP
 20.0.1: a little work on CI inference stuff
 20.0.2: fix soft-factor normalization and some refactoring
+20.0.3: tie-breaking for variable selection heuristics in ConditionedInference
 */
-version := "20.0.2"
+version := "20.0.3"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 

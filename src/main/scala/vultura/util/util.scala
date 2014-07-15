@@ -19,10 +19,10 @@ package object util {
   /**
    * @return Those elements of s where fitness evaluates to the highest value.
    */
-  def maxByMultiple[A,B: Ordering](s: Seq[A])(fitness: (A) => B): IndexedSeq[A] = {
+  def maxByMultiple[A,B: Ordering](s: Iterable[A])(fitness: (A) => B): IndexedSeq[A] = {
     val maxes = new ArrayBuffer[A]()
     val ord = implicitly[Ordering[B]]
-    var max: B = fitness(s(0))
+    var max: B = fitness(s.head)
 
     s.foreach{ x =>
       val v: B = fitness(x)

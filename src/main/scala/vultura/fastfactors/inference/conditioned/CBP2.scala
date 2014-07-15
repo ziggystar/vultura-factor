@@ -7,6 +7,7 @@ import vultura.util._
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.ref.SoftReference
+import scala.util.Random
 
 /** Incremental CBP implementation using the cp2.LBP BP implementation.
   *
@@ -17,7 +18,8 @@ import scala.ref.SoftReference
 class ConditionedInference[State <: AnyRef,LSI,VSI](val problem: Problem,
                                                     val cbpSolver: CBPSolverPlugin[State] = HybridSolver(ExactSolver.maxMinDegreeJT(2),BPSolverPlugin(maxSteps = 50000)),
                                                     val simplifier: Conditioner = SimpleConditioner,
-                                                    val runInitially: Int = 0)(
+                                                    val runInitially: Int = 0,
+                                                    private val random: Random = new Random(0))(
   val hLeaf: LeafHeuristic[LSI] = HL_MaxZ,
   val hVariable: VariableSelection[VSI] = VariableSelection.HV_MaxDegree)(
   implicit val state2ls: State <:< LSI,
@@ -28,7 +30,7 @@ class ConditionedInference[State <: AnyRef,LSI,VSI](val problem: Problem,
       val newResult: Either[MargParI, State] = oldState.map(cbpSolver.incremental(_,problem)).getOrElse(cbpSolver.create(problem))
       newResult match {
         case Left(r)         => (r.toResult, None)
-        case Right(newState) => (cbpSolver.result2mpi(newState).toResult, Some((new SoftReference(newState), hLeaf(state2ls(newState),problem), hVariable(state2vs(newState),problem))))
+        case Right(newState) => (cbpSolver.result2mpi(newState).toResult, Some((new SoftReference(newState), hLeaf(state2ls(newState),problem), hVariable(state2vs(newState),problem,random))))
       }
     }
     def isExact: Boolean = info.isEmpty
@@ -152,21 +154,21 @@ object HL_MaxVar extends LeafHeuristic[Any]{
 
 trait VariableSelection[-I] {
   def name: String
-  def apply(information: I, p: Problem): Set[GCondition]
+  def apply(information: I, p: Problem, rand: Random): Set[GCondition]
 }
 
 trait CompleteSplitVariableSelection[-I] extends VariableSelection[I]{
-  final override def apply(information: I, p: Problem): Set[GCondition] = {
-    val v = selectVariable(information,p)
+  final override def apply(information: I, p: Problem, rand: Random): Set[GCondition] = {
+    val v = selectVariable(information,p).pickRandom(rand)
     (0 until p.domains(v)).map(value => Map(v -> Set(value))).toSet
   }
-  def selectVariable(information: I, p: Problem): Int
+  def selectVariable(information: I, p: Problem): Set[Int]
 }
 
 /** Variable selection heuristics that work by assigning a numeric value to each variable and pick an extreme one.
   * @param heuristic Assigns larger values to variables that appear more attractive. */
 case class NumericVariableHeuristic[-I](name: String, heuristic: (I,Problem) => Int => Double) extends CompleteSplitVariableSelection[I]{
-  override def selectVariable(information: I, p: Problem): Int = p.variables.maxBy(heuristic(information,p))
+  override def selectVariable(information: I, p: Problem): Set[Int] = maxByMultiple(p.variables)(heuristic(information,p)).toSet
 }
 
 case class MaxMedianHeuristic[-I](heuristics: Seq[NumericVariableHeuristic[I]], quantile: Double) extends CompleteSplitVariableSelection[I]{
@@ -179,10 +181,10 @@ case class MaxMedianHeuristic[-I](heuristics: Seq[NumericVariableHeuristic[I]], 
     (sorted.last - q)/(sorted.last - sorted.head)
   }
   override def name: String = s"MaxMedian(${heuristics.map(_.name).mkString(",")})"
-  override def selectVariable(information: I, p: Problem): Int = {
+  override def selectVariable(information: I, p: Problem): Set[Int] = {
     val results: Seq[Array[Double]] = heuristics.map(h => p.variableRange.map(h.heuristic(information,p))(collection.breakOut): Array[Double])
     val bestH: Array[Double] = results.maxBy(quantileRatio)
-    bestH.zipWithIndex.maxBy(_._1)._2
+    maxByMultiple(p.variableRange)(bestH).toSet
   }
 }
 
@@ -196,5 +198,8 @@ object VariableSelection{
     p.factorsOfVariable(v).foldLeft(0d){case (acc, f) =>
       acc + bp.lastUpdate(Left((v,f))) + bp.lastUpdate(Right((f,v)))
     } / p.factorsOfVariable(v).size
+  )
+  val HV_MinEntropy = NumericVariableHeuristic[MargParI]("MinEntropy", (mp,p) => v =>
+    Some(p.ring.entropy(mp.variableBelief(v).values)).filterNot(_ == 0d).getOrElse(Double.NegativeInfinity)
   )
 }
