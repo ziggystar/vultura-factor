@@ -23,7 +23,6 @@ case class FastFactor(variables: Array[Int], values: Array[Double]){
     }
     this.variables.foldLeft(this){case (factor, variable) =>
       if(isIndependentIn(factor,variable)) {
-        //println("removing var " + variable + " in factor " + factor)
         factor.condition(Map(variable -> 0),domains)
       } else
         factor
@@ -32,33 +31,37 @@ case class FastFactor(variables: Array[Int], values: Array[Double]){
 
   def condition(condition: Map[Int,Int], domains: Array[Int]): FastFactor = {
     val (hitVars,remVars) = this.variables.partition(condition.contains)
-    val remDomains = remVars.map(domains)
-    val strides: Array[Int] = this.variables.map(domains).scanLeft(1)(_ * _)
+    if(hitVars.isEmpty)
+      this
+    else {
+      val remDomains = remVars.map(domains)
+      val strides: Array[Int] = this.variables.map(domains).scanLeft(1)(_ * _)
 
-    //maps variables to their stride
-    val strideLookup: Map[Int, Int] = this.variables.zip(strides.init).toMap
-    //we'll use the overflow position of the counter to index into this array
-    val lookup: Array[Int] = FastFactor.buildLookup(remVars,domains,this.variables)
-    var pos: Int = hitVars.map(v => strideLookup(v) * condition(v)).sum
+      //maps variables to their stride
+      val strideLookup: Map[Int, Int] = this.variables.zip(strides.init).toMap
+      //we'll use the overflow position of the counter to index into this array
+      val lookup: Array[Int] = FastFactor.buildLookup(remVars, domains, this.variables)
+      var pos: Int = hitVars.map(v => strideLookup(v) * condition(v)).sum
 
-    //this holds result
-    val condVals: Array[Double] = new Array[Double](remVars.map(domains).product)
+      //this holds result
+      val condVals: Array[Double] = new Array[Double](remVars.map(domains).product)
 
-    //loop state
-    val countReg: Array[Int] = Array.fill(remVars.size)(0)
-    var i = 0
+      //loop state
+      val countReg: Array[Int] = Array.fill(remVars.size)(0)
+      var i = 0
 
-    //work begins here
-    condVals(i) = this.values(pos)
-    while(i  < condVals.size - 1){
-      i += 1
-      //side-effecting call
-      val overflow = FastFactor.incrementCounter(countReg,remDomains)
-      pos += lookup(overflow)
+      //work begins here
       condVals(i) = this.values(pos)
-    }
+      while (i < condVals.size - 1) {
+        i += 1
+        //side-effecting call
+        val overflow = FastFactor.incrementCounter(countReg, remDomains)
+        pos += lookup(overflow)
+        condVals(i) = this.values(pos)
+      }
 
-    FastFactor(remVars,condVals)
+      FastFactor(remVars, condVals)
+    }
   }
 
   def normalize(ring: RingZ[Double]) = FastFactor(variables,ring.normalize(values))
@@ -100,7 +103,7 @@ object FastFactor{
 
   /** Sums the given factors element-wise. It's the ordinary sum of Double values. And all scopes have to be equal. */
   def elementWiseSum(factors: IndexedSeq[FastFactor]): FastFactor = {
-    require(!factors.isEmpty, "cannot be called with empty argument")
+    require(factors.nonEmpty, "cannot be called with empty argument")
     val scope = factors.head.variables
     require(factors.forall(_.variables.sameElements(scope)), "all scopes must be equal")
     FastFactor(scope,Array.tabulate(factors.head.values.size)(i => factors.foldLeft(0d)(_ + _.values(i))))
