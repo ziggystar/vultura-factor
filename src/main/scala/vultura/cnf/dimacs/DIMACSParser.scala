@@ -45,7 +45,7 @@ object DIMACSParser {
     }
 
     val clauses = splitAt(numberSequence.toList, 0).reverse.map(_.reverse)
-      .filter(!_.isEmpty)
+      .filter(_.nonEmpty)
       .map {
       vars =>
         val (pos, neg) = vars

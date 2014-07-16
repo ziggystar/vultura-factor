@@ -15,19 +15,19 @@ trait Ring[@specialized(Double) T]{
   def prodA(fs: Array[T]): T = fs.foldLeft(one)(prod)
   //for the the following methods it's not so clear how to generalize to rings
   //in particular, the result type is currently fixed to be Double in normal representation.
-  def normalize(a: Array[T]): Array[T] = ???
-  def normalizeInplace(a: Array[T]): Unit = ???
+  def normalize(a: Array[T]): Array[T] = sys.error("not supported")
+  def normalizeInplace(a: Array[T]): Unit = sys.error("not supported")
   /** @return In normal representation (not log). */
-  def maxNorm(a: Array[T], b: Array[T]): Double = ???
+  def maxNorm(a: Array[T], b: Array[T]): Double = sys.error("not supported")
   /** @return In normal representation (not log). */
-  def entropy(a: Array[T]): Double = ???
+  def entropy(a: Array[T]): Double = sys.error("not supported")
   /** @return In normal representation (not log). */
-  def expectation(p: Array[T], f: Array[T]): Double = ???
+  def expectation(p: Array[T], f: Array[T]): Double = sys.error("not supported")
   /** @return the expectation of the second array given the measure of the first, as both arrays are in the given encoding. */
-  def logExpectation(p: Array[T], f: Array[T]): Double = ???
-  def decode(p: Array[T]): Array[Double] = ???
-  def encode(p: Array[Double]): Array[T] = ???
-  def log(x: T): Double = ???
+  def logExpectation(p: Array[T], f: Array[T]): Double = sys.error("not supported")
+  def decode(p: Array[T]): Array[Double] = sys.error("not supported")
+  def encode(p: Array[Double]): Array[T] = sys.error("not supported")
+  def log(x: T): Double = sys.error("not supported")
 }
 
 object Ring{

@@ -3,9 +3,6 @@ package vultura.factor
 import org.specs2._
 import org.specs2.specification.Fragments
 
-/**
- * Created by thomas on 20.05.14.
- */
 class SumProductTaskTest extends Specification {
   override def is: Fragments =
     "multiply the same factor(2,2) twice and marginalize one variable out" ! {

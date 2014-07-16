@@ -1,4 +1,4 @@
-package vultura.factor.inference.cp2
+package vultura.factor.inference.calibration
 
 import vultura.factor.inference.MargParI
 import vultura.factor.{Factor, Problem, SumProductTask}
@@ -58,7 +58,7 @@ case class LBP(problem: Problem) {
     }
   }
 
-  val cp =  new CProb[BPMessage]{
+  val cp =  new CalibrationProblem[BPMessage]{
     val edges: Iterable[BPMessage] = for{
       f <- problem.factors
       v <- f.variables

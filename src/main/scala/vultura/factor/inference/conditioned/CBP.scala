@@ -41,7 +41,7 @@ class CBP(val problem: Problem,
 
   def run(maxIter: Int){
     var steps = 0
-    while(steps < maxIter && !queue.isEmpty){
+    while(steps < maxIter && queue.nonEmpty){
       val selectAssignment =  leafSelection(queue,random)
       val selectVar: Int = variableSelection(queue(selectAssignment),random)
       val newAssignments: IndexedSeq[Map[Int, Int]] =

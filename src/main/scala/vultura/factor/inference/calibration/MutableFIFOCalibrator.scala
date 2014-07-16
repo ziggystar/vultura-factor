@@ -1,72 +1,21 @@
-package vultura.factor.inference.cp2
+package vultura.factor.inference.calibration
 
 import vultura.util._
 
 import scala.collection.mutable
 
-trait Edge {
-  //the type of the parent edges
-  type InEdge <: Edge
-  //the type that is produced by this edge
-  type TOut <: AnyRef
-  def inputs: IndexedSeq[InEdge]
-  def compute(ins: IndexedSeq[InEdge#TOut]): TOut
-}
-
-/** Mutable edge type.
-  * Is able to write the result directly into a provided container.
+/** Calibrator that supports mutable message updates.
+  * Edges are updated in a round-robin way. Only those updates are performed that
+  * result in a significant change according to `differ`.
+  * @param maxSteps Number of edge updates to perform initially.
   */
-trait MEdge extends Edge {
-  /** These computations don't have to be thread-safe. */
-  def mCompute(): (IndexedSeq[InEdge#TOut], TOut) => Unit
-  def create: TOut
-  def copy(t: TOut): TOut
-  override def compute(ins: IndexedSeq[InEdge#TOut]): TOut = {
-    val c = create
-    mCompute()(ins,c)
-    c
-  }
-}
+class MutableFIFOCalibrator[E <: MEdge](val problem: CalibrationProblem[E])(
+  val differ: Diff[E, E#TOut],
+  val tol: Double = 1e-9,
+  val maxSteps: Long = 1000000,
+  initialize: EdgeValues[E] = EdgeValues.empty) extends Calibrated[E] {
 
-trait Diff[-E,-T]{
-  def diff(e: E)(oldValue: T, newValue: T): Double
-}
-
-object MaxDiff extends Diff[Any,Array[Double]]{
-  override def diff(e: Any)(oldValue: Array[Double], newValue: Array[Double]): Double =
-    vultura.util.maxDiff(oldValue, newValue)
-}
-
-trait CProb[E <: Edge]{
-  def edges: Iterable[E]
-  def init(e: E): e.TOut
-}
-
-/** Dependently typed partial function. */
-trait EdgeValues[-E <: Edge]{
-  def hasEdge(e: E): Boolean
-  def edgeValue(e: E): e.TOut
-}
-
-object EdgeValues {
-  def empty = new EdgeValues[Edge]{
-    override def hasEdge(e: Edge): Boolean = false
-    override def edgeValue(e: Edge): e.type#TOut = sys.error("querying non-existent edge value")
-  }
-}
-
-trait Calibrated[E <: Edge] extends EdgeValues[E] {
-  def isConverged: Boolean
-  def iteration: Long
-}
-
-/** Calibrator that supports mutable message updates. */
-class MutableFIFOCalibrator[E <: MEdge](val problem: CProb[E])(
-                                        val differ: Diff[E, E#TOut],
-                                        val tol: Double = 1e-9,
-                                        val maxSteps: Long = 1000000,
-                                        initialize: EdgeValues[E] = EdgeValues.empty) extends Calibrated[E]{
-  class EdgeData[ET <: E](val e: ET){
+  class EdgeData[ET <: E](val e: ET) {
     val inputSpace = new mutable.ArraySeq[e.InEdge#TOut](e.inputs.size)
     val computation: (IndexedSeq[e.InEdge#TOut], e.TOut) => Unit = e.mCompute()
   }
@@ -76,6 +25,7 @@ class MutableFIFOCalibrator[E <: MEdge](val problem: CProb[E])(
   //edge index
   type EI = edgeIndex.Idx
   val numEdges: Int = edgeIndex.size
+
   final def edges: IndexedSeq[E] = edgeIndex.elements
 
   //immutable
@@ -87,12 +37,12 @@ class MutableFIFOCalibrator[E <: MEdge](val problem: CProb[E])(
   //the successors of an edge
   val successors: IndexedSeq[Array[EI]] = {
     //if edges is closed, the following cast succeeds (because E is a valid super type)
-    val fromTo: IndexedSeq[(EI, EI)] = for(toI <- 0 until numEdges; fromI <- predecessors(toI)) yield (fromI,toI)
-    ((0 until numEdges) map fromTo.groupByMap(_._1,_._2).withDefaultValue(IndexedSeq())).map(_.toArray)
+    val fromTo: IndexedSeq[(EI, EI)] = for (toI <- 0 until numEdges; fromI <- predecessors(toI)) yield (fromI, toI)
+    ((0 until numEdges) map fromTo.groupByMap(_._1, _._2).withDefaultValue(IndexedSeq())).map(_.toArray)
   }
 
   def computeInitializedState(ev: EdgeValues[E]): mutable.Buffer[Out] = edges.map(e =>
-    if(ev.hasEdge(e)) e.copy(ev.edgeValue(e))
+    if (ev.hasEdge(e)) e.copy(ev.edgeValue(e))
     else problem.init(e)
   ).toBuffer
 
@@ -116,12 +66,11 @@ class MutableFIFOCalibrator[E <: MEdge](val problem: CProb[E])(
     val e: E = edgeIndex.backward(ei)
     val eData: EdgeData[e.type] = edgeData(ei).asInstanceOf[EdgeData[e.type]]
 
-    val input: mutable.ArraySeq[e.InEdge#TOut] =
-    {
+    val input: mutable.ArraySeq[e.InEdge#TOut] = {
       val preds: Array[EI] = predecessors(ei)
       val b = eData.inputSpace
       var i = 0
-      while(i < b.length){
+      while (i < b.length) {
         b(i) = state(preds(i)).asInstanceOf[e.InEdge#TOut]
         i += 1
       }
@@ -131,15 +80,15 @@ class MutableFIFOCalibrator[E <: MEdge](val problem: CProb[E])(
     val newVal = pool(ei).asInstanceOf[e.TOut]
     val oldVal = state(ei).asInstanceOf[e.TOut]
     //recalculate
-    eData.computation(input,newVal)
+    eData.computation(input, newVal)
     val diff = differ.diff(e)(oldVal, newVal)
-    if(diff > tol) {
+    if (diff > tol) {
       //save new state
       pool(ei) = oldVal
       state(ei) = newVal
       //awake dependent edges
-      successors(ei).foreach{e =>
-        dirtyEdges.enqueue((e,steps))
+      successors(ei).foreach { e =>
+        dirtyEdges.enqueue((e, steps))
       }
       lastCalibrated(ei) = steps
       true
@@ -148,27 +97,33 @@ class MutableFIFOCalibrator[E <: MEdge](val problem: CProb[E])(
   }
 
   def calibrate(): Unit = {
-    while(dirtyEdges.nonEmpty && steps < maxSteps){
-      val (ei,lastUpdate) = dirtyEdges.dequeue()
-      if(lastUpdate > lastCalibrated(ei)) {
+    while (dirtyEdges.nonEmpty && steps < maxSteps) {
+      val (ei, lastUpdate) = dirtyEdges.dequeue()
+      if (lastUpdate > lastCalibrated(ei)) {
         //side-effect
         val wasChanged: Boolean = updateEdge(ei)
-        if(wasChanged)
+        if (wasChanged)
           steps = steps + 1
       }
     }
   }
 
   def lastUpdateOf(e: E): Long = lastCalibrated(edgeIndex(e))
+
   def iteration: Long = steps
+
   def edgeValue(n: E): n.TOut = state(edgeIndex(n)).asInstanceOf[n.TOut]
+
   def hasEdge(e: E): Boolean = edgeIndex.contains(e)
+
   def isConverged = dirtyEdges.isEmpty
+
   def result: EdgeValues[E] = new EdgeValues[E] {
     private val index: SIIndex[E] = edgeIndex
     private val values: mutable.Buffer[Out] = state
+
     override def hasEdge(e: E): Boolean = index.contains(e)
+
     override def edgeValue(e: E): e.type#TOut = values(index(e)).asInstanceOf[e.TOut]
   }
 }
-

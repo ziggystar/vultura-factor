@@ -1,7 +1,7 @@
 package vultura.factor.inference.conditioned
 
 import vultura.factor.inference.MargParI
-import vultura.factor.inference.cp2._
+import vultura.factor.inference.calibration._
 import vultura.factor.{Factor, Problem}
 import vultura.util.SIIndex
 

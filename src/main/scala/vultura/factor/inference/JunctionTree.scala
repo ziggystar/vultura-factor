@@ -121,7 +121,7 @@ object JunctionTree{
         (factor,sepset,upwardMessage)
       }
     upwardCalibrated.scand(Factor(Array(),Array(ring.one))){
-      case (downMessage,Node((factor,sepset,upmessage),children)) => {
+      case (downMessage,Node((factor,sepset,upmessage),children)) =>
         val newLabel = (factor,sepset,upmessage,downMessage)
         val downMessages = mapOthers2(children.map(_.rootLabel)){case (childLabel,otherChildLabels) =>
           Factor.multiplyRetain(ring)(domains)(
@@ -130,7 +130,6 @@ object JunctionTree{
           )
         }
         (newLabel,downMessages)
-      }
     }
   }
 

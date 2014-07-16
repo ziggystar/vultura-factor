@@ -4,10 +4,8 @@ import org.specs2._
 import org.specs2.specification.Fragments
 import vultura.factor.generators._
 import vultura.factor.inference.BeliefPropagation
+import vultura.factor.inference.calibration.{LBP, MutableFIFOCalibrator, MaxDiff}
 
-/**
- * Created by thomas on 19.05.14.
- */
 class LBPTest extends Specification {
   val small = grid(2,3,2,expGauss(0.2))
   val lbp_small = LBP(small)

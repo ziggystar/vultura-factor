@@ -193,13 +193,13 @@ class SinglyLCMF(val problem: Problem, val scheme: SimpleScheme, val tol: Double
       case Marginal(v,c) => updateQ(v,c)
     }) p.effect.toSeq else Seq()
 
-    while(iterations < cMaxIter && !uncalibrated.isEmpty){
+    while(iterations < cMaxIter && uncalibrated.nonEmpty){
       val nextParam = uncalibrated.dequeue()
       val touched = updateParameter(nextParam)
       uncalibrated.enqueue(touched.filterNot(uncalibrated.contains).toSeq:_*)
       iterations += 1
     }
-    !uncalibrated.isEmpty
+    uncalibrated.nonEmpty
   }
 
   def iteration: Int = iterations

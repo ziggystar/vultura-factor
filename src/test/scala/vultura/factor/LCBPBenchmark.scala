@@ -1,16 +1,8 @@
 package vultura.factor
 
-import vultura.factor.generators._
-import vultura.factor.inference.calibration.BP_Cal
+import vultura.factor.Benchmarks._
 import vultura.factor.inference.conditioned._
-import Benchmarks._
-import vultura.factor.inference.BeliefPropagation
-import scala.util.Random
-import vultura.factor.inference.conditioned.GScheme
 
-/**
- * Created by thomas on 3/9/14.
- */
 object LCBPBenchmark {
   case class LCProblem(p: Problem, scheme: GScheme)
 

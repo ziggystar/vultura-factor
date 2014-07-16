@@ -133,7 +133,7 @@ object RegionGraph{
     require(_initialRegions.map(_._2).flatten.toSet == problem.factors.toSet)
 
     def nonemptyIntersections(rs: Set[Set[Int]]): Set[Set[Int]] =
-      for(s1 <- rs; s2 <- rs; intersect = s1 intersect s2 if !intersect.isEmpty) yield intersect
+      for(s1 <- rs; s2 <- rs; intersect = s1 intersect s2 if intersect.nonEmpty) yield intersect
 
     val initialRegions = _initialRegions.map(_._1).toSet
     val regionToFactor = _initialRegions.toMap.mapValues(_.toSet)
@@ -160,9 +160,8 @@ object RegionGraph{
 
   def setClosure[A](init: Set[A])(f: Set[A] => Set[A]): Set[A] = Iterator.iterate((init,true)){
     case x@(acc,false) => x
-    case (acc,true) => {
+    case (acc,true) =>
       val add = f(acc).filterNot(acc)
-      (acc ++ add,!add.isEmpty)
-    }
+      (acc ++ add,add.nonEmpty)
   }.dropWhile(_._2).next()._1
 }

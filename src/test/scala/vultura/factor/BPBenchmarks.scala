@@ -1,6 +1,6 @@
 package vultura.factor
 
-import vultura.factor.inference.cp2.LBP
+import vultura.factor.inference.calibration.LBP
 
 import scala.language.reflectiveCalls
 import scala.util.Random

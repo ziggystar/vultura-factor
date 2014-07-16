@@ -35,7 +35,7 @@ trait FastFactorMatchers {
       result(
         math.abs(obtainedZ - exactZ) < tol,
         "has same Z as exact inference",
-        f"has different Z compared to exact inference (got ${obtainedZ}, exact is ${exactZ})",
+        f"has different Z compared to exact inference (got $obtainedZ, exact is $exactZ)",
         t
       )
     }

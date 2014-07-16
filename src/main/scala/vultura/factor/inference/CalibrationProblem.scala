@@ -82,34 +82,30 @@ object CalibrationProblem {
     /** Map each node to a set of parents. Each parent has a weight and is either another node or a constant factor. */
     def parents: Map[BetheNode, Set[(Either[Factor, BetheNode], Double)]] =
       nodes.map{
-        case n@F2V(f,v) => {
+        case n@F2V(f,v) =>
           val incomingMsgs = for {
             otherVar <- f.variables if otherVar != v
           } yield Right(V2F(otherVar,f)) -> 1d
           val localFactor = Left(f)  -> 1d
           val allParentNodes: Set[(Either[Factor, BetheNode], Double)] = incomingMsgs.toSet + localFactor
           n -> allParentNodes
-        }
-        case n@V2F(v,f) => {
+        case n@V2F(v,f) =>
           val incomingMsgs: IndexedSeq[(Right[Nothing, BetheNode], Double)] = for{
             otherFactor <- p.factors if otherFactor.variables.contains(v) && otherFactor != f
           } yield Right(F2V(otherFactor, v)) -> 1d
           n -> (incomingMsgs.toSet: Set[(Either[Factor, BetheNode], Double)])
-        }
-        case n@VariableN(v) => {
+        case n@VariableN(v) =>
           val incomingMsgs: IndexedSeq[(Right[Nothing, BetheNode], Double)] = for{
             otherFactor <- p.factors if otherFactor.variables.contains(v)
           } yield Right(F2V(otherFactor, v)) -> 1d
           n -> (incomingMsgs.toSet: Set[(Either[Factor, BetheNode], Double)])
-        }
-        case n@FactorN(f) => {
+        case n@FactorN(f) =>
           val incomingMsgs = for {
             otherVar <- f.variables
           } yield Right(V2F(otherVar,f)) -> 1d
           val localFactor = Left(f)  -> 1d
           val allParentNodes: Set[(Either[Factor, BetheNode], Double)] = incomingMsgs.toSet + localFactor
           n -> (allParentNodes: Set[(Either[Factor, BetheNode], Double)])
-        }
 
       }(collection.breakOut)
 

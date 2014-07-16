@@ -58,7 +58,7 @@ object CNF {
       None
   }
 
-  def variablesOfCNF(cnf: CNF): Array[Int] = cnf.clauses.view.flatMap(variablesOfClause(_)).distinct.toArray
+  def variablesOfCNF(cnf: CNF): Array[Int] = cnf.clauses.view.flatMap(variablesOfClause).distinct.toArray
   def domainOfCNF(cnf: CNF): Array[Array[Int]] = variablesOfCNF(cnf).map(_ => Array(0,1))
   def evaluateCNF(cnf: CNF, trues: IndexedSeq[Int], falses:IndexedSeq[Int]): Option[Boolean] = {
     var i = 0
