@@ -7,7 +7,6 @@ import scala.language.implicitConversions
 import scala.reflect.ClassTag
 import scala.util.Random
 
-
 /**
  * Utility functions.
  *
@@ -100,9 +99,11 @@ package object util {
       elem
     }
   }
-  def randomFlip(ordering: scala.IndexedSeq[Int], random: Random): IndexedSeq[Int] = {
+
+  /** Exchanges two elements of a sequence. */
+  def randomFlip[A](ordering: scala.IndexedSeq[A], random: Random): IndexedSeq[A] = {
     val (i1, i2) = (random.nextInt(ordering.size), random.nextInt(ordering.size))
-    val builder = IndexedSeq.newBuilder[Int]
+    val builder = IndexedSeq.newBuilder[A]
     builder.sizeHint(ordering.size)
     var idx = 0
     while (idx < ordering.size) {
@@ -116,15 +117,6 @@ package object util {
     }
     builder.result()
   }
-
-  def addLog(a: Double, b: Double): Double =
-    if(a.isNegInfinity)
-      b
-    else if(b.isNegInfinity)
-      a
-    else
-      a + math.log1p(math.exp(b - a))
-  def addLogApproximate(a: Double, b: Double): Double = if(math.abs(a - b) > 15)  a max b else addLog(a,b)
 
   /** Create several Random objects in a deterministic way from an initial one. */
   implicit def random2RichRandom(r: Random) = new {

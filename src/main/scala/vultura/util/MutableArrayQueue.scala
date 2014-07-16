@@ -26,17 +26,6 @@ class MutableArrayQueue[T](initialSize: Int) extends IndexedSeq[T] {
       this.end = newCol.end
       this.data = newCol.data
       this.enqueue(t)
-//      val newData = new mutable.ArraySeq[T](data.size*2)
-//      var to = 0
-//      while(start != end){
-//        newData(to) = data(start)
-//        to = to + 1
-//        start = incP(start)
-//      }
-//      newData(to) = t
-//      data = newData
-//      start = 0
-//      end = incP(end)
     }
   }
   /** @throws RuntimeException if the queue is empty. */

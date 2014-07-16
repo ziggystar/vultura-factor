@@ -2,7 +2,6 @@ package vultura.util
 
 import java.util
 
-import vultura.fastfactors._
 import vultura.util.FastBitSet._
 
 import scala.annotation.tailrec
@@ -73,10 +72,9 @@ object TreeWidth {
     result
   }
 
-
   object MinFillHeuristic extends OrderingHeuristic[Array[Long]]{
 
-    def fillInCost(v: Var, neighbours: Array[BSType]): Int= {
+    def fillInCost(v: Int, neighbours: Array[BSType]): Int= {
       val nOfV = neighbours(v).toArray
 
       def fillInRec(nextNeighbour: Int = 0, fills: Int = 0): Int =

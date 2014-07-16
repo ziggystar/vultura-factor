@@ -1,6 +1,6 @@
 resourceGenerators in Compile <+= Def.task {
   import scala.sys.process._
-  val file = (resourceManaged in Compile).value / "vultura" / "version.properties"
+  val file = (resourceManaged in Compile).value / "vultura" / "util" / "version.properties"
   val gitHash = "git rev-parse HEAD".!!
   val gitStatus = "git status".!!
   IO.writeLines(file, Seq(
