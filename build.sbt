@@ -10,8 +10,9 @@ organization := "de.uni-ulm"
 20.0.1: a little work on CI inference stuff
 20.0.2: fix soft-factor normalization and some refactoring
 20.0.3: tie-breaking for variable selection heuristics in ConditionedInference
+20.0.4: moved code from competition solver into library; added code for OpenBitSet from apache lucene
 */
-version := "20.0.3"
+version := "20.0.4"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 
