@@ -2,7 +2,11 @@ package vultura.util
 
 import java.util
 
+import vultura.fastfactors._
+import vultura.util.FastBitSet._
+
 import scala.annotation.tailrec
+import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
 import scalaz.Scalaz._
 import scalaz.Tree._
@@ -14,6 +18,133 @@ import scalaz._
  */
 
 object TreeWidth {
+  /** Stateful ordering heuristic. */
+  trait OrderingHeuristic[S]{
+    def initialState(neighbours: Array[BSType]): S
+    def nextVariable(s: S, remaining: BSType, rand: Random): Int
+    def update(s: S)(eliminated: Int, eliminationClique: BSType, neighbours: Array[BSType], remaining: BSType): S
+  }
+
+  /**
+   * @return Those elements of s where fitness evaluates to the highest value.
+   */
+  def myMaxByMultiple(bs: BSType)(fitness: Long => Long): IndexedSeq[Long] = {
+    val maxes = new ArrayBuffer[Long](10)
+    var max = Long.MinValue
+
+    var nextBit = bs.nextSetBit(0L)
+    while(nextBit != -1){
+      val v: Long = fitness(nextBit)
+      if(v > max) {
+        max = v
+        maxes.clear()
+      }
+      if(v == max) {
+        maxes += nextBit
+      }
+      nextBit = bs.nextSetBit(nextBit + 1)
+    }
+    maxes
+  }
+
+  final class WeightedMinDegree(domains: Array[Int]) extends OrderingHeuristic[Array[Long]]{
+    override def initialState(neighbours: Array[BSType]): Array[Long] = neighbours.map(cliqueCost(_,domains))
+
+    override def update(s: Array[Long])(eliminated: Int, eliminationClique: BSType, neighbours: Array[BSType], remaining: BSType): Array[Long] = {
+      eliminationClique.foreach{v =>
+        s(v) = cliqueCost(neighbours(v), domains)
+      }
+      s
+    }
+
+    override def nextVariable(s: Array[Long], remaining: BSType, rand: Random): Int =
+      myMaxByMultiple(remaining)(v => -s(v.toInt)).pickRandom(rand).toInt
+  }
+
+  final def cliqueCost(bs: BSType, domains: Array[Int]): Long = {
+    var result = 1L
+    var nextBit = bs.nextSetBit(0L)
+    while(nextBit != -1 && result < Integer.MAX_VALUE){
+      result = result * domains(nextBit.toInt)
+      if (result >= Integer.MAX_VALUE)
+        result = Integer.MAX_VALUE
+      nextBit = bs.nextSetBit(nextBit + 1)
+    }
+    result
+  }
+
+
+  object MinFillHeuristic extends OrderingHeuristic[Array[Long]]{
+
+    def fillInCost(v: Var, neighbours: Array[BSType]): Int= {
+      val nOfV = neighbours(v).toArray
+
+      def fillInRec(nextNeighbour: Int = 0, fills: Int = 0): Int =
+        if(nextNeighbour >= nOfV.length - 1)
+          fills
+        else{
+          val currentNeigh = nOfV(nextNeighbour)
+          val currentAdjacencyList = neighbours(currentNeigh)
+          var np = nextNeighbour + 1
+          var newFills = 0
+          while(np < nOfV.length){
+            val v1: Int = nOfV(np)
+            newFills = newFills + (if(currentAdjacencyList.fastGet(v1)) 0 else 1)
+            np = np + 1
+          }
+          fillInRec(nextNeighbour + 1, fills + newFills)
+        }
+      fillInRec()
+    }
+
+    override def initialState(neighbours: Array[BSType]): Array[Long] = (0 until neighbours.size).map(fillInCost(_,neighbours).toLong)(collection.breakOut)
+
+    override def update(s: Array[Long])(eliminated: Int, eliminationClique: BSType, neighbours: Array[BSType], remaining: BSType): Array[Long] = {
+      eliminationClique.foreach(affected => s(affected) = fillInCost(affected, neighbours))
+      s
+    }
+
+    override def nextVariable(s: Array[Long], remaining: BSType, rand: Random): Int =
+      myMaxByMultiple(remaining)(v => -s(v.toInt)).pickRandom(rand).toInt
+  }
+
+  @tailrec
+  final def heuristicDecomposition[S](h: OrderingHeuristic[S])(
+    remaining: BSType,
+    neighbours: Array[BSType],
+    state: S,
+    domains: Array[Int],
+    cutoff: Long,
+    rand: Random,
+    acc: List[Int] = Nil): Option[List[Int]] = if (remaining.isEmpty) Some(acc.reverse)
+  else {
+    val elimVertex = h.nextVariable(state, remaining,rand)
+    val elimClique: BSType = neighbours(elimVertex)
+    val cost: Long = cliqueCost(elimClique, domains)
+    //MUTATE: remove elimVertex from elimClique
+    elimClique.fastClear(elimVertex)
+    if(cost > cutoff)
+      None
+    else {
+      //mutate the neighbours array
+      elimClique.foreach { affectedVar =>
+        val clique: BSType = neighbours(affectedVar)
+        clique.or(elimClique)
+        clique.fastClear(elimVertex)
+      }
+      //update remaining
+      remaining.fastClear(elimVertex)
+      heuristicDecomposition(h)(
+        remaining,
+        neighbours,
+        h.update(state)(elimVertex, elimClique, neighbours, remaining),
+        domains,
+        cutoff - cost,
+        rand,
+        elimVertex :: acc)
+    }
+  }
+
   def treeWidth[A](cliques: Seq[Set[A]], ordering: Seq[A]): Int = {
     val (elimination,maxCliqueSize) = ordering.foldLeft((cliques,0)){case ((remCliques,max),elimVar) =>
       val elimResult = eliminateVertex(remCliques,elimVar)._1
