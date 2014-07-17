@@ -2,14 +2,13 @@ package vultura.util
 
 import java.util
 
-import vultura.util.FastBitSet._
+import FastBitSet._
+import graph.Tree
+import graph.Tree._
 
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
-import scalaz.Scalaz._
-import scalaz.Tree._
-import scalaz._
 
 /**
  * @author Thomas Geier
@@ -414,14 +413,14 @@ object TreeWidth {
     //check that no variable is contained in two trees
     val allVars = cliques.map(_._1).flatten.distinct
     val containingTrees = allVars.map(v => v -> trees.filter(_.flatten.exists(_._1.contains(v))))
-    val violatedVars = containingTrees.find(_._2.size != 1).map(t => "variable appears in more or less than one tree: " + (t :-> printJTs))
+    val violatedVars = containingTrees.find(_._2.size != 1).map(t => "variable appears in more or less than one tree: " + (t._1,printJTs(t._2)))
 
     val result = domainViolation orElse partitionViolation orElse runningIntersectionViolation orElse violatedVars
 
     result
   }
 
-  def printJTs[A](trees: Seq[Tree[A]]): String = trees.map(_.map(_.toString).drawTree).mkString("\n---\n")
+  def printJTs[A](trees: Seq[Tree[A]]): String = trees.map(_.draw).mkString("\n---\n")
 
   def minDegreeOrdering(cliques: Seq[Set[Int]]): List[Int] = minDegreeOrderingAndWidth(cliques.toIndexedSeq)._1
 }

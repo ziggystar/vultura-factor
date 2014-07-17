@@ -12,8 +12,9 @@ organization := "de.uni-ulm"
 20.0.3: tie-breaking for variable selection heuristics in ConditionedInference
 20.0.4: moved code from competition solver into library; added code for OpenBitSet from apache lucene
 21.0.0: move probabilistic inference code into separate project
+22.0.0: remove scalaz dependency
 */
-version := "21.0.0"
+version := "22.0.0"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 
@@ -28,13 +29,8 @@ scalaVersion := "2.11.1"
 //asserions are only used in tests
 scalacOptions in Compile += "-Xdisable-assertions"
 
-//scalaz
-libraryDependencies += "org.scalaz" % "scalaz-core_2.11" % "7.0.6"
-
 // --------------- Java libraries ------------------------------
 libraryDependencies += "net.sf.trove4j" % "trove4j" % "3.0.3"
-
-libraryDependencies += "org.apache.commons" % "commons-math3" % "3.2"
 // --------------- Publishing ----------------------------------
 
 //testing dependencies
