@@ -247,11 +247,11 @@ class LCBP(val problem: Problem,
     override def edgeValue(e: LCBPEdge): e.type#TOut = e match {
       case FactorEdge(vars) => Factor.maxEntropy(vars,problem.domains,problem.ring).values.asInstanceOf[e.TOut]
       case ve: ValueEdge => problem.ring.one.asInstanceOf[e.TOut]
-      case cd: ConditionDistribution => ???.asInstanceOf[e.TOut]
+      case cd: ConditionDistribution => Array.fill(cd.conditions.size)(problem.ring.one).asInstanceOf[e.TOut]
     }
   }
 
-  val calibrator: Calibrated[LCBPEdge] = ??? //new MutableFIFOCalibrator[LCBPEdge](edges)(convTest,maxIterations,initializer)
+  val calibrator: Calibrated[LCBPEdge] = new FIFOCalibrator[LCBPEdge](edges)(convTest,maxIterations,initializer)
 
   def iteration: Long = calibrator.iteration
 
