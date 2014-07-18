@@ -5,9 +5,9 @@ import java.io._
 import vultura.factor.inference.VariableElimination
 import vultura.util.SSet
 import vultura.util.TreeWidth._
+import vultura.util.graph.Tree
 
 import scala.util.Random
-import scalaz.Tree
 
 trait BasicProblem {
   def domains: Array[Int]

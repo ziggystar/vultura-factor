@@ -7,7 +7,7 @@ import scala.collection.mutable
 
 case class LBP(problem: Problem) {
 
-  sealed trait BPMessage extends MEdge {
+  sealed trait BPMessage extends MEdge {self: Product =>
     def v: Int
     def f: Factor
     final type TOut = Array[Double]
@@ -58,14 +58,15 @@ case class LBP(problem: Problem) {
     }
   }
 
-  val cp =  new CalibrationProblem[BPMessage]{
-    val edges: Iterable[BPMessage] = for{
-      f <- problem.factors
-      v <- f.variables
-      edge <- Seq(F2V(f,v),V2F(v,f))
-    } yield edge
+  val edges: Iterable[BPMessage] = for{
+    f <- problem.factors
+    v <- f.variables
+    edge <- Seq(F2V(f,v),V2F(v,f))
+  } yield edge
 
-    def init(e: BPMessage): Array[Double] = Factor.maxEntropy(Array(e.v),problem.domains,problem.ring).values
+  val maxEntInitializer = new EdgeValues[BPMessage] {
+    override def hasEdge(e: BPMessage): Boolean = true
+    override def edgeValue(e: BPMessage): e.type#TOut =  Factor.maxEntropy(Array(e.v),problem.domains,problem.ring).values
   }
 }
 
@@ -73,7 +74,7 @@ object LBP{
   /** Convenient inference method. */
   def infer(p: Problem, maxIterations: Int = 1000000, tol: Double = 1e-10) = {
     val lbp = LBP(p)
-    val cp = new MutableFIFOCalibrator(lbp.cp)(MaxDiff, tol, maxIterations)
+    val cp = new MutableFIFOCalibrator(lbp.edges)(ConvergenceTest.MaxDiff(tol), maxIterations, lbp.maxEntInitializer)
     new BPResult{
       override def v2f(m: (Int, Factor)): Factor = Factor(Array(m._1),cp.edgeValue(lbp.V2F(m._1,m._2)))
       override def f2v(m: (Factor, Int)): Factor = Factor(Array(m._2),cp.edgeValue(lbp.F2V(m._1,m._2)))

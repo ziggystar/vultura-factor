@@ -3,7 +3,7 @@ package vultura.factor.inference.conditioned
 import vultura.factor.inference.MargParI
 import vultura.factor.inference.calibration._
 import vultura.factor.{Factor, Problem}
-import vultura.util.SIIndex
+import vultura.util.{ArrayIndex, SIIndex}
 
 /** Approximate BP solver plugin based on cp2 implementation. */
 case class BPSolverPlugin(tol: Double = 1e-10, maxSteps: Long = 10000) extends ApproximateSolver[ExtendedBPResult]{
@@ -13,18 +13,18 @@ case class BPSolverPlugin(tol: Double = 1e-10, maxSteps: Long = 10000) extends A
   //TODO make this incremental
   override def increment(oldState: ExtendedBPResult, newProblem: Problem): ExtendedBPResult = {
     val lbp: LBP = LBP(newProblem)
-    val cal = new MutableFIFOCalibrator(lbp.cp)(MaxDiff, tol, maxSteps, new EdgeValues[lbp.BPMessage] {
+    val cal = new MutableFIFOCalibrator(lbp.edges)(ConvergenceTest.MaxDiff(tol), maxSteps, new EdgeValues[lbp.BPMessage] {
       override def hasEdge(e: lbp.BPMessage): Boolean = oldState.problem.factorsOfVariable(e.v).contains(e.f)
       override def edgeValue(e: lbp.BPMessage): e.type#TOut = e match {
         case lbp.V2F(v,f) => oldState.messageValue(Left((v,f))).values
         case lbp.F2V(f,v) => oldState.messageValue(Right((f,v))).values
       }
-    })
+    } orElse lbp.maxEntInitializer)
     createResult(lbp)(cal)
   }
   override def create(p: Problem): ExtendedBPResult = {
     val lbp: LBP = LBP(p)
-    val cal = new MutableFIFOCalibrator(lbp.cp)(MaxDiff, tol, maxSteps)
+    val cal = new MutableFIFOCalibrator(lbp.edges)(ConvergenceTest.MaxDiff(tol), maxSteps, lbp.maxEntInitializer)
     createResult(lbp)(cal)
   }
 
@@ -46,7 +46,8 @@ case class BPSolverPlugin(tol: Double = 1e-10, maxSteps: Long = 10000) extends A
 }
 
 class CalResult(val problem: Problem, f2v: (Factor,Int) => (Array[Double],Long), v2f: (Int,Factor) => (Array[Double],Long), val iterations: Long) extends ExtendedBPResult with BPResult {
-  val factorIndex: SIIndex[Factor] = new SIIndex(problem.factors.toSet)
+  val factorIndex: ArrayIndex[Factor] = new ArrayIndex(problem.factors.toSet)
+
   val msgF2V: Array[Array[Array[Double]]] = factorIndex.elements.map(f => f.variables.map(v => new Array[Double](problem.domains(v)))(collection.breakOut): Array[Array[Double]])(collection.breakOut)
   val msgV2F: Array[Array[Array[Double]]] = factorIndex.elements.map(f => f.variables.map(v => new Array[Double](problem.domains(v)))(collection.breakOut): Array[Array[Double]])(collection.breakOut)
   val updF2V: Array[Array[Long]] = factorIndex.elements.map(f => new Array[Long](f.variables.size))(collection.breakOut)

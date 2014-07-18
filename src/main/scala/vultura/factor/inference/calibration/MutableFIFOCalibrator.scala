@@ -9,11 +9,10 @@ import scala.collection.mutable
   * result in a significant change according to `differ`.
   * @param maxSteps Number of edge updates to perform initially.
   */
-class MutableFIFOCalibrator[E <: MEdge](val problem: CalibrationProblem[E])(
-  val differ: Diff[E, E#TOut],
-  val tol: Double = 1e-9,
+class MutableFIFOCalibrator[E <: MEdge](val problem: Iterable[E])(
+  val convergenceTest: ConvergenceTest[E] = ConvergenceTest.MaxDiff(),
   val maxSteps: Long = 1000000,
-  initialize: EdgeValues[E] = EdgeValues.empty) extends Calibrated[E] {
+  initialize: EdgeValues[E]) extends Calibrated[E] {
 
   class EdgeData[ET <: E](val e: ET) {
     val inputSpace = new mutable.ArraySeq[e.InEdge#TOut](e.inputs.size)
@@ -21,7 +20,7 @@ class MutableFIFOCalibrator[E <: MEdge](val problem: CalibrationProblem[E])(
   }
 
   type Out = E#TOut
-  val edgeIndex: SIIndex[E] = new SIIndex(problem.edges.toSet)
+  val edgeIndex: SIIndex[E] = new SIIndex(problem.toSet)
   //edge index
   type EI = edgeIndex.Idx
   val numEdges: Int = edgeIndex.size
@@ -41,10 +40,11 @@ class MutableFIFOCalibrator[E <: MEdge](val problem: CalibrationProblem[E])(
     ((0 until numEdges) map fromTo.groupByMap(_._1, _._2).withDefaultValue(IndexedSeq())).map(_.toArray)
   }
 
-  def computeInitializedState(ev: EdgeValues[E]): mutable.Buffer[Out] = edges.map(e =>
-    if (ev.hasEdge(e)) e.copy(ev.edgeValue(e))
-    else problem.init(e)
-  ).toBuffer
+  /** Access initializer only through method to avoid keeping a reference to it. */
+  private def computeInitializedState(ev: EdgeValues[E]): mutable.Buffer[Out] = edges.map{ e =>
+    assert(ev.hasEdge(e))
+    e.copy(ev.edgeValue(e))
+  }.toBuffer
 
   //the current values of the edges
   private val state: mutable.Buffer[Out] = computeInitializedState(initialize)
@@ -81,8 +81,8 @@ class MutableFIFOCalibrator[E <: MEdge](val problem: CalibrationProblem[E])(
     val oldVal = state(ei).asInstanceOf[e.TOut]
     //recalculate
     eData.computation(input, newVal)
-    val diff = differ.diff(e)(oldVal, newVal)
-    if (diff > tol) {
+
+    if (!convergenceTest.isConverged(e)(oldVal,newVal)) {
       //save new state
       pool(ei) = oldVal
       state(ei) = newVal

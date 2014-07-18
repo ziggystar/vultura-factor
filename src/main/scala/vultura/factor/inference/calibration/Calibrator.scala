@@ -1,20 +1,38 @@
 package vultura.factor.inference.calibration
 
-trait Edge {
+import vultura.util.HashMemo
+
+trait Edge extends HashMemo {self: Product =>
   //the type of the parent edges
   type InEdge <: Edge
   //the type that is produced by this edge
-  type TOut <: AnyRef
+  type TOut <: Any
   def inputs: IndexedSeq[InEdge]
   def compute(ins: IndexedSeq[InEdge#TOut]): TOut
+}
+
+object Edge{
+  def expand[U <: Edge](xs: U*): Set[U] = {
+    def expandR(edges: Set[U], closed: Set[U] = Set()): Set[U] = if (edges.isEmpty) closed
+    else {
+      val newClosed = edges ++ closed
+      val preds: Set[U] = (for {
+        e <- edges
+        in <- e.inputs.map(_.asInstanceOf[U]) if !newClosed(in)
+      } yield in)(collection.breakOut)
+      expandR(preds, newClosed)
+    }
+    expandR(xs.toSet)
+  }
 }
 
 /** Mutable edge type.
   * Is able to write the result directly into a provided container.
   */
-trait MEdge extends Edge {
+trait MEdge extends Edge {self: Product =>
   /** These computations don't have to be thread-safe. */
   def mCompute(): (IndexedSeq[InEdge#TOut], TOut) => Unit
+  /** Only has to create the value container (e.g. an array); the value will be taken from elsewhere. */
   def create: TOut
   def copy(t: TOut): TOut
   override def compute(ins: IndexedSeq[InEdge#TOut]): TOut = {
@@ -24,16 +42,15 @@ trait MEdge extends Edge {
   }
 }
 
-/** Trait for a calibration problem. */
-trait CalibrationProblem[E <: Edge]{
-  def edges: Iterable[E]
-  def init(e: E): e.TOut
-}
-
 /** Dependently typed partial function. */
-trait EdgeValues[-E <: Edge]{
+trait EdgeValues[-E <: Edge]{outer =>
   def hasEdge(e: E): Boolean
   def edgeValue(e: E): e.TOut
+  def orElse[EE <: E](other: EdgeValues[EE]) = new EdgeValues[EE]{
+    override def hasEdge(e: EE): Boolean = outer.hasEdge(e) || other.hasEdge(e)
+
+    override def edgeValue(e: EE): e.type#TOut = if(outer.hasEdge(e)) outer.edgeValue(e) else other.edgeValue(e)
+  }
 }
 
 object EdgeValues {

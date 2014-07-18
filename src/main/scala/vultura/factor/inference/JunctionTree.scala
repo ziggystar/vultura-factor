@@ -1,14 +1,13 @@
 package vultura.factor.inference
 
 import vultura.factor._
-import vultura.util.ScalazUtils._
 import vultura.util.TreeWidth._
 import vultura.util._
+import vultura.util.graph.Tree
+import vultura.util.graph.Tree._
 
 import scala.collection.mutable
 import scala.util.Random
-import scalaz.Tree._
-import scalaz._
 
 /** Ordinary Shanoy-Shafer (1990) junction tree algorithm. */
 class JunctionTree(val problem: Problem, val variableOrderer: VariableOrderer = MinDegreeOrderer) extends MargParI with JointMargI {

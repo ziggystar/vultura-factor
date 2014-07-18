@@ -1,8 +1,7 @@
 package vultura.factor.inference.conditioned
 
 import vultura.util._
-
-import scalaz._
+import vultura.util.graph.Tree
 
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
@@ -33,12 +32,8 @@ sealed trait LScheme {
     })
   }
 
-  def partialAssignments: Stream[Map[Int, Int]] = {
-    import vultura.util.ScalazUtils._
-
-import scalaz.Scalaz._
-    linearize.map(_.fold(Map[Int,Int]())(Map(_))).pushPathToLeafs(implicitly[Monoid[Map[Int,Int]]]).leafs
-  }
+  def partialAssignments: Stream[Map[Int, Int]] =
+    linearize.map(_.fold(Map[Int,Int]())(Map(_))).pushPathToLeafs(_ ++ _).leafs
 }
 
 object LScheme{

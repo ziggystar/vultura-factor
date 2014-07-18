@@ -22,7 +22,6 @@ class LCBPTest extends Specification {
   val overlappingGrid = GridProblem(6,1,2,1d,4)
   val overlappingGridSmall = GridProblem(width = 3,margin=0,influence=2,coupling = 1d,numConditioned = 4)
 
-  //TODO create matcher that checks for convergence
   override def is: Fragments =
     "unconditioned" ^
       "yield same result as BP" ^
@@ -41,5 +40,5 @@ class LCBPTest extends Specification {
       "bug, threw an exception" ! convergedAndExactTo(new LCBP(overlappingGrid.problem,overlappingGrid.gscheme, maxIterations = 100000),0.1) ^
       "small grid" ! convergedAndExactTo(new LCBP(overlappingGridSmall.problem,overlappingGridSmall.gscheme, maxIterations = 100000),0.1)
 
-  def convergedAndExactTo(lcbp:LCBP, tol: Double) = (lcbp.calibrator.isCalibrated must beTrue) and (lcbp.logZ must beCloseTo(lcbp.problem.logZ, tol))
+  def convergedAndExactTo(lcbp:LCBP, tol: Double) = (lcbp.calibrator.isConverged must beTrue) and (lcbp.logZ must beCloseTo(lcbp.problem.logZ, tol))
 }

@@ -10,7 +10,7 @@ import scala.util.Random
  * User: Thomas Geier
  * Date: 5/31/13
  */
-case class Factor(variables: Array[Int], values: Array[Double]){
+case class Factor(variables: Array[Int], values: Array[Double]) {
   require(Factor.isStrictlyIncreasing(variables), "variables are not ordered increasingly")
 
   /** Check whether this factor is independent of some variable. (with no tolerance!) */
@@ -67,13 +67,15 @@ case class Factor(variables: Array[Int], values: Array[Double]){
   def normalize(ring: Ring[Double]) = Factor(variables,ring.normalize(values))
 
   override def equals(obj: Any): Boolean = obj match {
-    case ff: Factor => ff.eq(this) || (ff.variables.sameElements(variables) && ff.values.sameElements(values))
+    case ff: Factor => ff.eq(this) ||
+      (((ff.variables eq variables) || ff.variables.sameElements(variables))
+        && ((ff.values eq values) || ff.values.sameElements(values)))
     case _ => false
   }
 
   override lazy val hashCode: Int = (variables.toSeq,values.toSeq).hashCode()
 
-  override def toString: String = f"FastFactor(VAR: ${variables.mkString(",")},VAL: ${values.mkString(",")})"
+  override def toString: String = f"Factor(VAR: ${variables.mkString(",")},VAL: ${values.mkString(",")})"
   def toBriefString: String = f"${variables.mkString(",")} | ${values.map("%.2f".format(_)).mkString(",")}"
   def map(f: Double => Double): Factor = this.copy(values = values.map(f))
 

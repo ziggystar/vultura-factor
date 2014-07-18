@@ -28,9 +28,11 @@ scalaVersion := "2.11.1"
 //asserions are only used in tests
 scalacOptions in Compile += "-Xdisable-assertions"
 
-libraryDependencies += "de.uni-ulm" %% "vultura-util" % "21.0.0"
+libraryDependencies += "de.uni-ulm" %% "vultura-util" % "22.0.0"
 
 libraryDependencies += "org.apache.commons" % "commons-math3" % "3.2"
+
+libraryDependencies += "org.scalaz" % "scalaz-core_2.11" % "7.0.6"
 // --------------- Publishing ----------------------------------
 
 //testing dependencies
