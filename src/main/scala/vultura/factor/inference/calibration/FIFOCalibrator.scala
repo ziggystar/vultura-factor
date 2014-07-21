@@ -17,13 +17,16 @@ class FIFOCalibrator[E <: Edge](val problem: Iterable[E])(
   val convergenceTest: ConvergenceTest[E] = ConvergenceTest.MaxDiff(),
   val maxSteps: Long = 1000000,
   initialize: EdgeValues[E]) extends Calibrated[E]{
+
+  type EdgeIndex = Int
   val edges: SIIndex[E] = new SIIndex(problem.toSet)
-  def edgeIndex(e: E): Int = edges.forward(e)
+  def edgeIndex(e: E): EdgeIndex = edges.forward(e)
 
   //when a node changes its state, this tells us which edges need to be recomputed
-  val dependentEdges: Map[E, IndexedSeq[E]] = {
+  val dependentEdges: IndexedSeq[Array[EdgeIndex]] = {
     val broken: IndexedSeq[(E, E)] = for(e <- edges.elements; in <- e.inputs) yield in.asInstanceOf[E] -> e
-    broken.groupByMap(_._1,_._2).withDefaultValue(IndexedSeq())
+    val m: Map[E, IndexedSeq[E]] = broken.groupByMap(_._1,_._2).withDefaultValue(IndexedSeq())
+    edges.createArrayLookup(m)
   }
 
   private val state: mutable.Buffer[Any] = edges.elements.map(e => initialize.edgeValue(e)).toBuffer
@@ -31,7 +34,7 @@ class FIFOCalibrator[E <: Edge](val problem: Iterable[E])(
   //when was an edge calibrated the last time?
   private val lastCalibrated: Array[Long] = Array.fill(edges.elements.size)(-1)
 
-  private val dirtyEdges: mutable.Queue[(E,Long)] = mutable.Queue((for(e <- edges.elements) yield e -> 0L): _*)
+  private val dirtyEdges: MutableArrayQueue[(Int, Long)] = vultura.util.MutableArrayQueue(for(e <- edges.indices) yield e -> 0L)
 
   private var steps: Long = 0
 
@@ -39,21 +42,27 @@ class FIFOCalibrator[E <: Edge](val problem: Iterable[E])(
 
   def edgeValue(n: E): n.TOut = state(edgeIndex(n)).asInstanceOf[n.TOut]
 
-  val inputMemo: Map[E,IndexedSeq[E]] = edges.elements.map(e => e -> e.inputs.map(_.asInstanceOf[E]))(collection.breakOut)
+  val inputMemo: IndexedSeq[Array[EdgeIndex]] = {
+    val m: Map[E,IndexedSeq[E]] = edges.elements.map(e => e -> e.inputs.map(_.asInstanceOf[E]))(collection.breakOut)
+    edges.createArrayLookup(m)
+  }
 
   calibrate()
 
-  /** Assumes that `e` is already dequeued, and steps is incremented. */
-  private def updateEdge(e: E): Boolean = {
-    val input: IndexedSeq[e.InEdge#TOut] = inputMemo(e).map(n => edgeValue(n).asInstanceOf[e.InEdge#TOut])(collection.breakOut)
+  /** Assumes that `e` is already dequeued, and steps is incremented.
+    * @return True if the edge has been updated. */
+  private def updateEdge(ei: Int): Boolean = {
+    val e: E = edges.backward(ei)
+    val input: IndexedSeq[e.InEdge#TOut] = inputMemo(ei).map(n => state(n).asInstanceOf[e.InEdge#TOut])(collection.breakOut)
     //recalculate
     val newVal: e.TOut = e.compute(input)
-    if(convergenceTest.isConverged(e)(edgeValue(e),newVal)) {
+    if(!convergenceTest.isConverged(e)(state(ei).asInstanceOf[e.TOut],newVal)) {
       //save new state
-      state(edgeIndex(e)) = newVal
+      state(ei) = newVal
       //awake dependent edges
-      dirtyEdges.enqueue(dependentEdges(e).map(e => e -> steps):_*)
-      lastCalibrated(edgeIndex(e)) = steps
+      dependentEdges(ei).foreach(di => dirtyEdges.enqueue(di -> steps))
+      lastCalibrated(ei) = steps
+      steps = steps + 1
       true
     }
     else false
@@ -61,11 +70,10 @@ class FIFOCalibrator[E <: Edge](val problem: Iterable[E])(
 
   def calibrate(): Unit = {
     while(dirtyEdges.nonEmpty && steps < maxSteps){
-      val (e,lastUpdate) = dirtyEdges.dequeue()
-      if(lastUpdate > lastCalibrated(edgeIndex(e))) {
-        //recompute
-        if(updateEdge(e)) //side-effect
-          steps = steps + 1
+      val (ei,lastUpdate) = dirtyEdges.dequeue()
+      if(lastUpdate > lastCalibrated(ei)) {
+        //recompute, side-effect
+        updateEdge(ei)
       }
     }
   }
