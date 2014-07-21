@@ -169,7 +169,7 @@ object LogD extends Ring[Double] {
       i += 1
     }
 
-    //we cannot substract -Inf from -Inf below
+    //we cannot subtract -Inf from -Inf below
     if(max.isNegInfinity)
       return Double.NegativeInfinity
 

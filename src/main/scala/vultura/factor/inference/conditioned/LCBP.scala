@@ -4,7 +4,6 @@ import vultura.factor._
 import vultura.factor.inference.MargParI
 import vultura.factor.inference.calibration._
 import vultura.util._
-import vultura.util.graph.DotGraph
 
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>

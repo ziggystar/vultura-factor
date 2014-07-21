@@ -10,7 +10,7 @@ import vultura.factor.inference.BeliefPropagation
  *
  * @param numConditioned Number of conditioning variables to create.
  * @param influence (Manhatten) Distance the influence of conditioning shall reach.
- * @see vultura.fastfactors.algorithms.conditioned.GScheme
+ * @see vultura.factors.algorithms.conditioned.GScheme
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
  */
 case class GridProblem(width: Int, margin: Int, influence: Int, coupling: Double, numConditioned: Int, seed: Long = 0){

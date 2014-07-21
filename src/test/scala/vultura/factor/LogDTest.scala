@@ -31,8 +31,8 @@ class LogDTest extends Specification with ScalaCheck {
     "normalization" ! (LogD.normalize(AD(log(1),log(2),log(3))).map(exp).sum must be closeTo(1d,1e-5)) ^
     "expectation" ! (LogD.expectation(AD(log(0.2),log(0.8)),AD(10,20)) must be closeTo(18d,1e-5)) ^
     "entropy" ! (LogD.entropy(AD(log(0.2),log(0.8))) must be closeTo(0.5004d,1e-5)) ^
-    "entropy 2" ! (Prop.forAll(distribution) {(dist: Seq[Double]) =>
-      LogD.entropy(LogD.encode(dist.toArray)) must be closeTo(NormalD.entropy(dist.toArray),0.001)
-    }) ^
+    "entropy 2" ! Prop.forAll(distribution) { (dist: Seq[Double]) =>
+      LogD.entropy(LogD.encode(dist.toArray)) must be closeTo(NormalD.entropy(dist.toArray), 0.001)
+    } ^
     "log expectation with zeros" ! (LogD.logExpectation(Array(Double.NegativeInfinity,0), Array(Double.NegativeInfinity,0)) === 0d)
 }

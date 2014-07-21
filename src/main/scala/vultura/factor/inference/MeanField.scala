@@ -60,14 +60,14 @@ class MeanField(val problem: Problem, val tol: Double = 1e-9, val maxIter: Int =
   /** Calibrates the problem with a round-robin schedule according to variable indices.
     * @return `true` if calibration was achieved. */
   def calibrate(cTol: Double, cMaxIter: Int): Boolean = {
-    while(iterations < cMaxIter && !uncalibrated.isEmpty){
+    while(iterations < cMaxIter && uncalibrated.nonEmpty){
       val nextVar = uncalibrated.dequeue()
       if(updateVariable(nextVar)){
         uncalibrated.enqueue(problem.neighboursOf(nextVar).filterNot(uncalibrated.contains).toSeq.sorted:_*)
       }
       iterations += 1
     }
-    !uncalibrated.isEmpty
+    uncalibrated.nonEmpty
   }
 
   def iteration: Int = iterations

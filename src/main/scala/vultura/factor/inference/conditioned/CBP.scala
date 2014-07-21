@@ -125,7 +125,7 @@ object CBP {
   }
 
   object VARIABLE_SELECTION extends Enumeration with TypefulEnum[(BeliefPropagation, Random) => Int]{
-    val MAX_DEGREE, RANDOM, LAST_UPDATE, BACKDOOR, MIN_ENTROPY, LU_BIDI = Value
+    val MAX_DEGREE, RANDOM, LAST_UPDATE, MIN_ENTROPY, LU_BIDI = Value
 
     def variableSelectionHighDegree(bp: BeliefPropagation, random: Random): Int =
       vultura.util.maxByMultiple(bp.problem.variables.toSeq)(bp.problem.degreeOfVariable).pickRandom(random)
@@ -147,14 +147,6 @@ object CBP {
       vultura.util.maxByMultiple(bp.problem.variables.toSeq)(lastBidirectionalUpdate).pickRandom(random)
     }
 
-    def backdoor(bp: BeliefPropagation, random: Random): Int = {
-      val cliques = for {
-        tree <- bp.problem.minDegreeJunctionTrees(random)
-        (clique,_) <- tree.flatten
-      } yield clique
-      vultura.util.maxByMultiple(cliques)(_.size).pickRandom(random).pickRandom(random)
-    }
-
     def maxentropy(bp: BeliefPropagation, random: Random): Int = {
       vultura.util.maxByMultiple(bp.problem.variables.toSeq)(
         v => bp.problem.ring.entropy(bp.variableBelief(v).values)
@@ -166,7 +158,6 @@ object CBP {
       case RANDOM => variableSelectionRandom
       case LAST_UPDATE => variableSelectionSlowestSettler
       case LU_BIDI => lastUpdateBidir
-      case BACKDOOR => backdoor
       case MIN_ENTROPY => maxentropy
     }
   }

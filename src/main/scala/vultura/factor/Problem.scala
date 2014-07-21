@@ -73,10 +73,6 @@ case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[
     ).mkString("\n")
   }
 
-  @deprecated("get rid of this","18")
-  def minDegreeJunctionTrees(random: Random): Seq[Tree[(Set[Int], Seq[Factor])]] =
-    compactJTrees(minDegreeJTs(factors.map(f => f.variables.toSet -> f)))
-
   override def hashCode = {
     import scala.util.hashing.MurmurHash3._
     val mix1: Int = mix(arrayHash(domains), orderedHash(factors))

@@ -5,7 +5,13 @@ import collection.mutable
 import scala.collection.mutable
 
 /**
- * Created by thomas on 18.07.14.
+ * This calibrator can be used for immutable edge types.
+ *
+ * The calibrator itself contains mutable state, and thus is not thread-safe.
+ *
+ * @param maxSteps Run this many edge updates after construction.
+ *
+ * @see Edge, EdgeValues
  */
 class FIFOCalibrator[E <: Edge](val problem: Iterable[E])(
   val convergenceTest: ConvergenceTest[E] = ConvergenceTest.MaxDiff(),

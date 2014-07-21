@@ -1,4 +1,4 @@
-##General purpose utlities - vultura.util
+##General purpose utilities - vultura.util
 
  - types to handle `Array[Array[T: Manifest]]` types identically to `Seq[Seq[T: Manifest]]`
  - some simple statistical pimps on numeric collections like mean, variance, sd

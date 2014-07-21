@@ -4,7 +4,7 @@ import org.specs2._
 import org.specs2.specification.Fragments
 
 /**
- * Test parsing of *.uai files into fastfactor.Problem.
+ * Test parsing of *.uai files into [[vultura.factor.Problem]].
  */
 class UAIParserTest extends Specification {
   def is: Fragments =
