@@ -1,7 +1,7 @@
 package vultura.util
 
 /**
- * Mixin for memoizing hash values of case classes (more generaly products).
+ * Mixin for memoizing hash values of case classes (more generally products).
  * @see scala.Product
  */
 trait HashMemo {self: Product =>

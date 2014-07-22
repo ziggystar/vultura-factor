@@ -45,6 +45,7 @@ object TreeWidth {
     maxes
   }
 
+  /** Min-Degree heuristic that respects domain sizes. */
   final class WeightedMinDegree(domains: Array[Int]) extends OrderingHeuristic[Array[Long]]{
     override def initialState(neighbours: Array[BSType]): Array[Long] = neighbours.map(cliqueCost(_,domains))
 
@@ -59,6 +60,11 @@ object TreeWidth {
       myMaxByMultiple(remaining)(v => -s(v.toInt)).pickRandom(rand).toInt
   }
 
+  /** Returns the product of the domain sizes of the contained indices (variables).
+    * @param bs Bitset containing some variables.
+    * @param domains The domain sizes of all variables.
+    * @return
+    */
   final def cliqueCost(bs: BSType, domains: Array[Int]): Long = {
     var result = 1L
     var nextBit = bs.nextSetBit(0L)
@@ -71,6 +77,7 @@ object TreeWidth {
     result
   }
 
+  /** Min-Fill heuristic. */
   object MinFillHeuristic extends OrderingHeuristic[Array[Long]]{
 
     def fillInCost(v: Int, neighbours: Array[BSType]): Int= {
@@ -105,6 +112,20 @@ object TreeWidth {
       myMaxByMultiple(remaining)(v => -s(v.toInt)).pickRandom(rand).toInt
   }
 
+  /** Computes a variable order for a given hyper-graph.
+    * @see OrderingHeuristic
+    *
+    * @param h The used ordering heuristic.
+    * @param remaining Variables that remain to be eliminated.
+    * @param neighbours For each variable its neighbours. Basically an adjacency-list representation of the graph.
+    * @param state The heuristic state.
+    * @param domains Domain sizes of variables. Used to compute effort for cutoff.
+    * @param cutoff If the effort surpasses this value the search is stopped and None is returned.
+    * @param rand For picking among equal options.
+    * @param acc Accumulator
+    * @tparam S State type of heuristic.
+    * @return A variable order whose cost does not exceed `cutoff`.
+    */
   @tailrec
   final def heuristicDecomposition[S](h: OrderingHeuristic[S])(
     remaining: BSType,
@@ -178,8 +199,10 @@ object TreeWidth {
     is.foreach(result.set(_))
     result
   }
+  def bs2Iterator(bs: util.BitSet): Iterator[Int] = Iterator.iterate(0)(n => bs.nextSetBit(n) + 1).drop(1).map(_ - 1).takeWhile(_ >= 0)
 
   @tailrec
+  @deprecated("use heuristicDecomposition", "22.0.0")
   def minDegreeOrderingAndWidthSlow(cliques: Seq[Set[Int]], acc: List[Int] = Nil, maxSize: Int = 0): (List[Int],Int) = {
     val vertices = cliques.flatten.distinct
     if (vertices.isEmpty) {
@@ -194,13 +217,14 @@ object TreeWidth {
     }
   }
 
-
+  @deprecated("use heuristicDecomposition", "22.0.0")
   def weightedMinDegree(domainSizes: Int => Int): Seq[Set[Int]] => Int => Int = {cliques: Seq[Set[Int]] => v: Int =>
     val neighbours = cliques.foldLeft(Set.empty[Int]){case (acc, edge) => if(edge(v)) acc ++ edge else acc}
     neighbours.foldLeft(1){case (acc, nextVar) => acc * domainSizes(nextVar)}
   }
 
   @tailrec
+  @deprecated("use heuristicDecomposition", "22.0.0")
   def vertexOrdering(selectVariable: Seq[Set[Int]] => Int => Int)(cliques: Seq[Set[Int]], acc: List[Int] = Nil, maxWeight: Int = 0, random: Random = new Random): (List[Int],Int) = {
     val vertices = cliques.flatten.distinct
     if (vertices.isEmpty) {
@@ -212,10 +236,8 @@ object TreeWidth {
     }
   }
 
-
-  def bs2Iterator(bs: util.BitSet): Iterator[Int] = Iterator.iterate(0)(n => bs.nextSetBit(n) + 1).drop(1).map(_ - 1).takeWhile(_ >= 0)
-
   /** This is a rather efficient method to compute a mindegree ordering. */
+  @deprecated("use heuristicDecomposition", "22.0.0")
   def minDegreeOrderingAndWidth(_cliques: IndexedSeq[Set[Int]]): (List[Int],Int) = {
     val cliques = _cliques map intSet2BS
 
@@ -303,6 +325,7 @@ object TreeWidth {
     jtRec(cliques.map{case (vars, a) => leaf((vars, vars, Seq(a)))}, order.toList)
   }
 
+  @deprecated("use heuristicDecomposition", "22.0.0")
   def minDegreeJTs[A](_cliques: IndexedSeq[(Set[Int],A)]): Seq[Tree[(Set[Int],Seq[A])]] = {
     //convert the scala sets to BitSets
     val cliques = _cliques.map(c => intSet2BS(c._1))
@@ -420,7 +443,9 @@ object TreeWidth {
     result
   }
 
+  @deprecated("use heuristicDecomposition", "22.0.0")
   def printJTs[A](trees: Seq[Tree[A]]): String = trees.map(_.draw).mkString("\n---\n")
 
+  @deprecated("use heuristicDecomposition", "22.0.0")
   def minDegreeOrdering(cliques: Seq[Set[Int]]): List[Int] = minDegreeOrderingAndWidth(cliques.toIndexedSeq)._1
 }

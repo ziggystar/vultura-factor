@@ -1,8 +1,5 @@
 package vultura.util
 
-/**
- * Created by thomas on 20.06.14.
- */
 package object stats {
   implicit class RichNumericVector[A](val xs: Iterable[A]) extends AnyVal {
     def mean(implicit ev: Numeric[A]): Double = ev.toDouble(xs.sum) / xs.size
