@@ -1,16 +1,19 @@
-##General purpose utilities - vultura.util
+# Library for probabilistic inference
 
- - types to handle `Array[Array[T: Manifest]]` types identically to `Seq[Seq[T: Manifest]]`
- - some simple statistical pimps on numeric collections like mean, variance, sd
+## Fast Implementation of Sum/Product on Factors
+## Inference Algorithms
+### Exact
 
-##Cross-Product Indexing
+- Junction Tree
+- Variable Elimination
 
- - an optimized cross-product iterator, which can be used to build table-based multi-variate functions
+### Approximate
 
-##vultura.factors
+- Mean field
+- Belief Propagation
+- Conditioned Belief Propagation
+- Locally Conditioned Belief Propagation
 
-##vultura.cnf
+## Parameter Learning
 
-#vultura.graph
-
-- fast min-degree tree-decomposition
+- maximum likelihood for data with hidden variables
