@@ -1,6 +1,12 @@
 # Library for probabilistic inference
 
 ## Fast Implementation of Sum/Product on Factors
+
+See either `vultura.factor.Factor` companion for on-the-fly operations, or
+`vultura.factor.SumProductTask` for operation specifications. The latter
+can be used to persist lookup tables and temporary storage for better performance
+with small operations.
+
 ## Inference Algorithms
 ### Exact
 
