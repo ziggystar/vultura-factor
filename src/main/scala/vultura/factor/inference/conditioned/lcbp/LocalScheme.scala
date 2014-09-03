@@ -1,4 +1,4 @@
-package vultura.factor.inference.conditioned
+package vultura.factor.inference.conditioned.lcbp
 
 import vultura.util._
 import vultura.util.graph.Tree

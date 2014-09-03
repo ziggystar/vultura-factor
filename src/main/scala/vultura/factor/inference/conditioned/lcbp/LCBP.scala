@@ -1,8 +1,9 @@
-package vultura.factor.inference.conditioned
+package vultura.factor.inference.conditioned.lcbp
 
 import vultura.factor._
 import vultura.factor.inference.MargParI
 import vultura.factor.inference.calibration._
+import vultura.factor.inference.conditioned._
 import vultura.util._
 
 /**
@@ -233,15 +234,15 @@ class LCBP(val problem: Problem,
   def edges: Set[LCBPEdge] = Edge.expand[LCBPEdge](LogPartition)
 
 
-  val convTest = new ConvergenceTest[LCBPEdge] {
-    override def isConverged(e: LCBPEdge)(old: e.type#TOut, updated: e.type#TOut): Boolean = ((old,updated) match {
+  object convTest extends ConvergenceTest[LCBPEdge] {
+    def isConverged(e: LCBPEdge)(old: e.type#TOut, updated: e.type#TOut): Boolean = ((old,updated) match {
       case (o: Factor, u: Factor) => vultura.util.maxDiff(o.values,u.values)
       case (o: Array[Double], u: Array[Double]) => vultura.util.maxDiff(o,u)
       case (o: Double, u: Double) => math.abs(o - u)
     }) <= tol
   }
 
-  val initializer = new EdgeValues[LCBPEdge]{
+  object initializer extends EdgeValues[LCBPEdge]{
     override def hasEdge(e: LCBPEdge): Boolean = true
     override def edgeValue(e: LCBPEdge): e.type#TOut = e match {
       case FactorEdge(vars) => Factor.maxEntropy(vars,problem.domains,problem.ring).asInstanceOf[e.TOut]

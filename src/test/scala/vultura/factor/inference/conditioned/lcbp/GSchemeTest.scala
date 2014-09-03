@@ -1,4 +1,4 @@
-package vultura.factor.inference.conditioned
+package vultura.factor.inference.conditioned.lcbp
 
 import org.specs2.Specification
 import org.specs2.specification.Fragments
@@ -7,7 +7,6 @@ import org.specs2.specification.Fragments
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
  */
 class GSchemeTest extends Specification {
-  import LScheme._
 
   val domains = Array.fill(10)(2)
   val threeVars = GScheme(Map(

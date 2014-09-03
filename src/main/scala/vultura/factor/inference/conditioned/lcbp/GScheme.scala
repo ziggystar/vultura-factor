@@ -1,4 +1,6 @@
-package vultura.factor.inference.conditioned
+package vultura.factor.inference.conditioned.lcbp
+
+import vultura.factor.inference.conditioned._
 
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>

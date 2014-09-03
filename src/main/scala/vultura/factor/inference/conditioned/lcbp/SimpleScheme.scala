@@ -1,4 +1,4 @@
-package vultura.factor.inference.conditioned
+package vultura.factor.inference.conditioned.lcbp
 
 import vultura.factor.{Factor, Problem}
 import vultura.util.DomainCPI

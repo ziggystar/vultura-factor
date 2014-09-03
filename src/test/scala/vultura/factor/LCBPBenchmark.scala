@@ -2,6 +2,7 @@ package vultura.factor
 
 import vultura.factor.Benchmarks._
 import vultura.factor.inference.conditioned._
+import vultura.factor.inference.conditioned.lcbp.{GScheme, LCBP}
 
 object LCBPBenchmark {
   case class LCProblem(p: Problem, scheme: GScheme)

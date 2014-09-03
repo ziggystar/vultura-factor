@@ -1,12 +1,12 @@
-package vultura.factor.inference.conditioned
+package vultura.factor.inference.conditioned.lcbp
 
 import org.specs2.Specification
+import org.specs2.matcher.{Expectable, MatchResult, Matcher}
 import org.specs2.specification.Fragments
-import scala.util.Random
-import vultura.factor._
+import vultura.factor.{generators, _}
 import vultura.factor.inference.MeanField
-import vultura.factor.generators
-import org.specs2.matcher.{MatchResult, Expectable, Matcher}
+
+import scala.util.Random
 
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>

@@ -13,7 +13,7 @@ organization := "de.uni-ulm"
 20.0.4: moved code from competition solver into library; added code for OpenBitSet from apache lucene
 21.0.0: extract probabilistic inference code into separate project
 */
-version := "21.0.0"
+version := "22.0.0-DEV"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 

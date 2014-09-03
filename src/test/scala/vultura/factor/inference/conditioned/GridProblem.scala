@@ -1,5 +1,6 @@
 package vultura.factor.inference.conditioned
 
+import vultura.factor.inference.conditioned.lcbp.{DCon, LScheme, GScheme}
 import vultura.factor.{LogD, Problem}
 import scala.util.Random
 import vultura.factor.inference.BeliefPropagation

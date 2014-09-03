@@ -1,4 +1,4 @@
-package vultura.factor.inference.conditioned
+package vultura.factor.inference.conditioned.lcbp
 
 import org.specs2.Specification
 import org.specs2.specification.Fragments

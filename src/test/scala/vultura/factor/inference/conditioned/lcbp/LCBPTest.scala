@@ -1,10 +1,11 @@
-package vultura.factor.inference.conditioned
+package vultura.factor.inference.conditioned.lcbp
 
 import org.specs2.Specification
 import org.specs2.specification.Fragments
 import vultura.factor.Problem
 import vultura.factor.generators._
 import vultura.factor.inference.BeliefPropagation
+import vultura.factor.inference.conditioned.GridProblem
 
 import scala.util.Random
 

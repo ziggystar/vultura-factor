@@ -1,7 +1,8 @@
-package vultura.factor.inference.conditioned
+package vultura.factor.inference.conditioned.lcbp
 
 import vultura.factor._
 import vultura.factor.inference.MargParI
+import vultura.factor.inference.conditioned._
 import vultura.util.IntDomainCPI
 
 import scala.collection.mutable
