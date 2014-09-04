@@ -31,8 +31,11 @@ case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[
     r
   }
 
-  lazy val factorsOfVariable: Array[Array[Factor]] = {
-    val result: Array[Array[Factor]] = degrees.map(new Array[Factor](_))
+  def factorsOfVariable(v: Int): Array[Factor] = factorIOfVariable(v).map(factors)
+
+  /** Contains the indices of incident factors for a given variable. */
+  lazy val factorIOfVariable: Array[Array[Int]] = {
+    val result: Array[Array[Int]] = degrees.map(new Array[Int](_))
     val counter = new Array[Int](numVariables)
     var i = 0
     while(i < factors.size){
@@ -41,7 +44,7 @@ case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[
       val vs = f.variables
       while(ii < vs.size){
         val v = vs(ii)
-        result(v)(counter(v)) = f
+        result(v)(counter(v)) = i
         counter(v) = counter(v) + 1
         ii = ii + 1
       }
