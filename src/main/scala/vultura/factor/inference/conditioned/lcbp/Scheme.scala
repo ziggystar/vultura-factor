@@ -32,13 +32,16 @@ trait Scheme {
 
 /** In a factored scheme, the conditioners of sets of variables are the union of the conditioners of the single variables. */ 
 trait FactoredScheme extends Scheme {
+  def allConditioners: Set[Int]
+
   def conditionVariablesOf(variable: Int): Set[Int]
+
+  def conditionVariables(vs: Set[Int]): Set[Int] = vs.map(conditionVariablesOf).reduce(_ ++_)
   
   def allAssignmentsTo(variables: Set[Int]): Set[GC] =
     variables.foldLeft(Set(Map(): GC)){case (acc, v) =>
       for{c <- acc; value <- 0 until problem.domains(v)} yield c + (v -> value)
     }
   
-  final def conditionersOf(variables: Set[Int]): Set[GC] =
-    allAssignmentsTo(variables.map(conditionVariablesOf).reduce(_ ++ _))
+  final def conditionersOf(variables: Set[Int]): Set[GC] = allAssignmentsTo(conditionVariables(variables))
 }

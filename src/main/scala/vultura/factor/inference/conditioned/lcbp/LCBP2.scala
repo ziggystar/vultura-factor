@@ -1,6 +1,6 @@
 package vultura.factor.inference.conditioned.lcbp
 
-import vultura.factor.{NormalD, SumProductTask, Factor, Problem}
+import vultura.factor._
 import vultura.factor.inference.calibration.MEdge
 
 /** This trait defines the message for LCBP, excluding calculation of the meta problem.
@@ -22,8 +22,7 @@ trait LcbpBase {
     weighted reduce elementWiseSum
   }
 
-
-  sealed trait LcbpMessage extends MEdge {self: Product =>}
+  trait LcbpMessage extends MEdge {self: Product =>}
 
   trait ArrayEdge extends LcbpMessage {self: Product =>
     final type TOut = Array[Double]
@@ -196,3 +195,5 @@ trait LcbpBase {
   /** This must return a double-valued edge that computes the partition function of the meta problem. */
   def cdLogZ: DoubleEdge
 }
+
+
