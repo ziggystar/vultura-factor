@@ -9,8 +9,7 @@ import scala.runtime.ObjectRef
 /**
  * Created by thomas on 05.09.14.
  */
-case class LCBPGeneral(problem: Problem,
-                       scheme: FactoredScheme,
+case class LCBPGeneral(scheme: FactoredScheme,
                        inferer: Problem => MargParI with JointMargI,
                        maxUpdates: Long = 100000,
                        tol: Double = 1e-9) extends LcbpBase with ParFunI {
@@ -31,16 +30,18 @@ case class LCBPGeneral(problem: Problem,
     def isConstant = conditioners.isEmpty
     def sourceEdge(c: C): DoubleEdge
   }
-  case class VariableContribution(vi: Int) extends EnergyContrib {
-    val conditioners: Array[Int] = scheme.conditionersOfVariable(vi).toArray
-
+  //use early initializer for the construction of `mpvariables` in `EnergyContrib`
+  case class VariableContribution(vi: Int) extends {
+    val conditioners: Array[Int] = scheme.conditioners(vi).toArray
+  } with EnergyContrib {
     override def sourceEdge(c: C): DoubleEdge = {
       require(c.keySet == conditioners.toSet)
       FVariable(vi,c)
     }
   }
-  case class FactorContribution(fi: Int) extends EnergyContrib {
+  case class FactorContribution(fi: Int) extends {
     val conditioners: Array[Int] = scheme.conditionersOf(problem.factors(fi).variables.toSet).toArray
+  } with EnergyContrib {
 
     override def sourceEdge(c: C): DoubleEdge = {
       require(c.keySet == conditioners.toSet)

@@ -5,10 +5,11 @@ import vultura.factor.{Var, Problem}
 /** In a factored scheme, the conditioners of sets of variables are the union of the conditioners of the
   * single variables. Thus a `FactoredScheme` is defined by the mapping of each single variable to a
   * set of conditioning variables. */
-case class FactoredScheme(problem: Problem, conditionersOfVariable: Var => Set[Var]) extends Scheme {
-  def allConditioners: Set[Int] = problem.variables.flatMap(conditionersOfVariable)
+case class FactoredScheme(problem: Problem, conditionRelations: Map[Var,Set[Var]] = Map()) extends Scheme {
+  val conditioners: Map[Var, Set[Var]] = conditionRelations.withDefaultValue(Set.empty)
+  def allConditioners: Set[Int] = problem.variables.flatMap(conditioners)
 
-  def conditionersOf(vs: Set[Int]): Set[Int] = vs.map(conditionersOfVariable).reduce(_ ++_)
+  def conditionersOf(vs: Set[Int]): Set[Int] = vs.map(conditioners).reduce(_ ++_)
 
   def allAssignmentsTo(variables: Set[Int]): Set[GC] =
     variables.foldLeft(Set(Map(): GC)){case (acc, v) =>

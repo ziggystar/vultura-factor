@@ -9,8 +9,8 @@ import vultura.factor.inference.calibration.MEdge
 trait LcbpBase {
   type ST <: Scheme
   type C = ST#GC
-  def problem: Problem
   def scheme: ST
+  def problem: Problem = scheme.problem
 
   require(problem.ring == NormalD, "linear combination of messages only implemented for normal domain")
 
