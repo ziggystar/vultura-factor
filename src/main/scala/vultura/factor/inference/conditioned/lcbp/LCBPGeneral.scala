@@ -32,7 +32,7 @@ case class LCBPGeneral(problem: Problem,
     def sourceEdge(c: C): DoubleEdge
   }
   case class VariableContribution(vi: Int) extends EnergyContrib {
-    val conditioners: Array[Int] = scheme.conditionVariablesOf(vi).toArray
+    val conditioners: Array[Int] = scheme.conditionersOfVariable(vi).toArray
 
     override def sourceEdge(c: C): DoubleEdge = {
       require(c.keySet == conditioners.toSet)
@@ -40,7 +40,7 @@ case class LCBPGeneral(problem: Problem,
     }
   }
   case class FactorContribution(fi: Int) extends EnergyContrib {
-    val conditioners: Array[Int] = scheme.conditionVariables(problem.factors(fi).variables.toSet).toArray
+    val conditioners: Array[Int] = scheme.conditionersOf(problem.factors(fi).variables.toSet).toArray
 
     override def sourceEdge(c: C): DoubleEdge = {
       require(c.keySet == conditioners.toSet)
