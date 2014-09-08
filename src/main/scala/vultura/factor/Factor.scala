@@ -148,10 +148,13 @@ object Factor{
    * @return a `FastFactor` with a max entropy distribution over the given variables.
    */
   def deterministicMaxEntropy(variables: Array[Int], deterministic: Map[Int,Int], domains: Array[Int], ring: Ring[Double]): Factor =
+    generalDeterministicMaxEntropy(variables, deterministic.map{case (k,v) => (k,Set(v))}, domains, ring)
+
+  def generalDeterministicMaxEntropy(variables: Array[Int], deterministic: Map[Int,Set[Int]], domains: Array[Int], ring: Ring[Double]): Factor =
     fromFunction(
       variables,
       domains,
-      assign => if(assign.zip(variables).exists{case (value,variable) => deterministic.get(variable).exists(_ != value)}) ring.zero else ring.one
+      assign => if(assign.zip(variables).exists{case (value,variable) => deterministic.get(variable).exists(valids => !valids.contains(value))}) ring.zero else ring.one
     ).normalize(ring)
 
 
