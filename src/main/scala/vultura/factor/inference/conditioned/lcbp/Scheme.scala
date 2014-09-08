@@ -27,5 +27,5 @@ trait Scheme {
   def allowedValuesUnderCondition(variable: Int, condition: GC): Set[Int]
   
   def isVariableEffectedByCondition(variable: Int, condition: GC): Boolean = 
-    allowedValuesUnderCondition(variable, condition).size == problem.domains(variable) 
+    allowedValuesUnderCondition(variable, condition).size != problem.domains(variable)
 }

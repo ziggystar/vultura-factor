@@ -40,6 +40,11 @@ trait LcbpBase {
     def unapply(fe: FactorEdge): Option[Array[Int]] = Some(fe.variables)
   }
 
+  trait BPEdge extends FactorEdge {self: Product =>
+    def v: Int
+    def f: Int
+  }
+
   class DoubleRef(v: Double = 0d) extends Cloneable {
     var value: Double = v
     override def toString: String = value.toString
@@ -82,19 +87,19 @@ trait LcbpBase {
       }
   }
 
-  case class V2F(v: Int, f: Int, vc: C) extends FactorEdge {
+  case class V2F(v: Int, f: Int, vc: C) extends BPEdge {
     override def variables: Array[Int] = Array(v)
 
-    override type InEdge = F2VAgg
+    override type InEdge = BPEdge
 
     override def inputs: IndexedSeq[InEdge] =
       for(of <- problem.factorIOfVariable(v) if of != f)
-      yield F2VAgg(of, v, vc)
+      yield createF2VMessage(of, v, vc)
 
     //The enforcement of the condition
-    val conditionedBelief: Factor = Factor.deterministicMaxEntropy(
+    val conditionedBelief: Factor = Factor.generalDeterministicMaxEntropy(
       Array(v),
-      scheme.allowedValuesUnderCondition(v, vc).map(v -> _).toMap,
+      Map(v -> scheme.allowedValuesUnderCondition(v, vc)),
       problem.domains,
       problem.ring)
 
@@ -105,7 +110,7 @@ trait LcbpBase {
     )
   }
 
-  case class F2V(f: Int, v: Int, fc: C) extends FactorEdge {
+  case class F2V(f: Int, v: Int, fc: C) extends BPEdge {
     override def variables: Array[Int] = Array(v)
 
     override type InEdge = V2F
@@ -120,7 +125,7 @@ trait LcbpBase {
       fixedFactors = Seq(problem.factors(f)))
   }
 
-  case class F2VAgg(f: Int, v: Int, vc: C) extends FactorEdge {
+  case class F2VAgg(f: Int, v: Int, vc: C) extends BPEdge {
     override def variables: Array[Int] = Array(v)
 
     //this takes both F2V, as well as the conditional condition distribution
@@ -140,17 +145,33 @@ trait LcbpBase {
     }
   }
 
+  /** Either build an aggregator or directly connect. */
+  def createF2VMessage(f: Int, v: Int, vc: C): BPEdge =
+    if(scheme.subConditionsOf(vc, problem.factors(f).variables.toSet).size == 1)
+      F2V(f,v,vc)
+    else
+      F2VAgg(f,v,vc)
+
   /** Conditioned variable belief. */
   case class VBel(v: Int, vc: C) extends FactorEdge{
-    override type InEdge = F2VAgg
+    override type InEdge = BPEdge
 
     override def variables: Array[Int] = Array(v)
 
-    override def inputs: IndexedSeq[InEdge] = problem.factorIOfVariable(v).map(F2VAgg(_,v,vc))
+    override def inputs: IndexedSeq[InEdge] = problem.factorIOfVariable(v).map(createF2VMessage(_,v,vc))
+
+    //The enforcement of the condition
+    val conditionedBelief: Factor = Factor.generalDeterministicMaxEntropy(
+      Array(v),
+      Map(v -> scheme.allowedValuesUnderCondition(v, vc)),
+      problem.domains,
+      problem.ring)
 
     /** Just multiply the incoming messages. */
     override def mCompute(): (IndexedSeq[InEdge#TOut], TOut) => Unit =
-      constructSPTask(inputFactors = inputs.map(e => Array(e.v)), retainedVariables = variables)
+      constructSPTask(inputFactors = inputs.map(e => Array(e.v)),
+        retainedVariables = variables,
+        fixedFactors = Seq(conditionedBelief))
   }
 
   /** Conditioned factor belief. */
@@ -178,7 +199,7 @@ trait LcbpBase {
 
     /** These computations don't have to be thread-safe. */
     override def mCompute(): (IndexedSeq[InEdge#TOut], TOut) => Unit = { (vbel,result) =>
-      result.value = math.pow(problem.ring.entropy(vbel(0)), 1 - problem.degreeOfVariable(v))
+      result.value = problem.ring.entropy(vbel(0)) * (1 - problem.degreeOfVariable(v))
     }
   }
 
@@ -190,7 +211,8 @@ trait LcbpBase {
     /** These computations don't have to be thread-safe. */
     override def mCompute(): (IndexedSeq[InEdge#TOut], DoubleRef) => Unit = {(fbel,result) =>
       val dist: Array[Double] = fbel(0)
-      problem.ring.entropy(dist) + problem.ring.logExpectation(dist,problem.factors(f).values)
+      val energy = problem.ring.entropy(dist) + problem.ring.logExpectation(dist,problem.factors(f).values)
+      result.value = energy
     }
   }
 

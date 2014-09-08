@@ -146,7 +146,7 @@ case class LCBPGeneral(scheme: FactoredScheme,
     }) <= tol
   }
 
-  val calibrator: Calibrated[LcbpMessage] = new MutableFIFOCalibrator[LcbpMessage](cp)(
+  val calibrator: MutableFIFOCalibrator[LcbpMessage] = new MutableFIFOCalibrator[LcbpMessage](cp)(
     convTest,
     maxUpdates,
     initializer)

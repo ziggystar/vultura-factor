@@ -1,6 +1,7 @@
 package vultura.factor.inference.calibration
 
 import vultura.util._
+import vultura.util.graph.DotGraph
 
 import scala.collection.mutable
 
@@ -128,4 +129,14 @@ class MutableFIFOCalibrator[E <: MEdge](val problem: Iterable[E])(
 
     override def edgeValue(e: E): e.type#TOut = values(index(e)).asInstanceOf[e.TOut]
   }
+
+  def toDot: DotGraph[Int] = DotGraph(
+    edges = for{
+      (preds,succ) <- predecessors.zipWithIndex
+      pred <- preds
+    } yield pred -> succ,
+    graphName = "MutableFIFOCalibrator"
+  ).nodeLabeled(ei =>
+    s"${edges(ei)}: ${state(ei)}"
+    )
 }
