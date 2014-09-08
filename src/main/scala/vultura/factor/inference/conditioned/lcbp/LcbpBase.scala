@@ -36,6 +36,10 @@ trait LcbpBase {
     def makeFactor(t: TOut): Factor = Factor(variables.clone(),t.clone())
   }
 
+  object FactorEdge{
+    def unapply(fe: FactorEdge): Option[Array[Int]] = Some(fe.variables)
+  }
+
   trait DoubleEdge extends LcbpMessage {self: Product =>
     class DoubleRef(v: Double = 0d) extends Cloneable {
       var value: Double = v

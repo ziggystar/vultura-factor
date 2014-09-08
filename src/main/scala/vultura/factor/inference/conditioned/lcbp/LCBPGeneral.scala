@@ -1,5 +1,6 @@
 package vultura.factor.inference.conditioned.lcbp
 
+import vultura.factor.inference.calibration._
 import vultura.factor.{Val, Factor, LogD, Problem}
 import vultura.factor.inference.{ParFunI, MargParI, JointMargI}
 import vultura.util.{SSet, ArrayIndex}
@@ -128,6 +129,28 @@ case class LCBPGeneral(scheme: FactoredScheme,
   /** This must return a double-valued edge that computes the probability of condition `fc` given condition `vc`. */
   override def ccp(fc: C, vc: C): DoubleEdge = CCP(fc,vc)
 
+  val cp: Set[LcbpMessage] = Edge.expand(cdLogZ)
+
+  object initializer extends EdgeValues[LcbpMessage]{
+    override def hasEdge(e: LcbpMessage): Boolean = true
+    override def edgeValue(e: LcbpMessage): e.type#TOut = e match {
+      case FactorEdge(vars) => Factor.maxEntropy(vars,problem.domains,problem.ring).asInstanceOf[e.TOut]
+      case ve: DoubleEdge => problem.ring.one.asInstanceOf[e.TOut]
+    }
+  }
+
+  object convTest extends ConvergenceTest[LcbpMessage] {
+    def isConverged(e: LcbpMessage)(old: e.type#TOut, updated: e.type#TOut): Boolean = ((old,updated) match {
+      case (o: Array[Double], u: Array[Double]) => vultura.util.maxDiff(o,u)
+      case (o: DoubleEdge#DoubleRef, u: DoubleEdge#DoubleRef) => math.abs(o.value - u.value)
+    }) <= tol
+  }
+
+  val calibrator: Calibrated[LcbpMessage] = new MutableFIFOCalibrator[LcbpMessage](cp)(
+    convTest,
+    maxUpdates,
+    initializer)
+
   /** @return Partition function in encoding specified by `ring`. */
-  override def Z: Double = ???
+  override def Z: Double = math.exp(calibrator.edgeValue(cdLogZ).value)
 }
