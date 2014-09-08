@@ -49,7 +49,10 @@ package object generators {
       Factor.fromFunction(variables,domains,assignment => math.exp(-assignment.toSet.size * theta)).normalize(NormalD)
   }
 
-  def grid(width: Int, height: Int, domainSize: Int, factorGenerator: FactorGenerator, random: Random = new Random(0)): Problem = {
+  def grid(width: Int, height: Int,
+           domainSize: Int = 2,
+           factorGenerator: FactorGenerator = expGauss(1),
+           random: Random = new Random(0)): Problem = {
     val variables: Map[(Int, Int), Int] = (for (x <- 0 until width; y <- 0 until height) yield (x, y)).zipWithIndex.toMap
     val domains = Array.fill(variables.size)(domainSize)
     val horizontalPairs =
