@@ -135,14 +135,16 @@ case class LCBPGeneral(scheme: FactoredScheme,
     override def hasEdge(e: LcbpMessage): Boolean = true
     override def edgeValue(e: LcbpMessage): e.type#TOut = e match {
       case FactorEdge(vars) => Factor.maxEntropy(vars,problem.domains,problem.ring).asInstanceOf[e.TOut]
-      case ve: DoubleEdge => problem.ring.one.asInstanceOf[e.TOut]
+      case ve: DoubleEdge => new DoubleRef(problem.ring.one).asInstanceOf[e.TOut]
+      case mp: MetaProblem.type => e.create
     }
   }
 
   object convTest extends ConvergenceTest[LcbpMessage] {
     def isConverged(e: LcbpMessage)(old: e.type#TOut, updated: e.type#TOut): Boolean = ((old,updated) match {
       case (o: Array[Double], u: Array[Double]) => vultura.util.maxDiff(o,u)
-      case (o: DoubleEdge#DoubleRef, u: DoubleEdge#DoubleRef) => math.abs(o.value - u.value)
+      case (o: DoubleRef, u: DoubleRef) => math.abs(o.value - u.value)
+      case (o: ObjectRef[MetaProblem.type], u: ObjectRef[MetaProblem.type]) => Double.PositiveInfinity //hope this works
     }) <= tol
   }
 

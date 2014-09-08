@@ -40,13 +40,13 @@ trait LcbpBase {
     def unapply(fe: FactorEdge): Option[Array[Int]] = Some(fe.variables)
   }
 
-  trait DoubleEdge extends LcbpMessage {self: Product =>
-    class DoubleRef(v: Double = 0d) extends Cloneable {
-      var value: Double = v
-      override def toString: String = value.toString
-      override def clone(): AnyRef = new DoubleRef(value)
-    }
+  class DoubleRef(v: Double = 0d) extends Cloneable {
+    var value: Double = v
+    override def toString: String = value.toString
+    override def clone(): AnyRef = new DoubleRef(value)
+  }
 
+  trait DoubleEdge extends LcbpMessage {self: Product =>
     final type TOut = DoubleRef
     def create: TOut = new DoubleRef()
     def copy(t: TOut): TOut = new DoubleRef(t.value)
