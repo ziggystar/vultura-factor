@@ -53,7 +53,6 @@ case class LCBPGeneral(scheme: FactoredScheme,
   //we already drop constant factors here
   val contributions: IndexedSeq[EnergyContrib] =
     (problem.variableRange.map(VariableContribution) ++ (0 until problem.factors.size).map(FactorContribution))
-      .filterNot(_.isConstant)
 
   private val ssetOfMPCliques: SSet[Int] = new SSet(contributions.map(_.mpVariables.toSet).toSet)
   /** The cliques of variables of the meta problem.
@@ -134,7 +133,7 @@ case class LCBPGeneral(scheme: FactoredScheme,
   object initializer extends EdgeValues[LcbpMessage]{
     override def hasEdge(e: LcbpMessage): Boolean = true
     override def edgeValue(e: LcbpMessage): e.type#TOut = e match {
-      case FactorEdge(vars) => Factor.maxEntropy(vars,problem.domains,problem.ring).asInstanceOf[e.TOut]
+      case FactorEdge(vars) => Factor.maxEntropy(vars,problem.domains,problem.ring).values.asInstanceOf[e.TOut]
       case ve: DoubleEdge => new DoubleRef(problem.ring.one).asInstanceOf[e.TOut]
       case mp: MetaProblem.type => e.create
     }

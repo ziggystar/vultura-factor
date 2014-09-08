@@ -17,6 +17,8 @@ class MutableFIFOCalibrator[E <: MEdge](val problem: Iterable[E])(
   class EdgeData[ET <: E](val e: ET) {
     val inputSpace = new mutable.ArraySeq[e.InEdge#TOut](e.inputs.size)
     val computation: (IndexedSeq[e.InEdge#TOut], e.TOut) => Unit = e.mCompute()
+
+    override def toString: String = s"ED: $e"
   }
 
   type Out = E#TOut
