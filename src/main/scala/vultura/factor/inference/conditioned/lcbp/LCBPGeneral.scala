@@ -1,14 +1,13 @@
 package vultura.factor.inference.conditioned.lcbp
 
 import vultura.factor.inference.calibration._
-import vultura.factor.{Val, Factor, LogD, Problem}
+import vultura.factor._
 import vultura.factor.inference.{ParFunI, MargParI, JointMargI}
 import vultura.util.{SSet, ArrayIndex}
 
 import scala.runtime.ObjectRef
 
-/**
- * Created by thomas on 05.09.14.
+/** LCBP inference where inference on the meta problem can be any inference algorithm.
  */
 case class LCBPGeneral(scheme: FactoredScheme,
                        inferer: Problem => MargParI with JointMargI,
@@ -88,10 +87,10 @@ case class LCBPGeneral(scheme: FactoredScheme,
     override def copy(t: TOut): TOut = new ObjectRef(t.elem)
 
     /** Only has to create the value container (e.g. an array); the value will be taken from elsewhere. */
-    override def create: TOut = new ObjectRef(inferer(Problem(IndexedSeq(),Array(),metaRing)))
+    override def create: TOut = new ObjectRef(inferer(buildProblem(IndexedSeq.fill(inputs.size)(metaRing.one))))
 
     //input are all variable and factor contributions to the free energy
-    override def inputs: IndexedSeq[DoubleEdge] = contributionValues.map{case (contr,c) => contr.sourceEdge(c)}
+    override val inputs: IndexedSeq[DoubleEdge] = contributionValues.map{case (contr,c) => contr.sourceEdge(c)}
 
     /** These computations don't have to be thread-safe. */
     override def mCompute(): (IndexedSeq[InEdge#TOut], TOut) => Unit = {
@@ -119,8 +118,8 @@ case class LCBPGeneral(scheme: FactoredScheme,
     /** These computations don't have to be thread-safe. */
     override def mCompute(): (IndexedSeq[InEdge#TOut], TOut) => Unit = { (ins,resultRef) =>
       val infResult: MargParI with JointMargI = ins(0).elem
-      val belief = infResult.cliqueBelief(clique).normalize(metaRing)
-      val summed = Factor.multiplyRetain(metaRing)(mcDomains)(Seq(belief),vcVariablesMP)
+      val belief = infResult.decodedCliqueBelief(clique)
+      val summed = Factor.multiplyRetain(NormalD)(mcDomains)(Seq(belief),vcVariablesMP)
       resultRef.value = summed.eval(vcCondition, mcDomains)
     }
   }
