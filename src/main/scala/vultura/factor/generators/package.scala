@@ -51,7 +51,7 @@ package object generators {
 
   def grid(width: Int, height: Int,
            domainSize: Int = 2,
-           factorGenerator: FactorGenerator = expGauss(1),
+           factorGenerator: FactorGenerator = expGauss(),
            random: Random = new Random(0)): Problem = {
     val variables: Map[(Int, Int), Int] = (for (x <- 0 until width; y <- 0 until height) yield (x, y)).zipWithIndex.toMap
     val domains = Array.fill(variables.size)(domainSize)
@@ -68,8 +68,8 @@ package object generators {
   def randomK(numVariables: Int,
               numFactors: Int,
               factorSize: Int,
-              domainSize: Int,
-              factorGenerator: FactorGenerator,
+              domainSize: Int = 2,
+              factorGenerator: FactorGenerator = expGauss(),
               random: Random = new Random(0)): Problem = {
     val domains = Array.fill(numVariables)(domainSize)
     def genFactorVariables: Array[Int] = Iterator
@@ -80,8 +80,8 @@ package object generators {
   }
   def treeK(numFactors: Int,
             k: Int,
-            domainSize: Int,
-            fgen: FactorGenerator,
+            domainSize: Int = 2,
+            fgen: FactorGenerator = expGauss(),
             random: Random = new Random(0)): Problem = {
     val numVars = numFactors * (k-1) + 1
     val domains = Array.fill(numVars)(domainSize)
