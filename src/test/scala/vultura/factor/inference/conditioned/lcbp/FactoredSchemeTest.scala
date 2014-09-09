@@ -32,6 +32,8 @@ class FactoredSchemeTest extends Specification {
     "maximum loop length constructor" ^
       "zero loop length" !
         (FactoredScheme.withAllLoopsOfLength(Set(0),0,grid(2,2)).conditionersOf(Set(0)) === Set(0)) ^
-      "loops of length one" !
-        (FactoredScheme.withAllLoopsOfLength(Set(0),1,grid(2,2)).conditionersOf(Set(0)) === Set(0,1,2,3))
+      "don't find loop in 2x2 when limit is 3" !
+        (FactoredScheme.withAllLoopsOfLength(Set(0),3,grid(2,2)).conditionersOf(Set(0)) === Set(0)) ^
+      "find loop in 2x2 with limit 4" !
+        (FactoredScheme.withAllLoopsOfLength(Set(0),4,grid(2,2)).conditionersOf(Set(0)) === Set(0,1,2,3))
 }

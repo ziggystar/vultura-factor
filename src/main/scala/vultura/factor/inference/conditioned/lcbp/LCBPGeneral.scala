@@ -2,7 +2,7 @@ package vultura.factor.inference.conditioned.lcbp
 
 import vultura.factor.inference.calibration._
 import vultura.factor._
-import vultura.factor.inference.{ParFunI, MargParI, JointMargI}
+import vultura.factor.inference.{JunctionTree, ParFunI, MargParI, JointMargI}
 import vultura.util.{SSet, ArrayIndex}
 
 import scala.runtime.ObjectRef
@@ -10,7 +10,7 @@ import scala.runtime.ObjectRef
 /** LCBP inference where inference on the meta problem can be any inference algorithm.
  */
 case class LCBPGeneral(scheme: FactoredScheme,
-                       inferer: Problem => MargParI with JointMargI,
+                       inferer: Problem => MargParI with JointMargI = p => new JunctionTree(p),
                        maxUpdates: Long = 100000,
                        tol: Double = 1e-9) extends LcbpBase with ParFunI {
   //the scheme type we require
@@ -74,7 +74,7 @@ case class LCBPGeneral(scheme: FactoredScheme,
     Problem(
       factors = for {
         scope <- maxSet
-        contribFactors = contributions.filter(_.conditioners.forall(scope.contains)).map(buildFactor)
+        contribFactors = contributions.filter(_.mpVariables.forall(scope.contains)).map(buildFactor)
       } yield Factor.multiply(metaRing)(mcDomains)(contribFactors),
       domains = mcDomains,
       ring = metaRing)
