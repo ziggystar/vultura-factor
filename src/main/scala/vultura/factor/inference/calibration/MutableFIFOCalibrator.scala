@@ -136,7 +136,8 @@ class MutableFIFOCalibrator[E <: MEdge](val problem: Iterable[E])(
       pred <- preds
     } yield pred -> succ,
     graphName = "MutableFIFOCalibrator"
-  ).nodeLabeled(ei =>
-    s"${edges(ei)}: ${state(ei)}"
-    )
+  ).nodeLabeled { ei =>
+    val edge: E = edges(ei)
+    s"$edge\\n ${edge.prettyPrint(edgeValue(edge))}"
+  }
 }
