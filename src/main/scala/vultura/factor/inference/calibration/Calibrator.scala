@@ -10,6 +10,7 @@ trait Edge extends HashMemo {self: Product =>
   def inputs: IndexedSeq[InEdge]
   def compute(ins: IndexedSeq[InEdge#TOut]): TOut
   def prettyPrint(t: TOut): String = t.toString
+  def dotNodeOption: Seq[String] = Seq()
 }
 
 object Edge{

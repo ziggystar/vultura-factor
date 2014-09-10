@@ -33,6 +33,8 @@ case class FactoredScheme(problem: Problem, conditionRelations: Map[Var,Set[Var]
     condition.get(variable).map(Set(_)).getOrElse((0 until problem.domains(variable)).toSet)
 
   final def conditionsOf(variables: Set[Int]): Set[GC] = allAssignmentsTo(conditionersOf(variables))
+
+  def toGScheme: GScheme = GScheme(conditionRelations,problem.domains)
 }
 
 object FactoredScheme{

@@ -22,11 +22,14 @@ trait LcbpBase {
     weighted reduce elementWiseSum
   }
 
-  trait LcbpMessage extends MEdge {self: Product =>}
+  trait LcbpMessage extends MEdge {self: Product =>
+    def drawColor: String = "black"
+    override def dotNodeOption: Seq[String] = super.dotNodeOption :+ s"color = $drawColor"
+  }
 
   trait ArrayEdge extends LcbpMessage {self: Product =>
     final type TOut = Array[Double]
-    override def prettyPrint(t: TOut): String = t.map(x => f"$x%.2f").mkString(",")
+    override def prettyPrint(t: TOut): String = t.map(x => f"$x%.4f").mkString(",")
   }
 
   trait FactorEdge extends ArrayEdge {self: Product =>
@@ -57,7 +60,7 @@ trait LcbpBase {
     def create: TOut = new DoubleRef()
     def copy(t: TOut): TOut = new DoubleRef(t.value)
 
-    override def prettyPrint(t: TOut): String = f"${t.value}%.2f"
+    override def prettyPrint(t: TOut): String = f"${t.value}%.4f"
   }
 
   /** Construct a [[SumProductTask]].
@@ -111,6 +114,10 @@ trait LcbpBase {
       retainedVariables = Array(v),
       fixedFactors = if(scheme.isVariableEffectedByCondition(v,vc)) Seq(conditionedBelief) else Seq()
     )
+
+    override def dotNodeOption: Seq[String] = super.dotNodeOption :+ "color = red"
+
+    override def drawColor: String = "red"
   }
 
   case class F2V(f: Int, v: Int, fc: C) extends BPEdge {
@@ -126,6 +133,8 @@ trait LcbpBase {
       inputFactors = inputs.map(x => Array(x.v)),
       retainedVariables = Array(v),
       fixedFactors = Seq(problem.factors(f)))
+
+    override def drawColor: String = "blue"
   }
 
   case class F2VAgg(f: Int, v: Int, vc: C) extends BPEdge {
@@ -146,6 +155,8 @@ trait LcbpBase {
         val myResult = linearCombination(weights,messages)
         System.arraycopy(myResult,0,result,0,myResult.length)
     }
+
+    override def drawColor: String = "blue3"
   }
 
   /** Either build an aggregator or directly connect. */
@@ -190,6 +201,7 @@ trait LcbpBase {
       inputFactors = inputs.map(x => Array(x.v)),
       retainedVariables = variables,
       fixedFactors = Seq(problem.factors(f)))
+
   }
   
   /** The contribution the the average energy from this variable.
@@ -204,6 +216,8 @@ trait LcbpBase {
     override def mCompute(): (IndexedSeq[InEdge#TOut], TOut) => Unit = { (vbel,result) =>
       result.value = problem.ring.entropy(vbel(0)) * (1 - problem.degreeOfVariable(v))
     }
+
+    override def drawColor: String = "coral"
   }
 
   case class FFactor(f: Int, fc: C) extends DoubleEdge{
@@ -217,6 +231,8 @@ trait LcbpBase {
       val energy = problem.ring.entropy(dist) + problem.ring.logExpectation(dist,problem.factors(f).values)
       result.value = energy
     }
+
+    override def drawColor: String = "aquamarine"
   }
 
   /** This must return a double-valued edge that computes the probability of condition `fc` given condition `vc`. */

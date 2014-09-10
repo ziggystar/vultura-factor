@@ -39,7 +39,13 @@ class LCBPTest extends Specification {
       "random structure" ! convergedAndExactTo(new LCBP(rand1,slightlyConditioned(rand1,0),1e-9,10000), 1e-2) ^
       "overlapping influences" ^
       "bug, threw an exception" ! convergedAndExactTo(new LCBP(overlappingGrid.problem,overlappingGrid.gscheme, maxIterations = 100000),0.1) ^
-      "small grid" ! convergedAndExactTo(new LCBP(overlappingGridSmall.problem,overlappingGridSmall.gscheme, maxIterations = 100000),0.1)
+      "small grid" ! convergedAndExactTo(new LCBP(overlappingGridSmall.problem,overlappingGridSmall.gscheme, maxIterations = 100000),0.1) ^
+    p^
+    "exactness on trees" ^
+      "chain l=5" ! {
+        val p = grid(3,1)
+        new LCBP(p,FactoredScheme(p,Map(1->Set(1))).toGScheme).logZ must beCloseTo(p.logZ, 1e-6)
+      }
 
   def convergedAndExactTo(lcbp:LCBP, tol: Double) = (lcbp.calibrator.isConverged must beTrue) and (lcbp.logZ must beCloseTo(lcbp.problem.logZ, tol))
 }
