@@ -111,16 +111,16 @@ case class LCBPGeneral(scheme: FactoredScheme,
     override type InEdge = MetaProblem.type
     override def inputs: IndexedSeq[InEdge] = IndexedSeq(MetaProblem)
     val clique: Array[Int] = ssetOfMPCliques.maximalSuperSetsOf(fc.keySet.map(mcVariablesIdx.forward)).head.toArray
-    private val vcVariables: Array[Int] = vc.keySet.toArray
-    val vcCondition: Array[Val] = vcVariables.map(vc)
+    val fcVariables: Array[Int] = fc.keySet.toArray
+    val fcCondition: Array[Val] = fcVariables.map(fc)
     //an ordering of the conditioners in vc as variables of the meta problem
-    val vcVariablesMP: Array[Int] = vcVariables.map(mcVariablesIdx.forward)
+    val fcVariablesMP: Array[Int] = fcVariables.map(mcVariablesIdx.forward)
     /** These computations don't have to be thread-safe. */
     override def mCompute(): (IndexedSeq[InEdge#TOut], TOut) => Unit = { (ins,resultRef) =>
       val infResult: MargParI with JointMargI = ins(0).elem
       val belief = infResult.decodedCliqueBelief(clique)
-      val summed = Factor.multiplyRetain(NormalD)(mcDomains)(Seq(belief),vcVariablesMP)
-      resultRef.value = summed.eval(vcCondition, mcDomains)
+      val summed = Factor.multiplyRetain(NormalD)(mcDomains)(Seq(belief),fcVariablesMP)
+      resultRef.value = summed.eval(fcCondition, mcDomains)
     }
   }
 

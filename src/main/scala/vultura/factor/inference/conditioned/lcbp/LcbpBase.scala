@@ -26,6 +26,7 @@ trait LcbpBase {
 
   trait ArrayEdge extends LcbpMessage {self: Product =>
     final type TOut = Array[Double]
+    override def prettyPrint(t: TOut): String = t.map(x => f"$x%.2f").mkString(",")
   }
 
   trait FactorEdge extends ArrayEdge {self: Product =>
@@ -55,6 +56,8 @@ trait LcbpBase {
     final type TOut = DoubleRef
     def create: TOut = new DoubleRef()
     def copy(t: TOut): TOut = new DoubleRef(t.value)
+
+    override def prettyPrint(t: TOut): String = f"${t.value}%.2f"
   }
 
   /** Construct a [[SumProductTask]].
