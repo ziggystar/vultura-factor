@@ -19,14 +19,14 @@ case class LCBPGeneral(scheme: FactoredScheme,
   val metaRing = LogD
 
   /** Maps the index of the conditioners in the original problem to a new index in the meta problem. */
-  val mcVariablesIdx = new ArrayIndex[Int](scheme.allConditioners)
+  val mcVariablesIdx = new ArrayIndex[Int](scheme.allConditioners.toSeq.sorted)
 
   val mcDomains: Array[Int] = mcVariablesIdx.elements.map(problem.domains)(collection.breakOut)
 
   sealed trait EnergyContrib {
     /** The index of the influencing conditioners within the original problem. */
     def conditioners: Array[Int]
-    val mpVariables: Array[Int] = conditioners.map(mcVariablesIdx.forward)
+    lazy val mpVariables: Array[Int] = conditioners.map(mcVariablesIdx.forward)
     def isConstant = conditioners.isEmpty
     def sourceEdge(c: C): DoubleEdge
   }
@@ -40,7 +40,8 @@ case class LCBPGeneral(scheme: FactoredScheme,
     }
   }
   case class FactorContribution(fi: Int) extends {
-    val conditioners: Array[Int] = scheme.conditionersOf(problem.factors(fi).variables.toSet).toArray
+    val conditioners: Array[Int] =
+      scheme.conditionersOf(problem.factors(fi).variables.toSet).toArray
   } with EnergyContrib {
 
     override def sourceEdge(c: C): DoubleEdge = {
@@ -110,14 +111,15 @@ case class LCBPGeneral(scheme: FactoredScheme,
   case class CCP(fc: C, vc: C) extends DoubleEdge{
     override type InEdge = MetaProblem.type
     override def inputs: IndexedSeq[InEdge] = IndexedSeq(MetaProblem)
-    val clique: Array[Int] = ssetOfMPCliques.maximalSuperSetsOf(fc.keySet.map(mcVariablesIdx.forward)).head.toArray
-    val fcVariables: Array[Int] = fc.keySet.toArray
+    val clique: Array[Int] = ssetOfMPCliques.maximalSuperSetsOf(fc.keySet.map(mcVariablesIdx.forward)).head.toArray.sorted
+    val fcVariables: Array[Int] = fc.keySet.toArray.sorted
     val fcCondition: Array[Val] = fcVariables.map(fc)
     //an ordering of the conditioners in vc as variables of the meta problem
     val fcVariablesMP: Array[Int] = fcVariables.map(mcVariablesIdx.forward)
     /** These computations don't have to be thread-safe. */
     override def mCompute(): (IndexedSeq[InEdge#TOut], TOut) => Unit = { (ins,resultRef) =>
-      val infResult: MargParI with JointMargI = ins(0).elem
+      val infResult: MargParI with JointMargI = ins(0
+      ).elem
       val belief = infResult.decodedCliqueBelief(clique)
       val summed = Factor.multiplyRetain(NormalD)(mcDomains)(Seq(belief),fcVariablesMP)
       resultRef.value = summed.eval(fcCondition, mcDomains)

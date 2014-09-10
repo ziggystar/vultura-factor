@@ -25,10 +25,10 @@ licenses += "MIT" -> url("http://opensource.org/licenses/MIT")
 
 scalaVersion := "2.11.1"
 
-//asserions are only used in tests
+//assertions are only used in tests
 scalacOptions in Compile += "-Xdisable-assertions"
 
-libraryDependencies += "de.uni-ulm" %% "vultura-util" % "22.0.0"
+libraryDependencies += "de.uni-ulm" %% "vultura-util" % "23.0.0"
 
 libraryDependencies += "org.apache.commons" % "commons-math3" % "3.2"
 

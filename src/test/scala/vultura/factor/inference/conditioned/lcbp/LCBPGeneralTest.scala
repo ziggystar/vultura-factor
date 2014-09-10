@@ -53,6 +53,4 @@ class LCBPGeneralTest extends Specification {
     val p = grid(30,1)
     new LCBPGeneral(FactoredScheme.withMaxDistance(Set(15),5,p)).logZ must beCloseTo(p.logZ, 1e-6)
   }
-
-
 }

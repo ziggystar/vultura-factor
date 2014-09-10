@@ -98,12 +98,12 @@ trait LcbpBase {
 
     override type InEdge = BPEdge
 
-    override def inputs: IndexedSeq[InEdge] =
+    lazy val inputs: IndexedSeq[InEdge] =
       for(of <- problem.factorIOfVariable(v) if of != f)
       yield createF2VMessage(of, v, vc)
 
     //The enforcement of the condition
-    val conditionedBelief: Factor = Factor.generalDeterministicMaxEntropy(
+    lazy val conditionedBelief: Factor = Factor.generalDeterministicMaxEntropy(
       Array(v),
       Map(v -> scheme.allowedValuesUnderCondition(v, vc)),
       problem.domains,
@@ -125,7 +125,7 @@ trait LcbpBase {
 
     override type InEdge = V2F
 
-    override def inputs: IndexedSeq[InEdge] =
+    lazy val inputs: IndexedSeq[InEdge] =
       for(ov <- problem.factors(f).variables if ov != v)
       yield V2F(ov,f,scheme.superConditionOf(fc, Set(ov)))
 
@@ -143,9 +143,9 @@ trait LcbpBase {
     //this takes both F2V, as well as the conditional condition distribution
     override type InEdge = LcbpMessage
 
-    val subconditions: IndexedSeq[C] = scheme.subConditionsOf(vc, problem.factors(f).variables.toSet).toIndexedSeq
+    lazy val subconditions: IndexedSeq[C] = scheme.subConditionsOf(vc, problem.factors(f).variables.toSet).toIndexedSeq
 
-    override def inputs: IndexedSeq[InEdge] = subconditions.map(ccp(_,vc)) ++ subconditions.map(F2V(f,v,_))
+    lazy val inputs: IndexedSeq[InEdge] = subconditions.map(ccp(_,vc)) ++ subconditions.map(F2V(f,v,_))
 
     /** These computations don't have to be thread-safe. */
     override def mCompute(): (IndexedSeq[InEdge#TOut], TOut) => Unit = {
@@ -170,12 +170,12 @@ trait LcbpBase {
   case class VBel(v: Int, vc: C) extends FactorEdge{
     override type InEdge = BPEdge
 
-    override def variables: Array[Int] = Array(v)
+    val variables: Array[Int] = Array(v)
 
-    override def inputs: IndexedSeq[InEdge] = problem.factorIOfVariable(v).map(createF2VMessage(_,v,vc))
+    lazy val inputs: IndexedSeq[InEdge] = problem.factorIOfVariable(v).map(createF2VMessage(_,v,vc))
 
     //The enforcement of the condition
-    val conditionedBelief: Factor = Factor.generalDeterministicMaxEntropy(
+    lazy val conditionedBelief: Factor = Factor.generalDeterministicMaxEntropy(
       Array(v),
       Map(v -> scheme.allowedValuesUnderCondition(v, vc)),
       problem.domains,
@@ -194,7 +194,7 @@ trait LcbpBase {
 
     override type InEdge = V2F
 
-    override def inputs: IndexedSeq[InEdge] = variables.map(v => V2F(v,f,scheme.superConditionOf(fc,Set(v))))
+    lazy val inputs: IndexedSeq[InEdge] = variables.map(v => V2F(v,f,scheme.superConditionOf(fc,Set(v))))
 
     /** These computations don't have to be thread-safe. */
     override def mCompute(): (IndexedSeq[TOut], TOut) => Unit = constructSPTask(
@@ -210,7 +210,7 @@ trait LcbpBase {
   case class FVariable(v: Int, vc: C) extends DoubleEdge{
     override type InEdge = VBel
 
-    override def inputs: IndexedSeq[InEdge] = IndexedSeq(VBel(v,vc))
+    lazy val inputs: IndexedSeq[InEdge] = IndexedSeq(VBel(v,vc))
 
     /** These computations don't have to be thread-safe. */
     override def mCompute(): (IndexedSeq[InEdge#TOut], TOut) => Unit = { (vbel,result) =>
@@ -223,7 +223,7 @@ trait LcbpBase {
   case class FFactor(f: Int, fc: C) extends DoubleEdge{
     override type InEdge = FBel
 
-    override def inputs: IndexedSeq[InEdge] = IndexedSeq(FBel(f,fc))
+    lazy val inputs: IndexedSeq[InEdge] = IndexedSeq(FBel(f,fc))
     
     /** These computations don't have to be thread-safe. */
     override def mCompute(): (IndexedSeq[InEdge#TOut], DoubleRef) => Unit = {(fbel,result) =>

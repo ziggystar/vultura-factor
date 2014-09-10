@@ -162,7 +162,8 @@ object Factor{
     Factor(variables, ring.normalize(Array.fill(variables.foldLeft(1)(_ * domains(_)))(ring.one))).normalize(ring)
 
   def fromFunction(variables: Array[Int], domains: Array[Int], f: Array[Int] => Double): Factor =
-    Factor(variables, new IntDomainCPI(variables.map(v => Array.range(0,domains(v)))).map(f)(collection.breakOut))
+    orderIfNecessary(variables, new IntDomainCPI(variables.map(v => Array.range(0,domains(v)))).map(f)(collection.breakOut), domains)
+
 
   def orderIfNecessary(variables: Array[Int], values: Array[Double], domains: Array[Int]): Factor = {
     val ordered = variables.sorted
