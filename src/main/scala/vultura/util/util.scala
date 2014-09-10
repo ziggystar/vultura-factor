@@ -217,7 +217,7 @@ package object util {
     } yield s1 intersect s2).forall(_.isEmpty)
   }
 
-  implicit class RichOrdering[T](val o: Ordering[T]) extends AnyVal {
+  implicit class RichOrdering[T](val o: Ordering[T]) {
     def andThen(other: Ordering[T]): Ordering[T] = new Ordering[T]{
       override def compare(x: T, y: T): Int = {
         val c1 = o.compare(x,y)

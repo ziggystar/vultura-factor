@@ -17,15 +17,15 @@ trait Index[T] {
 }
 
 object Index{
-  def apply[A](values: Set[A]): SIIndex[A] = new SIIndex[A](values.toSet)
+  def apply[A](values: Iterable[A]): SIIndex[A] = new SIIndex[A](values)
 }
 
 /**
  * Creates forward and backward mappings to integers for a set of values.
  * Requires a [[scala.reflect.ClassTag]], since te backward mapping is stored inside an array.
  */
-class ArrayIndex[T: ClassTag](values: Set[T]) extends Index[T] {
-  val backwardMap: Array[T] = values.toArray
+class ArrayIndex[T: ClassTag](values: Iterable[T]) extends Index[T] {
+  val backwardMap: Array[T] = values.toArray.distinct
   val forwardMap: TObjectIntHashMap[T] = {
     val m = new TObjectIntHashMap[T](values.size)
     var i = 0
@@ -52,8 +52,8 @@ class ArrayIndex[T: ClassTag](values: Set[T]) extends Index[T] {
  * Creates forward and backward mappings to integers for a set of values.
  * If you have a [[scala.reflect.ClassTag]], see [[ArrayIndex]] for a (slightly) faster version.
  */
-class SIIndex[T](values: Set[T]) extends Index[T] {
-  val backwardMap: IndexedSeq[T] = values.toIndexedSeq
+class SIIndex[T](values: Iterable[T]) extends Index[T] {
+  val backwardMap: IndexedSeq[T] = values.toIndexedSeq.distinct
   val forwardMap: TObjectIntHashMap[T] = {
     val m = new TObjectIntHashMap[T](values.size)
     var i = 0

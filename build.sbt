@@ -13,8 +13,9 @@ organization := "de.uni-ulm"
 20.0.4: moved code from competition solver into library; added code for OpenBitSet from apache lucene
 21.0.0: move probabilistic inference code into separate project
 22.0.0: remove scalaz dependency
+23.0.0: Index now takes Iterables thus one can provide a target ordre of the indices.
 */
-version := "22.0.0"
+version := "23.0.0"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 

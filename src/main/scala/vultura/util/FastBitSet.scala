@@ -7,7 +7,7 @@ object FastBitSet {
   type BSType = OpenBitSet
   def newBitSet(hint: Int = 0): BSType = new OpenBitSet(hint)
 
-  implicit class BSAsIterableToIterable(val bs: BSType) extends AnyVal {
+  implicit class BSAsIterableToIterable(val bs: BSType) {
     def foreach(action: Int => Unit) {
       var nextBit = bs.nextSetBit(0)
       while(nextBit != -1){
@@ -45,7 +45,7 @@ object FastBitSet {
       var nextBit = bs.nextSetBit(0)
       var i = 0
       while(nextBit != -1){
-        result(i) = nextBit.toInt
+        result(i) = nextBit
         i += 1
         nextBit = bs.nextSetBit(nextBit + 1)
       }
