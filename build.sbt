@@ -38,3 +38,5 @@ libraryDependencies += "net.sf.trove4j" % "trove4j" % "3.0.3"
 libraryDependencies += "org.specs2" %% "specs2" % "2.3.11" % "test"
 
 libraryDependencies += "org.scalacheck" % "scalacheck_2.11" % "1.11.3" % "test"
+
+testOptions in Test += Tests.Argument("junitxml", "console")
