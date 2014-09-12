@@ -143,4 +143,10 @@ class MutableFIFOCalibrator[E <: MEdge](val problem: Iterable[E])(
     }
     g.copy(nodeOptions = g.nodeOptions :+ ((i: Int) => edges(i).dotNodeOption.mkString(",")))
   }
+
+  def toCSV: String =
+    edges.zip(state)
+      .sortBy(_._1.toString)
+      .map(t => t._1 + "\t" + t._1.prettyPrint(t._2.asInstanceOf[t._1.TOut]))
+      .mkString("\n")
 }

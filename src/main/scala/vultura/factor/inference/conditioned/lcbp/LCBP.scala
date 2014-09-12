@@ -251,7 +251,7 @@ class LCBP(val problem: Problem,
     }
   }
 
-  val calibrator: Calibrated[LCBPEdge] = new FIFOCalibrator[LCBPEdge](edges)(convTest,maxIterations,initializer)
+  val calibrator: FIFOCalibrator[LCBPEdge] = new FIFOCalibrator[LCBPEdge](edges)(convTest,maxIterations,initializer)
 
   def iteration: Long = calibrator.iteration
 

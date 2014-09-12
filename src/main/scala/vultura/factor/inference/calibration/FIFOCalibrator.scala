@@ -1,6 +1,7 @@
 package vultura.factor.inference.calibration
 
 import vultura.util._
+import vultura.util.graph.DotGraph
 import collection.mutable
 import scala.collection.mutable
 
@@ -80,4 +81,24 @@ class FIFOCalibrator[E <: Edge](val problem: Iterable[E])(
 
   override def isConverged: Boolean = dirtyEdges.isEmpty
   override def hasEdge(e: E): Boolean = edges.contains(e)
+
+  def toDot: DotGraph[Int] = {
+    val g = DotGraph(
+      edges = for{
+        (preds,ei) <- inputMemo.zipWithIndex
+        pred <- preds
+      } yield pred -> ei,
+      graphName = "MutableFIFOCalibrator"
+    ).nodeLabeled { ei =>
+      val edge: E = edges.backward(ei)
+      s"$edge\\n ${edge.prettyPrint(state(ei).asInstanceOf[edge.TOut])}"
+    }
+    g.copy(nodeOptions = g.nodeOptions :+ ((i: Int) => edges.backward(i).dotNodeOption.mkString(",")))
+  }
+
+  def toCSV: String =
+    edges.backwardMap.zip(state)
+      .sortBy(_._1.toString)
+      .map(t => t._1 + "\t" + t._1.prettyPrint(t._2.asInstanceOf[t._1.TOut]))
+      .mkString("\n")
 }

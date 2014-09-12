@@ -5,7 +5,6 @@ import org.specs2.specification.Fragments
 import vultura.factor.Problem
 
 import vultura.factor.generators._
-import vultura.factor.inference.JunctionTree
 import vultura.factor.inference.calibration.LBP
 
 import scala.util.Random
@@ -22,6 +21,8 @@ class LCBPGeneralTest extends Specification {
   def lcbp4x4_jt_exact2 = new LCBPGeneral(FactoredScheme(problem4x4.simplify, Map(0 -> Set(2), 1 -> Set(2), 2 -> Set(2), 3 -> Set(2))))
 
   val tree: Problem = treeK(5,2)
+
+  def lcbp4x4_3cond = FactoredScheme.withMaxDistance(Set(1,5),1,grid(3,6).simplify)
 
   override def is: Fragments =
   "pointless scheme" ! (lcbp4x4_pointless.logZ must beCloseTo(LBP.infer(problem4x4,tol = 1e-9).logZ,1e-2)) ^
@@ -52,5 +53,13 @@ class LCBPGeneralTest extends Specification {
   "splitting over more variables in longer chain should be exact" ! {
     val p = grid(30,1)
     new LCBPGeneral(FactoredScheme.withMaxDistance(Set(15),5,p)).logZ must beCloseTo(p.logZ, 1e-6)
+  } ^
+  "conditioning three variables on 4x4 should be not extremely off" ! {
+    val lcbp_new: LCBPGeneral = new LCBPGeneral(lcbp4x4_3cond)
+    val lcbp_old: LCBP = new LCBP(lcbp4x4_3cond.problem, lcbp4x4_3cond.toGScheme, maxIterations = 100000)
+    println(lcbp_new.calibrator.toCSV)
+    println(lcbp_old.calibrator.toCSV)
+    ((lcbp_new.calibrator.isConverged && lcbp_old.calibrator.isConverged) must beTrue) and
+      (lcbp_new.logZ must beCloseTo(lcbp_old.logZ,1e-6))
   }
 }
