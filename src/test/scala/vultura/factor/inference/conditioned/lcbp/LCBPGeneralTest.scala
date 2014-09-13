@@ -31,9 +31,9 @@ class LCBPGeneralTest extends Specification {
   " with different conditioner" ! (lcbp4x4_jt_exact2.logZ must beCloseTo(problem4x4.logZ,1e-6)) ^
   "splitting on a tree should remain exact" !
     {
-      new LCBPGeneral(FactoredScheme(tree)).calibrator.toDot.toPDF("empty.pdf")
-      new LCBPGeneral(FactoredScheme.withMaxDistance(Set(0),0,tree)).calibrator.toDot.toPDF("md0.pdf")
-      new LCBPGeneral(FactoredScheme.withMaxDistance(Set(0),1,tree)).calibrator.toDot.toPDF("md1.pdf")
+//      new LCBPGeneral(FactoredScheme(tree)).calibrator.toDot.toPDF("empty.pdf")
+//      new LCBPGeneral(FactoredScheme.withMaxDistance(Set(0),0,tree)).calibrator.toDot.toPDF("md0.pdf")
+//      new LCBPGeneral(FactoredScheme.withMaxDistance(Set(0),1,tree)).calibrator.toDot.toPDF("md1.pdf")
       (new LCBPGeneral(FactoredScheme.withMaxDistance(Set(0),1,tree)).logZ must beCloseTo(tree.logZ, 1e-6))
     } ^
   "splitting only one variable singleton in tree should be exact" !
@@ -46,8 +46,8 @@ class LCBPGeneralTest extends Specification {
   "splitting one variable in the middle of chain" ! {
     val p = grid(4,1, random = new Random(6)).simplify
     val lcbp = new LCBPGeneral(FactoredScheme(p,Map(2->Set(2))))
-    lcbp.calibrator.toDot.toPDF("4chain-lcbp.pdf")
-    new LCBPGeneral(FactoredScheme(p)).calibrator.toDot.toPDF("4chain-uncond.pdf")
+//    lcbp.calibrator.toDot.toPDF("4chain-lcbp.pdf")
+//    new LCBPGeneral(FactoredScheme(p)).calibrator.toDot.toPDF("4chain-uncond.pdf")
     lcbp.calibrator.isConverged and (lcbp.logZ must beCloseTo(p.logZ,1e-9))
   } ^
   "splitting over more variables in longer chain should be exact" ! {
