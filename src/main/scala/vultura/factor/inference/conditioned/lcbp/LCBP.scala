@@ -15,6 +15,8 @@ class LCBP(val problem: Problem,
            val maxIterations: Int = 1000) extends MargParI {
   require(problem.ring == NormalD, "linear combination of messages only implemented for normal domain")
 
+  type FactorIdx = Int
+
   //TODO make this work for the Log ring
   def linearCombination(weights: Array[Double], factors: IndexedSeq[Factor]): Factor = {
     assert(weights.size == factors.size)
@@ -49,9 +51,9 @@ class LCBP(val problem: Problem,
     * factors in general.
     *
     * @param v Source variable.
-    * @param f Destination factor.
+    * @param fi Destination factor.
     * @param vc Variable condition. */
-  case class V2F(v: Int, f: Factor, vc: Condition) extends FactorEdge {
+  case class V2F(v: Int, fi: FactorIdx, vc: Condition) extends FactorEdge {
     override type InEdge = F2VSummed
     def variables = Array(v)
 
@@ -60,36 +62,35 @@ class LCBP(val problem: Problem,
     /** Compute the value of this node given the values of the independent nodes. */
     override def compute(ins: IndexedSeq[Factor]): TOut = fMul(ins :+ conditionedBelief).normalize(problem.ring)
     /** The nodes this edge depends on. This must remain lazy. */
-    override def inputs: IndexedSeq[InEdge] = for(of <- problem.factorsOfVariable(v) if of != f) yield F2VSummed(of,v,vc)
-    override def toString: String = s"V2F:$v -> ${f.toBriefString} ${briefCondition(vc)}"
+    override def inputs: IndexedSeq[InEdge] = for(of <- problem.factorIOfVariable(v) if of != fi) yield F2VSummed(of,v,vc)
   }
 
-  case class FactorBelief(f: Factor, fc: Condition) extends FactorEdge {
+  case class FactorBelief(fi: FactorIdx, fc: Condition) extends FactorEdge {
     override type InEdge = V2F
+    def f = problem.factors(fi)
     override def variables: Array[Int] = f.variables
     /** Compute the value of this node given the values of the independent nodes. */
     override def compute(ins: IndexedSeq[Factor]): TOut = fMul(ins :+ f).normalize(problem.ring)
     /** The nodes this edge depends on. This must remain lazy. */
-    override def inputs: IndexedSeq[V2F] = f.variables.map(v => V2F(v,f,scheme.superCondition(v,fc)))
-    override def toString: String = s"FBel:${f.toBriefString} ${briefCondition(fc)}"
+    override def inputs: IndexedSeq[V2F] = f.variables.map(v => V2F(v,fi,scheme.superCondition(v,fc)))
   }
 
   /** Message emerging from a factor node. In general this has to be combined with messages from differently conditioned
     * instances of the factor node to produce a message that can be multiplied into a variable belief.
     *
-    * @param f Source factor.
+    * @param fi Source factor index.
     * @param v Destination variable.
     * @param fc Factor condition. */
-  case class F2V(f: Factor, v: Int, fc: Condition) extends FactorEdge {
+  case class F2V(fi: FactorIdx, v: Int, fc: Condition) extends FactorEdge {
     override type InEdge = V2F
     def variables = Array(v)
+    def f = problem.factors(fi)
 
     /** Compute the value of this node given the values of the independent nodes. */
     override def compute(ins: IndexedSeq[Factor]): TOut =
       Factor.multiplyRetain(problem.ring)(problem.domains)(ins :+ f, Array(v)).normalize(problem.ring)
     /** The nodes this edge depends on. This must remain lazy. */
-    override def inputs: IndexedSeq[InEdge] = for(ov <- f.variables if ov != v) yield V2F(ov,f,scheme.superCondition(ov,fc))
-    override def toString: String = s"F2V:${f.toBriefString} -> $v ${briefCondition(fc)}"
+    override def inputs: IndexedSeq[InEdge] = for(ov <- f.variables if ov != v) yield V2F(ov,fi,scheme.superCondition(ov,fc))
   }
 
   /** Message from a factor to a variable after summing over the refined conditions of the factor.
@@ -98,9 +99,11 @@ class LCBP(val problem: Problem,
     * @param v Destination variable.
     * @param vc Variable Condition.
     */
-  case class F2VSummed(f: Factor, v: Int, vc: Condition) extends FactorEdge {
+  case class F2VSummed(fi: FactorIdx, v: Int, vc: Condition) extends FactorEdge {
     type InEdge = LCBPEdge
     def variables = Array(v)
+
+    def f = problem.factors(fi)
 
     /** Compute the value of this node given the values of the independent nodes. */
     override def compute(ins: IndexedSeq[LCBPEdge#TOut]): TOut = {
@@ -111,12 +114,10 @@ class LCBP(val problem: Problem,
     }
 
     /** First entry is the condition distribution. The rest are the messages from the factor. */
-    override def inputs: IndexedSeq[InEdge] = ConditionDistribution(subConditions,vc) +: subConditions.map(F2V(f,v,_))
+    override def inputs: IndexedSeq[InEdge] = ConditionDistribution(subConditions,vc) +: subConditions.map(F2V(fi,v,_))
 
     /** The conditions this sum combines over. */
     def subConditions: IndexedSeq[Condition] = scheme.subConditions(vc, f.variables).toIndexedSeq
-
-    override def toString: String = s"F2VS:${f.toBriefString} -> $v ${briefCondition(vc)}"
   }
 
   case class VariableBelief(v: Int, vc: Condition) extends FactorEdge {
@@ -129,7 +130,7 @@ class LCBP(val problem: Problem,
     def create: TOut = conditionedBelief
 
     /** The nodes this edge depends on. This must remain lazy. */
-    override def inputs: IndexedSeq[F2VSummed] = problem.factorsOfVariable(v).map(f => F2VSummed(f,v,vc))
+    override def inputs: IndexedSeq[F2VSummed] = problem.factorIOfVariable(v).map(fi => F2VSummed(fi,v,vc))
 
     /** Compute the value of this node given the values of the independent nodes. */
     override def compute(ins: IndexedSeq[Factor]): Factor = fMul(ins :+ conditionedBelief).normalize(problem.ring)
@@ -145,13 +146,13 @@ class LCBP(val problem: Problem,
 
     /** The nodes this edge depends on. This must remain lazy. */
     override def inputs: IndexedSeq[FactorEdge] =
-      variables.map{case (v,c,_) => VariableBelief(v,c)} ++ factors.map{case(f,fc) => FactorBelief(f,fc)}
+      variables.map{case (v,c,_) => VariableBelief(v,c)} ++ factorConditions.zipWithIndex.map{case(fc,fi) => FactorBelief(fi,fc)}
 
     //third in tuple is number of neighbours, needed to compute the Bethe entropy approximation
     val variables: IndexedSeq[(Int,Condition,Int)] =
       problem.variables.map(v => (v, scheme.superCondition(v,condition), problem.factorsOfVariable(v).size))(collection.breakOut)
-    val factors: IndexedSeq[(Factor,Condition)] =
-      problem.factors.map(f => f -> scheme.superConditionJoint(f.variables,condition))(collection.breakOut)
+    val factorConditions: IndexedSeq[Condition] =
+      problem.factors.map(f => scheme.superConditionJoint(f.variables,condition))(collection.breakOut)
 
     /** Compute the value of this node given the values of the independent nodes. */
     override def compute(ins: IndexedSeq[Factor]): Double = {
