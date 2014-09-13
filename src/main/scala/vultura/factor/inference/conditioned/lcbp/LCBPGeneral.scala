@@ -50,14 +50,10 @@ case class LCBPGeneral(scheme: FactoredScheme,
     }
   }
 
-  //we already drop constant factors here
   val contributions: IndexedSeq[EnergyContrib] =
     (problem.variableRange.map(VariableContribution) ++ (0 until problem.factors.size).map(FactorContribution))
 
   private val ssetOfMPCliques: SSet[Int] = new SSet(contributions.map(_.mpVariables.toSet).toSet)
-  /** The cliques of variables of the meta problem.
-    * These will become the factors of the meta problem.*/
-  val maxSet: IndexedSeq[Set[Int]] = ssetOfMPCliques.maximalSets.toIndexedSeq
 
   val contributionValues: IndexedSeq[(EnergyContrib,C)] = for{
     contrib <- contributions
@@ -73,12 +69,10 @@ case class LCBPGeneral(scheme: FactoredScheme,
     )
 
     Problem(
-      factors = for {
-        scope <- maxSet
-        contribFactors = contributions.filter(_.mpVariables.forall(scope.contains)).map(buildFactor)
-      } yield Factor.multiply(metaRing)(mcDomains)(contribFactors),
+      factors = contributions.map(buildFactor),
       domains = mcDomains,
-      ring = metaRing)
+      ring = metaRing
+    ).simplify
   }
 
   case object MetaProblem extends LcbpMessage {
@@ -94,8 +88,9 @@ case class LCBPGeneral(scheme: FactoredScheme,
     override val inputs: IndexedSeq[DoubleEdge] = contributionValues.map{case (contr,c) => contr.sourceEdge(c)}
 
     /** These computations don't have to be thread-safe. */
-    override def mCompute(): (IndexedSeq[InEdge#TOut], TOut) => Unit = {
-      (energyValues,problemRef) => problemRef.elem = inferer(buildProblem(energyValues.map(_.value)))
+    override def mCompute(): (IndexedSeq[InEdge#TOut], TOut) => Unit = { (energyValues,problemRef) =>
+      val problem: Problem = buildProblem(energyValues.map(_.value))
+      problemRef.elem = inferer(problem)
     }
   }
 

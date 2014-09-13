@@ -215,7 +215,7 @@ class LCBP(val problem: Problem,
     override def toString: String = s"CDist: ${conditions.mkString} ${briefCondition(given)}"
 
     /** @return human readable representation of a value. */
-    def printValue(v: TOut): String = s"(${v.mkString(",")})"
+    override def prettyPrint(v: TOut): String = s"(${v.mkString(",")})"
   }
   
   /** Sums all LogConditionWeights. */
