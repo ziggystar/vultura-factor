@@ -14,10 +14,12 @@ class JunctionTree(val problem: Problem, val variableOrderer: VariableOrderer = 
 
   val variableOrder: VariableOrder = variableOrderer(problem)
 
-  val (calibratedTrees: Seq[Tree[Factor]], myLogZ) = {
+  val (calibratedTrees: Seq[Tree[Factor]], mlogZ) = {
     val calibratedTreesWithZ = uncalibratedTrees.map(JunctionTree.calibrate(_,problem.ring, problem.domains))
     (calibratedTreesWithZ.map(_._1),problem.ring.prodA(calibratedTreesWithZ.map(_._2)(collection.breakOut)))
   }
+
+  val Z = mlogZ
 
   lazy val calibratedCliques: Map[Set[Var],Factor] =
     calibratedTrees.map(_.flatten).flatten.groupBy(_.variables.toSet).map{case (k,v) => k -> v.head}
@@ -34,11 +36,6 @@ class JunctionTree(val problem: Problem, val variableOrderer: VariableOrderer = 
 
   def initialTrees: Seq[Tree[(Set[Int], Seq[Factor])]] =
     junctionTreesFromOrder(problem.factors.map(f => f.variables.toSet -> f), variableOrder.order.toList)
-
-  /** @return Partition function in encoding specified by `ring`. */
-  def Z: Double = problem.ring.decode(Array(myLogZ))(0)
-  /** @return Natural logarithm of partition function. */
-  override def logZ: Double = if(problem.ring == LogD) myLogZ else math.log(problem.ring.decode(Array(myLogZ))(0))
 
   private val marginalCache = new mutable.HashMap[Int, Factor]()
 
@@ -88,6 +85,7 @@ class JunctionTree(val problem: Problem, val variableOrderer: VariableOrderer = 
 
 object JunctionTree{
   def logZ(p: Problem): Double = new JunctionTree(p).logZ
+
   /** Discards the tree structure and returns calibrated cliques and the partition function for the tree. */
   def calibrate(tree: Tree[Factor], ring: Ring[Double], domains: Array[Int]): (Tree[Factor], Double) = {
     val calTree: Tree[(Factor,Set[Int],Factor,Factor)] = calibrateTree(tree,ring, domains)
