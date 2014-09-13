@@ -150,4 +150,7 @@ case class LCBPGeneral(scheme: FactoredScheme,
 
   /** @return Partition function in encoding specified by `ring`. */
   override def Z: Double = math.exp(calibrator.edgeValue(cdLogZ).value)
+
+  /** @return Natural logarithm of partition function. */
+  override def logZ: Double = calibrator.edgeValue(cdLogZ).value
 }
