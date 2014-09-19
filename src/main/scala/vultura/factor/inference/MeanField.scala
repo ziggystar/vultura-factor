@@ -63,7 +63,7 @@ class MeanField(val problem: Problem, val tol: Double = 1e-9, val maxIter: Int =
     while(iterations < cMaxIter && uncalibrated.nonEmpty){
       val nextVar = uncalibrated.dequeue()
       if(updateVariable(nextVar)){
-        uncalibrated.enqueue(problem.neighboursOf(nextVar).filterNot(uncalibrated.contains).toSeq.sorted:_*)
+        uncalibrated.enqueue(problem.neighboursOfVariableEx(nextVar).filterNot(uncalibrated.contains).toSeq.sorted:_*)
       }
       iterations += 1
     }

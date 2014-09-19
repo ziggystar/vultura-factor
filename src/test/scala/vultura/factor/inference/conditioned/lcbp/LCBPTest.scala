@@ -16,7 +16,7 @@ class LCBPTest extends Specification {
   val p1 = grid(2,2,2,expGauss(0.5))
   def fullyConditioned(p: Problem, cv: Int) = GScheme(p.domains, p.variables.map(v => v -> LScheme.split(cv,p.domains)).toMap)
   val p2 = grid(4,4,2,expGauss(1))
-  def slightlyConditioned(p: Problem, cv: Int) = GScheme(p.domains, (p.neighboursOf(cv) + cv).map(v => v -> LScheme.split(cv,p.domains)).toMap)
+  def slightlyConditioned(p: Problem, cv: Int) = GScheme(p.domains, p.neighboursOfVariableInc(cv).map(v => v -> LScheme.split(cv,p.domains)).toMap)
 
   val rand1 = randomK(10,6,3,2,expGauss(1))
 

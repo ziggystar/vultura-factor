@@ -14,9 +14,9 @@ import scala.util.Random
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
  */
 case class SimpleScheme(problem: Problem, splits: Set[(Set[Int],Int)]) {
-  require(splits.map(_._2).subsetOf(problem.variables))
+  require(splits.map(_._2).subsetOf(problem.variableSet))
   require(splits.forall{case (scope, cv) => scope contains cv})
-  require(splits.flatMap(_._1).subsetOf(problem.variables))
+  require(splits.flatMap(_._1).subsetOf(problem.variableSet))
   require(splits.toSeq.map(_._2).size == splits.map(_._2).size, "duplicate conditioning variables")
 
   val influencedVariables: Map[Int,Set[Int]] =
@@ -66,12 +66,12 @@ case class SimpleScheme(problem: Problem, splits: Set[(Set[Int],Int)]) {
       }
     }
 
-    val nodes: Set[Node] = problem.variables.map(v => Node(v,conditionsOf(v)))
+    val nodes: Set[Node] = problem.variableSet.map(v => Node(v,conditionsOf(v)))
 
     val edges: Set[Edge] = for{
       Node(dst,dstConds) <- nodes
       dstCond <- dstConds
-      src <- problem.neighboursOf(dst) if src > dst
+      src <- problem.neighboursOfVariableEx(dst) if src > dst
       srcCond <- compatibleNeighbourConditions(dst,dstCond,src)
     } yield Edge(src,srcCond,dst,dstCond)
 

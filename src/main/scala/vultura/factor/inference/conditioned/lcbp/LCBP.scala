@@ -62,7 +62,7 @@ class LCBP(val problem: Problem,
     /** Compute the value of this node given the values of the independent nodes. */
     override def compute(ins: IndexedSeq[Factor]): TOut = fMul(ins :+ conditionedBelief).normalize(problem.ring)
     /** The nodes this edge depends on. This must remain lazy. */
-    override def inputs: IndexedSeq[InEdge] = for(of <- problem.factorIOfVariable(v) if of != fi) yield F2VSummed(of,v,vc)
+    override def inputs: IndexedSeq[InEdge] = for(of <- problem.factorIdxOfVariable(v) if of != fi) yield F2VSummed(of,v,vc)
   }
 
   case class FactorBelief(fi: FactorIdx, fc: Condition) extends FactorEdge {
@@ -130,7 +130,7 @@ class LCBP(val problem: Problem,
     def create: TOut = conditionedBelief
 
     /** The nodes this edge depends on. This must remain lazy. */
-    override def inputs: IndexedSeq[F2VSummed] = problem.factorIOfVariable(v).map(fi => F2VSummed(fi,v,vc))
+    override def inputs: IndexedSeq[F2VSummed] = problem.factorIdxOfVariable(v).map(fi => F2VSummed(fi,v,vc))
 
     /** Compute the value of this node given the values of the independent nodes. */
     override def compute(ins: IndexedSeq[Factor]): Factor = fMul(ins :+ conditionedBelief).normalize(problem.ring)
@@ -150,7 +150,7 @@ class LCBP(val problem: Problem,
 
     //third in tuple is number of neighbours, needed to compute the Bethe entropy approximation
     val variables: IndexedSeq[(Int,Condition,Int)] =
-      problem.variables.map(v => (v, scheme.superCondition(v,condition), problem.factorsOfVariable(v).size))(collection.breakOut)
+      problem.variables.map(v => (v, scheme.superCondition(v,condition), problem.factorIdxOfVariable(v).size))(collection.breakOut)
     val factorConditions: IndexedSeq[Condition] =
       problem.factors.map(f => scheme.superConditionJoint(f.variables,condition))(collection.breakOut)
 

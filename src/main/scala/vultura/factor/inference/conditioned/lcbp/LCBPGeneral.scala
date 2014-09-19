@@ -51,7 +51,7 @@ case class LCBPGeneral(scheme: FactoredScheme,
   }
 
   val contributions: IndexedSeq[EnergyContrib] =
-    (problem.variableRange.map(VariableContribution) ++ (0 until problem.factors.size).map(FactorContribution))
+    (problem.variables.map(VariableContribution) ++ (0 until problem.factors.size).map(FactorContribution))
 
   private val ssetOfMPCliques: SSet[Int] = new SSet(contributions.map(_.mpVariables.toSet).toSet)
 

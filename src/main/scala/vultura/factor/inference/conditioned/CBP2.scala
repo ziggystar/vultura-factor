@@ -182,9 +182,9 @@ case class MaxMedianHeuristic[-I](heuristics: Seq[NumericVariableHeuristic[I]], 
   }
   override def name: String = s"MaxMedian(${heuristics.map(_.name).mkString(",")})"
   override def selectVariable(information: I, p: Problem): Set[Int] = {
-    val results: Seq[Array[Double]] = heuristics.map(h => p.variableRange.map(h.heuristic(information,p))(collection.breakOut): Array[Double])
+    val results: Seq[Array[Double]] = heuristics.map(h => p.variables.map(h.heuristic(information,p))(collection.breakOut): Array[Double])
     val bestH: Array[Double] = results.maxBy(quantileRatio)
-    maxByMultiple(p.variableRange)(bestH).toSet
+    maxByMultiple(p.variables)(bestH).toSet
   }
 }
 

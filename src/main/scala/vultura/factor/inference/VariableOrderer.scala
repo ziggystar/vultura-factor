@@ -25,7 +25,7 @@ case object MinDegreeOrderer extends VariableOrderer {
 }
 
 case class RandomOrderer(seed: Long = 0) extends VariableOrderer{
-  override def apply(v1: Problem): VariableOrder = VariableOrder(new Random(seed).shuffle(v1.variables.toSeq), v1)
+  override def apply(v1: Problem): VariableOrder = VariableOrder(new Random(seed).shuffle(v1.variableSet.toSeq), v1)
 }
 
 case class VariableOrder(order: Seq[Var], problem: Problem)

@@ -99,7 +99,7 @@ trait LcbpBase {
     override type InEdge = BPEdge
 
     lazy val inputs: IndexedSeq[InEdge] =
-      for(of <- problem.factorIOfVariable(v) if of != f)
+      for(of <- problem.factorIdxOfVariable(v) if of != f)
       yield createF2VMessage(of, v, vc)
 
     //The enforcement of the condition
@@ -172,7 +172,7 @@ trait LcbpBase {
 
     val variables: Array[Int] = Array(v)
 
-    lazy val inputs: IndexedSeq[InEdge] = problem.factorIOfVariable(v).map(createF2VMessage(_,v,vc))
+    lazy val inputs: IndexedSeq[InEdge] = problem.factorIdxOfVariable(v).map(createF2VMessage(_,v,vc))
 
     //The enforcement of the condition
     lazy val conditionedBelief: Factor = Factor.generalDeterministicMaxEntropy(

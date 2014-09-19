@@ -18,7 +18,7 @@ class SinglyLCMF(val problem: Problem, val scheme: SimpleScheme, val tol: Double
   sealed trait Parameter{ def effect: Set[Parameter]}
   case class Marginal(variable: Int, condition: Condition) extends Parameter{
     def effect: Set[Parameter] = for{
-      n <- problem.neighboursOf(variable) if !scheme.conditionVariables(n)
+      n <- problem.neighboursOfVariableEx(variable).toSet if !scheme.conditionVariables(n)
       cond <- scheme.conditionsOf(n) if cond.isCompatibleWith(condition)
       eff <- Seq(Marginal(n,cond)) ++ cond.headOption.map{case (cv,_) => Seq(Weight(cv))}.getOrElse(Seq())
     } yield eff: Parameter
@@ -29,7 +29,7 @@ class SinglyLCMF(val problem: Problem, val scheme: SimpleScheme, val tol: Double
     def effect: Set[Parameter] = {
       val influencedVariables = scheme.influencedVariables(variable)
       influencedVariables
-        .flatMap(problem.neighboursOf)
+        .flatMap(vi => problem.neighboursOfVariableEx(vi).toSet)
         .filterNot(influencedVariables)
         .map(Marginal(_,Map()))
     }

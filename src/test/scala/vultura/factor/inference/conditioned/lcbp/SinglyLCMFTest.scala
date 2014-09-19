@@ -28,7 +28,7 @@ class SinglyLCMFTest extends Specification with FastFactorMatchers {
   //create conditioning schemes
   def unconditionedMF(p: Problem): SinglyLCMF = directNeighbours(p,Set())
   def directNeighbours(p: Problem, conditionVars: Set[Int]) =
-    new SinglyLCMF(p, SimpleScheme(p,conditionVars.map(cv => (p.neighboursOf(cv) + cv) -> cv)))
+    new SinglyLCMF(p, SimpleScheme(p,conditionVars.map(cv => p.neighboursOfVariableInc(cv).toSet -> cv)))
 
   def haveLargerZThanMF: Matcher[SinglyLCMF] = new Matcher[SinglyLCMF]{
     def apply[S <: SinglyLCMF](t: Expectable[S]): MatchResult[S] = {

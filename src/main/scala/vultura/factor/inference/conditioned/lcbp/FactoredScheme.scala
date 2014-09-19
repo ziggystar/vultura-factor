@@ -9,7 +9,7 @@ import scala.annotation.tailrec
   * set of conditioning variables. */
 case class FactoredScheme(problem: Problem, conditionRelations: Map[Var,Set[Var]] = Map()) extends Scheme {
   val conditioners: Map[Var, Set[Var]] = conditionRelations.withDefaultValue(Set.empty)
-  def allConditioners: Set[Int] = problem.variables.flatMap(conditioners)
+  def allConditioners: Set[Int] = problem.variableSet.flatMap(conditioners)
 
   def conditionersOf(vs: Set[Int]): Set[Int] = vs.map(conditioners).reduce(_ ++_)
 
@@ -48,7 +48,7 @@ object FactoredScheme{
   def withMaxDistance(variables: Set[Int], maxDistance: Int, problem: Problem): FactoredScheme = {
     @tailrec
     def collect(from: Set[Int], d: Int = maxDistance): Set[Int] = if(d <= 0) from else
-      collect(from ++ from.flatMap(problem.neighboursOf), d - 1)
+      collect(from ++ from.flatMap(vi => problem.neighboursOfVariableEx(vi)), d - 1)
     fromInfluenceMap(problem,variables.map(v => v -> collect(Set(v)))(collection.breakOut))
   }
   /** Assigns all variables as conditionees that lie on loops including the conditioner with given maximum length. */
@@ -61,7 +61,7 @@ object FactoredScheme{
         paths.flatten.toSet + root
       }
       else {
-        collect(root,d-1,fringe.flatMap(p => (problem.neighboursOf(p.head) - p.head).map(succ => succ :: p)))
+        collect(root,d-1,fringe.flatMap(p => (problem.neighboursOfVariableEx(p.head)).map(succ => succ :: p)))
       }
     fromInfluenceMap(problem, variables.map(v =>
       v -> collect(v, maxLength, List(List(v)))

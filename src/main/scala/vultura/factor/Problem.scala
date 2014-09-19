@@ -9,56 +9,62 @@ import vultura.util.graph.Tree
 
 import scala.util.Random
 
-trait BasicProblem {
+trait ProblemStructure {
+  type VI = Int
+  type FI = Int
+  /** The domain size for each variable. Variable indices start at zero and are consecutive. */
   def domains: Array[Int]
-  def factors: IndexedSeq[Factor]
-  def ring: Ring[Double]
+  def scopeOfFactor: Array[Array[VI]]
+  
+  val numVariables: Int = domains.size
+  val numFactors: Int = scopeOfFactor.size
+  
+  def variables: Range = 0 until numVariables
+  lazy val variableSet: Set[Int] = (0 until numVariables).toSet
+
+  lazy val degrees: Array[Int] = {
+    val r = new Array[Int](numVariables)
+    for{
+      scope <- scopeOfFactor
+      vi <- scope
+    } {
+      r(vi) = r(vi) + 1
+    }
+    r
+  }
+  
+  /** Indexing with a variable index yields the factor indices this variable participates in. */
+  lazy val factorIdxOfVariable: Array[Array[FI]] = {
+    val result: Array[Array[Int]] = degrees.map(new Array[Int](_))
+    val counter = new Array[Int](numVariables)
+    var fi = 0
+    while(fi < numFactors){
+      val scope = scopeOfFactor(fi)
+      var vi = 0
+      while(vi < scope.size){
+        val v = scope(vi)
+        result(v)(counter(v)) = fi
+        counter(v) = counter(v) + 1
+        vi = vi + 1
+      }
+      fi = fi + 1
+    }
+    result
+  }
+  /** The index with variable index `vi`, yields the neighbours of the variable, without `vi`. */ 
+  lazy val neighboursOfVariableEx: Array[Array[VI]] =
+    factorIdxOfVariable.zipWithIndex.map{ case (fs,v) => fs.flatMap(fi => scopeOfFactor(fi)).filterNot(_ == v) }
+  lazy val neighboursOfVariableInc: Array[Array[VI]] =
+    factorIdxOfVariable.zipWithIndex.map{ case (fs,v) => fs.flatMap(fi => scopeOfFactor(fi)) }
 }
 
 /** A problem is basically a collection of factors, together with a domain and a ring.
   * It provides several inference methods based on the exact junction tree algorithm. */
-case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[Double]) extends BasicProblem {
-  val numVariables = domains.size
+case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[Double]) extends ProblemStructure {
 
-  private val degrees: Array[Int] = {
-    val r = new Array[Int](numVariables)
-    for{
-      f <- factors
-      v <- f.variables
-    } {
-      r(v) = r(v) + 1
-    }
-    r
-  }
+  override def scopeOfFactor: Array[Array[VI]] = factors.map(_.variables)(collection.breakOut)
 
-  def factorsOfVariable(v: Int): Array[Factor] = factorIOfVariable(v).map(factors)
-
-  /** Contains the indices of incident factors for a given variable. */
-  lazy val factorIOfVariable: Array[Array[Int]] = {
-    val result: Array[Array[Int]] = degrees.map(new Array[Int](_))
-    val counter = new Array[Int](numVariables)
-    var i = 0
-    while(i < factors.size){
-      var ii = 0
-      val f = factors(i)
-      val vs = f.variables
-      while(ii < vs.size){
-        val v = vs(ii)
-        result(v)(counter(v)) = i
-        counter(v) = counter(v) + 1
-        ii = ii + 1
-      }
-      i = i + 1
-    }
-    result
-  }
-
-  def variableRange: Range = 0 until numVariables
-  def variables: Set[Int] = (0 until numVariables).toSet
-
-  /** @return The set of all neighbouring variables for a given variable, excluding itself. */
-  lazy val neighboursOf: Map[Int,Set[Int]] =
-    variables.map(v => v -> (factorsOfVariable(v).flatMap(_.variables).toSet - v))(collection.breakOut)
+  def factorsOfVariable(v: Int): Array[Factor] = factorIdxOfVariable(v).map(factors)
 
   def filter(p: Factor => Boolean): Problem = this.copy(factors=factors.filter(p))
   def map(p: Factor => Factor): Problem = this.copy(factors=factors.map(p))
@@ -99,9 +105,9 @@ case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[
   /** merges factors into other factors where possible */
   def simplify: Problem = {
     val sset: SSet[Int] = new SSet(factors.map(_.variables.toSet)(collection.breakOut))
-    val groupedFactors: Iterator[IndexedSeq[Factor]] =
-      factors.groupBy(f => sset.maximalSuperSetsOf(f.variables.toSet).maxBy(_.size)).valuesIterator
-    val aggregatedFactors: IndexedSeq[Factor] = groupedFactors.map(Factor.multiply(ring)(domains)).toIndexedSeq
+    val aggregatedFactors: IndexedSeq[Factor] = factors
+      .groupBy(f => sset.maximalSuperSetsOf(f.variables.toSet).maxBy(_.size))
+      .map{case (_,v) => Factor.multiply(ring)(domains)(v)}(collection.breakOut)
     copy(factors = aggregatedFactors)
   }
 
@@ -126,7 +132,6 @@ case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[
 }
 
 object Problem{
-  def fromProblem(bp: BasicProblem): Problem = Problem(bp.factors, bp.domains, bp.ring)
   def fromUaiString(s: String): Problem = parseUAIProblem(new StringReader(s)).right.get
   def loadUaiFile(s: String): Either[String,Problem] = loadUaiFile(new File(s))
   def loadUaiFile(f: File): Either[String,Problem] = {
