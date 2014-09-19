@@ -71,25 +71,27 @@ trait LcbpBase {
     */
   def constructSPTask(inputFactors: IndexedSeq[Array[Int]],
                       retainedVariables: Array[Int],
-                      fixedFactors: Seq[Factor] = Seq()): (IndexedSeq[Array[Double]], Array[Double]) => Unit = {
+                      fixedFactors: Seq[Factor] = Seq(),
+                      domains: Array[Int] = problem.domains,
+                      ring: Ring[Double] = problem.ring): (IndexedSeq[Array[Double]], Array[Double]) => Unit = {
     //this must be lazy, otherwise inputs gets called indefinitely
     val spTask = SumProductTask(
       remainingVars = retainedVariables,
-      domainSizes = problem.domains,
+      domainSizes = domains,
       factorVariables = (inputFactors ++ fixedFactors.map(_.variables)).toArray,
-      problem.ring)
+      ring)
 
     val values: Seq[Array[Double]] = fixedFactors.map(_.values)
 
     if(fixedFactors.isEmpty)
       (ins: IndexedSeq[Array[Double]], result: Array[Double]) => {
         spTask.sumProduct(ins,result)
-        problem.ring.normalizeInplace(result)
+        ring.normalizeInplace(result)
       }
     else
       (ins: IndexedSeq[Array[Double]], result: Array[Double]) => {
         spTask.sumProduct(ins ++ values,result)
-        problem.ring.normalizeInplace(result)
+        ring.normalizeInplace(result)
       }
   }
 
@@ -234,6 +236,7 @@ trait LcbpBase {
 
     override def drawColor: String = "aquamarine"
   }
+
 
   /** This must return a double-valued edge that computes the probability of condition `fc` given condition `vc`. */
   def ccp(fc: C, vc: C): DoubleEdge
