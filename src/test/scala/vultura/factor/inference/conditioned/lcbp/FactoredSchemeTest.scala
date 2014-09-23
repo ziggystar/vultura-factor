@@ -21,19 +21,13 @@ class FactoredSchemeTest extends Specification {
       (singletonScheme4v.allowedValuesUnderCondition(0,Map(1->0)) === Set(0,1)) ^
       (singletonScheme4v.allowedValuesUnderCondition(0,Map(0->1,1->0)) === Set(1)) ^
     p^
+    "construction from influence map" !
+      (FactoredScheme.fromInfluenceMap(grid(2,2), Map(0 -> Set(0,1))).conditioners === Map(0 -> Set(0), 1 -> Set(0))) ^
     "maximum graphical distance constructor" ^
       "condition only the variable itself" !
         (FactoredScheme.withMaxDistance(Set(0),0,grid(2,2)).conditionersOf(Set(0)) === Set(0)) ^
       "with distance 1" !
-        (FactoredScheme.withMaxDistance(Set(0),1,grid(2,2)).conditionersOf(Set(0)) === Set(0,1,2)) ^
+        (FactoredScheme.withMaxDistance(Set(0),1,grid(2,2)).conditioners === Map(0 -> Set(0), 1 -> Set(0), 2 -> Set(0))) ^
       "two conditioners" !
-        (FactoredScheme.withMaxDistance(Set(0,2),1,grid(3,1)).conditionersOf(Set(2)) === Set(1,2)) ^
-    p^
-    "maximum loop length constructor" ^
-      "zero loop length" !
-        (FactoredScheme.withAllLoopsOfLength(Set(0),0,grid(2,2)).conditionersOf(Set(0)) === Set(0)) ^
-      "don't find loop in 2x2 when limit is 3" !
-        (FactoredScheme.withAllLoopsOfLength(Set(0),3,grid(2,2)).conditionersOf(Set(0)) === Set(0)) ^
-      "find loop in 2x2 with limit 4" !
-        (FactoredScheme.withAllLoopsOfLength(Set(0),4,grid(2,2)).conditionersOf(Set(0)) === Set(0,1,2,3))
+        (FactoredScheme.withMaxDistance(Set(0,2),1,grid(3,1)).conditioners === Map(0 -> Set(0), 1 -> Set(0,2), 2 -> Set(2)))
 }
