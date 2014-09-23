@@ -23,8 +23,8 @@ trait LcbpFactoredBase extends LcbpBase {
       problem.variables.map(v => metaConditionersOf(Set(v))))
       .distinct
       .map(_.toArray.sorted)(collection.breakOut)
-  val metaVariables = (0 until var2metaVar.size).toArray
-  val metaStructure: ProblemStructure = StructureOnly(metaVariables,metaScopes)
+  val metaStructure: ProblemStructure =
+    StructureOnly((0 until var2metaVar.size).map(problem.domains)(collection.breakOut),metaScopes)
 
   def metaRing: Ring[Double] = LogD
   def conditionVarToMetaVar(v: Int): MVI = var2metaVar.forward(v)
