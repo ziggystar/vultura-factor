@@ -17,8 +17,6 @@ class LcbpMetaBPTest extends Specification {
     val p = grid(2,2)
     val scheme = FactoredScheme.fromInfluenceMap(p, Map(0 -> Set(0,1,2,3)))
     val lcbpMetaBP: LcbpMetaBP = new LcbpMetaBP(scheme)
-    lcbpMetaBP.calibrator.toDot.toPDF("lcbp-bp.pdf")
-    new LCBPGeneral(scheme).calibrator.toDot.toPDF("lcbp-jt.pdf")
     (lcbpMetaBP.calibrator.isConverged must beTrue) and (lcbpMetaBP.logZ must beCloseTo(p.logZ,1e-6))
   }
 }

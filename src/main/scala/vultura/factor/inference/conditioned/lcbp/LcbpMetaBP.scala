@@ -1,10 +1,12 @@
 package vultura.factor.inference.conditioned.lcbp
 
 import vultura.factor._
+import vultura.factor.inference.ParFunI
+import vultura.factor.inference.calibration.{MutableFIFOCalibrator, ConvergenceTest, EdgeValues, Edge}
 
 /** BP on the meta problem.
  */
-class LcbpMetaBP(val scheme: FactoredScheme, val maxUpdates: Long = 1000000, val tol: Double = 1e-12) extends LcbpFactoredBase {
+class LcbpMetaBP(val scheme: FactoredScheme, val maxUpdates: Long = 1000000, val tol: Double = 1e-12) extends LcbpFactoredBase with ParFunI {
   override type ST = FactoredScheme
 
   case class MetaV2F(v: MVI, fi: MFI) extends MetaFactorEdge {
@@ -97,7 +99,9 @@ class LcbpMetaBP(val scheme: FactoredScheme, val maxUpdates: Long = 1000000, val
         val (fb,fs) = rest.splitAt(metaStructure.numFactors)
         (vb,fb,fs)
       }
-      val variableEntropy = vbels.map(metaRing.entropy).sum
+      val variableEntropy = vbels.map(metaRing.entropy)
+        .zip(metaStructure.variables.map(v => 1 - metaStructure.degrees(v)))
+        .map{case (x,y) => x * y}.sum
       val factorEntropy = fbels.map(metaRing.entropy).sum
       val factorLogExpect = (fbels zip factors).map{case (fb,f) => metaRing.logExpectation(fb,f)}.sum
       res.value = variableEntropy + factorEntropy + factorLogExpect
@@ -106,4 +110,32 @@ class LcbpMetaBP(val scheme: FactoredScheme, val maxUpdates: Long = 1000000, val
 
   /** This must return a double-valued edge that computes the probability of condition `fc` given condition `vc`. */
   override def ccp(fc: C, vc: C): DoubleEdge = CCP(fc,vc)
+
+  val cp: Set[LcbpMessage] = Edge.expand(cdLogZ)
+
+  object initializer extends EdgeValues[LcbpMessage]{
+    override def hasEdge(e: LcbpMessage): Boolean = true
+    override def edgeValue(e: LcbpMessage): e.type#TOut = e match {
+      case FactorEdge(vars) => Factor.maxEntropy(vars,problem.domains,problem.ring).values.asInstanceOf[e.TOut]
+      case ve: DoubleEdge => new DoubleRef(problem.ring.one).asInstanceOf[e.TOut]
+    }
+  }
+
+  object convTest extends ConvergenceTest[LcbpMessage] {
+    def isConverged(e: LcbpMessage)(old: e.type#TOut, updated: e.type#TOut): Boolean = ((old,updated) match {
+      case (o: Array[Double], u: Array[Double]) => vultura.util.maxDiff(o,u)
+      case (o: DoubleRef, u: DoubleRef) => math.abs(o.value - u.value)
+    }) <= tol
+  }
+
+  val calibrator: MutableFIFOCalibrator[LcbpMessage] = new MutableFIFOCalibrator[LcbpMessage](cp)(
+    convTest,
+    maxUpdates,
+    initializer)
+
+  /** @return Partition function in encoding specified by `ring`. */
+  override def Z: Double = math.exp(calibrator.edgeValue(cdLogZ).value)
+
+  /** @return Natural logarithm of partition function. */
+  override def logZ: Double = calibrator.edgeValue(cdLogZ).value
 }
