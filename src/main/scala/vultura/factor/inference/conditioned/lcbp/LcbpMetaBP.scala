@@ -1,37 +1,22 @@
 package vultura.factor.inference.conditioned.lcbp
 
 import vultura.factor._
-import vultura.factor.inference.conditioned.Condition
 
-/**
- * Implementation of LCBP using BP for meta-inference.
- * Implementation only for factored schemes.
+/** BP on the meta problem.
  */
-class LcbpMetaBP(val scheme: FactoredScheme, val maxUpdates: Long = 1000000, val tol: Double = 1e-12) extends LcbpBase{
+class LcbpMetaBP(val scheme: FactoredScheme, val maxUpdates: Long = 1000000, val tol: Double = 1e-12) extends LcbpFactoredBase {
   override type ST = FactoredScheme
 
-  //meta variable index
-  type MVI = Int
-  //meta factor index
-  type MFI = Int
-
-  val meta: ProblemStructure = ???
-  def metaFactorEdge(fi: MFI): FactorEdge = ???
-  def metaRing: Ring[Double] = LogD
-  def conditionVarToMetaVar(v: Int): MVI = ???
-  def conditionToMetaCondition(c: Condition): Condition = c.map{case (k,v) => conditionVarToMetaVar(k) -> v}
-  def containingMetaClique(mvs: Iterable[MVI]): MFI = ???
-
-//  case class MetaFactor(metaVariables: Array[MVI], )
-  case class MetaV2F(v: MVI, fi: MFI) extends FactorEdge {
+  case class MetaV2F(v: MVI, fi: MFI) extends MetaFactorEdge {
     override def variables: Array[MVI] = Array(v)
     override type InEdge = MetaF2V
-    override def inputs: IndexedSeq[InEdge] = for(nf <- meta.factorIdxOfVariable(v) if nf != fi) yield MetaF2V(nf,v)
+    override def inputs: IndexedSeq[InEdge] =
+      for(nf <- metaStructure.factorIdxOfVariable(v) if nf != fi) yield MetaF2V(nf,v)
     def mCompute() = {
       //this must be lazy, otherwise inputs gets called indefinitely
       val spTask = SumProductTask(
         remainingVars = Array(v),
-        domainSizes = meta.domains,
+        domainSizes = metaStructure.domains,
         inputs.map(f2v => Array(f2v.v))(collection.breakOut),
         metaRing
       )
@@ -42,22 +27,36 @@ class LcbpMetaBP(val scheme: FactoredScheme, val maxUpdates: Long = 1000000, val
     }
   }
 
-  case class MetaF2V(fi: MFI, v: MVI) extends FactorEdge {
+  case class MetaF2V(fi: MFI, v: MVI) extends MetaFactorEdge {
     override def variables: Array[MVI] = Array(v)
-    override type InEdge = FactorEdge
+    override type InEdge = MetaFactorEdge
     //first input is the factor value, tail are the incoming messages (except the one from `v`)
-    override def inputs: IndexedSeq[InEdge] = metaFactorEdge(fi) +: (for(nv <- meta.scopeOfFactor(fi) if nv != v) yield MetaV2F(nv,fi))
+    override def inputs: IndexedSeq[InEdge] =
+      metaFactorEdge(fi) +: (for(nv <- metaStructure.scopeOfFactor(fi) if nv != v) yield MetaV2F(nv,fi))
     override def mCompute(): (IndexedSeq[Array[Double]], Array[Double]) => Unit =
-      constructSPTask(inputs.map(_.variables),variables,Seq(),meta.domains,metaRing)
+      constructSPTask(inputs.map(_.variables),variables,Seq(),metaStructure.domains,metaRing)
   }
 
-  case class MetaFBel(fi: MFI) extends FactorEdge {
-    override def variables: Array[Int] = meta.scopeOfFactor(fi)
-    override type InEdge = MetaV2F
-    override def inputs: IndexedSeq[InEdge] = for(mvi <- meta.scopeOfFactor(fi)) yield MetaV2F(mvi,fi)
+  case class MetaFBel(fi: MFI) extends MetaFactorEdge {
+    override def variables: Array[Int] = metaStructure.scopeOfFactor(fi)
+    override type InEdge = MetaFactorEdge
+    override def inputs: IndexedSeq[InEdge] =
+      metaFactorEdge(fi) +: (for(mvi <- metaStructure.scopeOfFactor(fi)) yield MetaV2F(mvi,fi))
     /** These computations don't have to be thread-safe. */
     override def mCompute(): (IndexedSeq[InEdge#TOut], TOut) => Unit =
-      constructSPTask(inputs.map(_.variables), variables, Seq(), meta.domains, metaRing)
+      constructSPTask(inputs.map(_.variables), variables, Seq(), metaStructure.domains, metaRing)
+  }
+
+  case class MetaVBel(vi: MVI) extends MetaFactorEdge {
+    override type InEdge = MetaF2V
+    override def variables: Array[Int] = Array(vi)
+
+    override def inputs: IndexedSeq[InEdge] =
+      for(fi <- metaStructure.factorIdxOfVariable(vi)) yield MetaF2V(fi,vi)
+
+    /** These computations don't have to be thread-safe. */
+    override def mCompute(): (IndexedSeq[TOut], TOut) => Unit =
+      constructSPTask(inputs.map(_.variables), variables, Seq(), metaStructure.domains, metaRing)
   }
 
   case class CCP(fc: C, vc: C) extends DoubleEdge {
@@ -77,14 +76,33 @@ class LcbpMetaBP(val scheme: FactoredScheme, val maxUpdates: Long = 1000000, val
     /** These computations don't have to be thread-safe. */
     override def mCompute(): (IndexedSeq[InEdge#TOut], DoubleRef) => Unit = (fb,res) => {
       val rLog = Factor
-        .multiplyRetain(metaRing)(meta.domains)(Seq(edge.makeFactor(fb.head)), retainVars) //marginalize to mvc condition
-        .eval(conditionValues, meta.domains) //select proper value
+        .multiplyRetain(metaRing)(metaStructure.domains)(Seq(edge.makeFactor(fb.head)), retainVars) //marginalize to mvc condition
+        .eval(conditionValues, metaStructure.domains) //select proper value
       res.value = math.exp(rLog)
     }
   }
 
   /** This must return a double-valued edge that computes the partition function of the meta problem. */
-  override def cdLogZ: DoubleEdge = ???
+  case object cdLogZ extends DoubleEdge {
+    override type InEdge = MetaFactorEdge
+    override def inputs: IndexedSeq[InEdge] =
+      metaStructure.variables.map(MetaVBel) ++
+        (0 until metaStructure.numFactors).map(MetaFBel) ++
+        (0 until metaStructure.numFactors).map(MetaFactor)
+
+    /** These computations don't have to be thread-safe. */
+    override def mCompute(): (IndexedSeq[InEdge#TOut], TOut) => Unit = { (ins, res) =>
+      val (vbels,fbels,factors) = {
+        val (vb,rest) = ins.splitAt(metaStructure.numVariables)
+        val (fb,fs) = rest.splitAt(metaStructure.numFactors)
+        (vb,fb,fs)
+      }
+      val variableEntropy = vbels.map(metaRing.entropy).sum
+      val factorEntropy = fbels.map(metaRing.entropy).sum
+      val factorLogExpect = (fbels zip factors).map{case (fb,f) => metaRing.logExpectation(fb,f)}.sum
+      res.value = variableEntropy + factorEntropy + factorLogExpect
+    }
+  }
 
   /** This must return a double-valued edge that computes the probability of condition `fc` given condition `vc`. */
   override def ccp(fc: C, vc: C): DoubleEdge = CCP(fc,vc)

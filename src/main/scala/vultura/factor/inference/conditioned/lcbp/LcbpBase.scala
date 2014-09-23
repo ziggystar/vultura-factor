@@ -34,6 +34,7 @@ trait LcbpBase {
 
   trait FactorEdge extends ArrayEdge {self: Product =>
     def variables: Array[Int]
+    def domains: Array[Int]
 
     def create: TOut = new Array[Double](variables.map(problem.domains).product)
     def copy(t: TOut): TOut = t.clone()
@@ -44,15 +45,25 @@ trait LcbpBase {
     def unapply(fe: FactorEdge): Option[Array[Int]] = Some(fe.variables)
   }
 
-  trait BPEdge extends FactorEdge {self: Product =>
+  trait BaseFactorEdge extends FactorEdge {self: Product =>
+    def domains = problem.domains
+  }
+
+  trait BPEdge extends BaseFactorEdge {self: Product =>
     def v: Int
     def f: Int
+
+    final override def variables: Array[Int] = Array(v)
   }
 
   class DoubleRef(v: Double = 0d) extends Cloneable {
     var value: Double = v
     override def toString: String = value.toString
     override def clone(): AnyRef = new DoubleRef(value)
+  }
+
+  object DoubleRef{
+    def unapply(x: DoubleRef): Option[Double] = Some(x.value)
   }
 
   trait DoubleEdge extends LcbpMessage {self: Product =>
@@ -96,8 +107,6 @@ trait LcbpBase {
   }
 
   case class V2F(v: Int, f: Int, vc: C) extends BPEdge {
-    override def variables: Array[Int] = Array(v)
-
     override type InEdge = BPEdge
 
     lazy val inputs: IndexedSeq[InEdge] =
@@ -123,8 +132,6 @@ trait LcbpBase {
   }
 
   case class F2V(f: Int, v: Int, fc: C) extends BPEdge {
-    override def variables: Array[Int] = Array(v)
-
     override type InEdge = V2F
 
     lazy val inputs: IndexedSeq[InEdge] =
@@ -140,8 +147,6 @@ trait LcbpBase {
   }
 
   case class F2VAgg(f: Int, v: Int, vc: C) extends BPEdge {
-    override def variables: Array[Int] = Array(v)
-
     //this takes both F2V, as well as the conditional condition distribution
     override type InEdge = LcbpMessage
 
@@ -169,7 +174,7 @@ trait LcbpBase {
       F2VAgg(f,v,vc)
 
   /** Conditioned variable belief. */
-  case class VBel(v: Int, vc: C) extends FactorEdge{
+  case class VBel(v: Int, vc: C) extends BaseFactorEdge{
     override type InEdge = BPEdge
 
     val variables: Array[Int] = Array(v)
@@ -191,7 +196,7 @@ trait LcbpBase {
   }
 
   /** Conditioned factor belief. */
-  case class FBel(f: Int, fc: C) extends FactorEdge{
+  case class FBel(f: Int, fc: C) extends BaseFactorEdge{
     override def variables: Array[Int] = problem.factors(f).variables
 
     override type InEdge = V2F
