@@ -38,6 +38,7 @@ case class FactoredScheme(problem: Problem, conditionRelations: Map[Var,Set[Var]
 }
 
 object FactoredScheme{
+  /** Construct a factored scheme from a map that maps a conditioner to all its conditionees. */
   def fromInfluenceMap(problem: Problem, influenceMap: Map[Int,Set[Int]]): FactoredScheme =
     FactoredScheme(problem, influenceMap.toSeq.flatMap{case (conditioner,conditionees) => conditionees.map(_ -> conditioner)}.groupBy(_._1).map{case(conditionee,tuples) => conditionee -> tuples.map(_._2).toSet})
   /** Constructs a [[vultura.factor.inference.conditioned.lcbp.FactoredScheme]] that conditions on the
@@ -47,24 +48,9 @@ object FactoredScheme{
     */
   def withMaxDistance(variables: Set[Int], maxDistance: Int, problem: Problem): FactoredScheme = {
     @tailrec
-    def collect(from: Set[Int], d: Int = maxDistance): Set[Int] = if(d <= 0) from else
-      collect(from ++ from.flatMap(vi => problem.neighboursOfVariableEx(vi)), d - 1)
+    def collect(from: Set[Int], d: Int = maxDistance): Set[Int] =
+      if(d <= 0) from
+      else collect(from ++ from.flatMap(vi => problem.neighboursOfVariableEx(vi)), d - 1)
     fromInfluenceMap(problem,variables.map(v => v -> collect(Set(v)))(collection.breakOut))
-  }
-  /** Assigns all variables as conditionees that lie on loops including the conditioner with given maximum length. */
-  def withAllLoopsOfLength(variables: Set[Int], maxLength: Int, problem: Problem): FactoredScheme = {
-    @tailrec
-    def collect(root: Int, d: Int = maxLength, fringe: List[List[Int]]): Set[Int] =
-      if(d <= 0) {
-        val paths: List[List[Int]] = fringe.map(_.dropWhile(_ != root)).filter(p => p.size > 3 && p.distinct.size == p.size - 1)
-        println(paths.mkString("\n"))
-        paths.flatten.toSet + root
-      }
-      else {
-        collect(root,d-1,fringe.flatMap(p => (problem.neighboursOfVariableEx(p.head)).map(succ => succ :: p)))
-      }
-    fromInfluenceMap(problem, variables.map(v =>
-      v -> collect(v, maxLength, List(List(v)))
-    )(collection.breakOut))
   }
 }
