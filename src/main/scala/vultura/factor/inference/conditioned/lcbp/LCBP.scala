@@ -11,8 +11,8 @@ import vultura.util._
  */
 class LCBP(val problem: Problem,
            val scheme: GScheme,
-           val tol: Double = 1e-9,
-           val maxIterations: Int = 1000) extends MargParI {
+           val tol: Double = 1e-12,
+           val maxIterations: Int = 1000000) extends MargParI {
   require(problem.ring == NormalD, "linear combination of messages only implemented for normal domain")
 
   type FactorIdx = Int
