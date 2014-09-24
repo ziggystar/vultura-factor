@@ -10,17 +10,7 @@ import scala.util.parsing.combinator.JavaTokenParsers
  * Date: 6/14/13
  */
 package object generators {
-  trait FactorGenerator extends ((Seq[Int],IndexedSeq[Int],Random) => Factor) {
-    def generate(variables: Array[Int], domains: Array[Int], random: Random): Factor
-    final def apply(v1: Seq[Int], v2: IndexedSeq[Int], v3: Random): Factor = generate(v1.toArray.sorted,v2.toArray,v3)
-  }
-  trait SimpleGenerator extends FactorGenerator {
-    final def generate(variables: Array[Int], domains: Array[Int], random: Random): Factor =  {
-      val entries: Int = variables.map(domains).product
-      Factor(variables, generateValues(entries,random))
-    }
-    def generateValues(numValues: Int, random: Random): Array[Double]
-  }
+
 
   implicit def fun2SimpleGenerator(f: ( Int, Random) => Array[Double]) = new SimpleGenerator {
     def generateValues(numValues: Int, random: Random): Array[Double] = f(numValues,random)
@@ -136,5 +126,17 @@ package object generators {
     def pFClause: Parser[FactorGenerator] = "clause(" ~> named("weight",float) <~ ")" ^^ {weight => clause(weight)}
     def pFSigmaClause: Parser[FactorGenerator] = "sigma-clause(" ~> named("sigma",float) <~ ")" ^^ {sigma => sigmaClause(sigma)}
   }
+}
 
+trait FactorGenerator extends ((Seq[Int],IndexedSeq[Int],Random) => Factor) {
+  def generate(variables: Array[Int], domains: Array[Int], random: Random): Factor
+  final def apply(v1: Seq[Int], v2: IndexedSeq[Int], v3: Random): Factor = generate(v1.toArray.sorted,v2.toArray,v3)
+}
+
+trait SimpleGenerator extends FactorGenerator {
+  final def generate(variables: Array[Int], domains: Array[Int], random: Random): Factor =  {
+    val entries: Int = variables.map(domains).product
+    Factor(variables, generateValues(entries,random))
+  }
+  def generateValues(numValues: Int, random: Random): Array[Double]
 }

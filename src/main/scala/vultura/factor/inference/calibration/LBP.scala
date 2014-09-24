@@ -90,10 +90,10 @@ trait BPResult extends MargParI {
   def problem: Problem
   /** @return marginal distribution of variable in encoding specified by `ring`. */
   override def variableBelief(vi: Int): Factor =
-    Factor.multiply(problem.ring)(problem.domains)(problem.factorsOfVariable(vi).map(f => f2v(f,vi))).normalize(problem.ring)
+    Factor.multiply(problem.ring)(problem.domains)(problem.factorsOfVariable(vi).map(f => f2v((f,vi)))).normalize(problem.ring)
 
   def factorBelief(f: Factor): Factor =
-    Factor.multiply(problem.ring)(problem.domains)(f.variables.map(v => v2f(v,f)) :+ f).normalize(problem.ring)
+    Factor.multiply(problem.ring)(problem.domains)(f.variables.map(v => v2f((v,f))) :+ f).normalize(problem.ring)
 
   /** This is lazy to prevent accessing elements in derived classes early.
    * @return Partition function in encoding specified by `ring`. */

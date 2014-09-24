@@ -100,7 +100,7 @@ class SinglyLCMF(val problem: Problem, val scheme: SimpleScheme, val tol: Double
             Factor(f1.variables,f1.values.zip(f2.values).map{case (v1,v2) => v1 + v2})
           }
         //a conditioned marginal is requested
-        case Seq(vc) if condition.contains(vc) => conditionedQs(variable,Map(vc -> condition(vc)))
+        case Seq(vc) if condition.contains(vc) => conditionedQs((variable,Map(vc -> condition(vc))))
         case _ => sys.error("more than one influencing variable found")
       }
     }

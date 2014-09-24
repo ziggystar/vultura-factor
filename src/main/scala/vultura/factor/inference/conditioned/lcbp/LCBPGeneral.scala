@@ -139,7 +139,7 @@ case class LCBPGeneral(scheme: FactoredScheme,
     def isConverged(e: LcbpMessage)(old: e.type#TOut, updated: e.type#TOut): Boolean = ((old,updated) match {
       case (o: Array[Double], u: Array[Double]) => vultura.util.maxDiff(o,u)
       case (o: DoubleRef, u: DoubleRef) => math.abs(o.value - u.value)
-      case (o: ObjectRef[MetaProblem.type], u: ObjectRef[MetaProblem.type]) => Double.PositiveInfinity //hope this works
+      case (o: ObjectRef[_], u: ObjectRef[_]) => Double.PositiveInfinity //hope this works
     }) <= tol
   }
 

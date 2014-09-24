@@ -34,7 +34,7 @@ case class BPSolverPlugin(tol: Double = 1e-10, maxSteps: Long = 10000) extends A
       f <- p.factors
       v <- f.variables
       (m,e) <- Seq(Left((v,f)) -> lbp.V2F(v,f),Right((f,v)) -> lbp.F2V(f,v))
-    } yield m -> (cal.edgeValue(e), cal.lastUpdateOf(e)))(collection.breakOut)
+    } yield m -> ((cal.edgeValue(e), cal.lastUpdateOf(e))))(collection.breakOut)
     new CalResult(p,(f,i) => {
       val m = lbp.F2V(f,i)
       (cal.edgeValue(m),cal.lastUpdateOf(m))

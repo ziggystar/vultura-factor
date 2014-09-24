@@ -12,7 +12,7 @@ case class Region(cr: Double, variables: Set[Int], factors: Set[Factor]){
   override val hashCode: Int = (variables,factors).hashCode
 
   override def equals(obj: scala.Any): Boolean = obj match {
-    case Region(_,v,f) => (variables,factors) == (v,f)
+    case Region(_,v,f) => variables == v && factors == f
     case _ => false
   }
 }
