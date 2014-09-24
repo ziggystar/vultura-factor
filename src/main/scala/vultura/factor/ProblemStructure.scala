@@ -1,5 +1,7 @@
 package vultura.factor
 
+import vultura.util.TreeWidth
+
 /** Describes the structure of a markov network, without the factor values (parameters). */
 trait ProblemStructure {
   type VI = Int
@@ -48,6 +50,8 @@ trait ProblemStructure {
     factorIdxOfVariable.zipWithIndex.map{ case (fs,v) => fs.flatMap(fi => scopeOfFactor(fi)).filterNot(_ == v) }
   lazy val neighboursOfVariableInc: Array[Array[VI]] =
     factorIdxOfVariable.zipWithIndex.map{ case (fs,v) => fs.flatMap(fi => scopeOfFactor(fi)) }
+
+  def isTree: Boolean = ???
 }
 
 /** Implementation of [[ProblemStructure]]. */
