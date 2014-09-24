@@ -14,8 +14,9 @@ organization := "de.uni-ulm"
 21.0.0: move probabilistic inference code into separate project
 22.0.0: remove scalaz dependency
 23.0.0: Index now takes Iterables thus one can provide a target ordre of the indices.
+23.1.0: - add simple tree test to TreeWidth
 */
-version := "23.0.0"
+version := "23.1.0"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 

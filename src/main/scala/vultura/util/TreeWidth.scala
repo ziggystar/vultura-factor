@@ -448,4 +448,28 @@ object TreeWidth {
 
   @deprecated("use heuristicDecomposition", "22.0.0")
   def minDegreeOrdering(cliques: Seq[Set[Int]]): List[Int] = minDegreeOrderingAndWidth(cliques.toIndexedSeq)._1
+
+  def treeDecomposition[S](cliques: AA[Int],
+                        domains: Array[Int],
+                        heuristic: OrderingHeuristic[S] = MinFillHeuristic,
+                        cutoff: Long = Long.MaxValue,
+                        random: Random = new Random(0)): Option[Seq[Int]] = {
+    val neighbours: Array[BSType] = cliques.map(_.toBitSet)
+    heuristicDecomposition(heuristic)(
+      remaining = neighbours.foldLeft(FastBitSet.newBitSet())((acc,n) => {acc.or(n);acc}),
+      neighbours = neighbours,
+      state = heuristic.initialState(neighbours),
+      domains = domains,
+      cutoff = cutoff,
+      rand = random
+    )
+  }
+  /** @param cutoff The maximal clique weight (as the product of domain sizes if the variables of the clique).
+    * @return The unweighted tree width. */
+  def treeWidth[S](cliques: AA[Int],
+                   domains: Array[Int],
+                   heuristic: OrderingHeuristic[S] = MinFillHeuristic,
+                   cutoff: Long = Long.MaxValue,
+                   random: Random = new Random(0)): Option[Int] =
+    treeDecomposition(cliques, domains, heuristic, cutoff, random).map(treeWidth(cliques.map(_.toSet), _))
 }
