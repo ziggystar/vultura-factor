@@ -5,6 +5,8 @@ import java.io._
 import vultura.factor.inference.VariableElimination
 import vultura.util.SSet
 
+import scala.util.Either.RightProjection
+
 /** A problem is basically a collection of factors, together with a domain and a ring.
   * It provides several inference methods based on the exact junction tree algorithm. */
 case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[Double]) extends ProblemStructure {
@@ -95,7 +97,6 @@ object Problem{
   def parseUAIProblem(in: InputStream): Either[String, Problem] = parseUAIProblem(new InputStreamReader(in))
   /** @return first: the parsed problem; second: true if the input was a bayeschen network ("BAYES"). */
   def parseBayesOrMarkov(in: Reader): Either[String,(Problem,Boolean)] = {
-    import scalaz._
     val tokenStream = new BufferedReader(in)
 
     val lines = Iterator.continually(tokenStream.readLine)
@@ -106,28 +107,25 @@ object Problem{
       .filterNot(_.isEmpty)
 
     //first token must be 'MARKOV'
-    val asVal: Validation[String, (Problem, Boolean)] = for{
-      problemType <- Success(tokens.next().toUpperCase)
-      isBayes <- problemType match {
-        case "BAYES" => Success(true)
-        case "MARKOV" => Success(false)
-        case _ => Failure("problem file must start with 'BAYES' or 'MARKOV'")
-      }
-      numVars = tokens.next().toInt
-      domains: Array[Int] = Array.fill(numVars)(tokens.next().toInt)
-      numFactors = tokens.next().toInt
-      factorVars: Seq[Array[Int]] = Seq.fill(numFactors){
+    (tokens.next().toUpperCase match {
+        case "BAYES" => Right(true)
+        case "MARKOV" => Right(false)
+        case _ => Left("problem file must start with 'BAYES' or 'MARKOV'")
+    }).right.map { isBayes =>
+      val numVars = tokens.next().toInt
+      val domains: Array[Int] = Array.fill(numVars)(tokens.next().toInt)
+      val numFactors = tokens.next().toInt
+      val factorVars = Seq.fill(numFactors) {
         val nv = tokens.next().toInt
         Array.fill(nv)(tokens.next().toInt)
       }
-      factorValues: Seq[Array[Double]] = Seq.fill(numFactors){
+      val factorValues = Seq.fill(numFactors) {
         val nv = tokens.next().toInt
         Array.fill(nv)(tokens.next().toDouble)
       }
-      factors = (factorVars,factorValues).zipped.map{case (vars,values) => Factor.orderIfNecessary(vars.reverse,values,domains)}
-    } yield (Problem(factors.toIndexedSeq,domains,NormalD), isBayes)
-
-    asVal.toEither
+      val factors = (factorVars, factorValues).zipped.map { case (vars, values) => Factor.orderIfNecessary(vars.reverse, values, domains)}
+      (Problem(factors.toIndexedSeq, domains, NormalD), isBayes)
+    }
   }
   def parseUAIProblem(in: Reader): Either[String,Problem] = parseBayesOrMarkov(in).right.map(_._1)
 }

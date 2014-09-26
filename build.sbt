@@ -28,17 +28,19 @@ scalaVersion := "2.11.2"
 //assertions are only used in tests
 scalacOptions in Compile += "-Xdisable-assertions"
 
-libraryDependencies += "de.uni-ulm" %% "vultura-util" % "23.0.0"
-
 libraryDependencies += "org.apache.commons" % "commons-math3" % "3.2"
 
-libraryDependencies += "org.scalaz" % "scalaz-core_2.11" % "7.0.6"
+libraryDependencies += "de.uni-ulm" %% "vultura-util" % "23.1.1"
+
+libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.+"
+
+
 // --------------- Publishing ----------------------------------
 
 //testing dependencies
-libraryDependencies += "org.specs2" %% "specs2" % "2.3.11" % "test"
+libraryDependencies += "org.specs2" %% "specs2" % "2.3.+" % "test"
 
-libraryDependencies += "org.scalacheck" % "scalacheck_2.11" % "1.11.3" % "test"
+libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.11.+" % "test"
 
 //for vultura-util
 resolvers += "tgeier repository@companion" at "http://companion.informatik.uni-ulm.de/~tgeier/mvn"

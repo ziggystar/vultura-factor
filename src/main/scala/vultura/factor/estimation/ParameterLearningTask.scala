@@ -6,9 +6,10 @@ import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.BOBYQAOptimizer
 import vultura.factor._
 import vultura.factor.inference.{JointMargI, JunctionTree, ParFunI}
 import vultura.util.stats._
+import vultura.util._
 
+import scala.collection.mutable
 import scala.language.reflectiveCalls
-import scalaz.Memo
 
 trait UnconstraintDifferentiableFunction { outer =>
   def dimension: Int
@@ -121,6 +122,11 @@ case class MObsAvgLogLikelihood(problem: Problem,
                                 target: IndexedSeq[Seq[Feature]],
                                 inferer: Problem => JointMargI with ParFunI = new JunctionTree(_)) extends UnconstraintDifferentiableFunction {
 
+  def hashMemo[A,B](f: A => B): A => B = {
+    val hash = new mutable.HashMap[A,B]()
+    a: A => hash.getOrElseUpdate(a,f(a))
+  }
+
   val simplifiedLogProblem: Problem = problem.simplify.toRing(LogD)
 
   //note that the parameters are always kept in normal representation
@@ -138,11 +144,11 @@ case class MObsAvgLogLikelihood(problem: Problem,
     val p: Problem = buildProblem(theta)
     val unconditioned = inferer(p)
 
-    val unconditionedCliqueBeliefs = Memo.mutableHashMapMemo[IndexedSeq[Int],Factor](vars => unconditioned.decodedCliqueBelief(vars.toArray))
+    val unconditionedCliqueBeliefs = hashMemo[IndexedSeq[Int],Factor](vars => unconditioned.decodedCliqueBelief(vars.toArray))
 
     val expectationMatrix = data.map{ d =>
       val conditioned = inferer(p.condition(d))
-      val conditionedCliqueBeliefs = Memo.mutableHashMapMemo[IndexedSeq[Int],Factor](vars => conditioned.decodedCliqueBelief(vars.toArray))
+      val conditionedCliqueBeliefs = hashMemo[IndexedSeq[Int],Factor](vars => conditioned.decodedCliqueBelief(vars.toArray))
       //every element in target corresponds to one parameter
       target.map{ features =>
       //the average expected value over all features tied for this parameter; note that the feature might already
