@@ -2,11 +2,12 @@ package vultura.factor.inference.conditioned.lcbp
 
 import vultura.factor._
 import vultura.factor.inference.ParFunI
-import vultura.factor.inference.calibration.{MutableFIFOCalibrator, ConvergenceTest, EdgeValues, Edge}
+import vultura.factor.inference.calibration._
 
 /** BP on the meta problem.
  */
-class LcbpMetaBP(val scheme: FactoredScheme, val maxUpdates: Long = 1000000, val tol: Double = 1e-12) extends LcbpFactoredBase with ParFunI {
+class LcbpMetaBP(val scheme: FactoredScheme, val maxUpdates: Long = 1000000, val tol: Double = 1e-12)
+  extends LcbpFactoredBase with ParFunI {
   override type ST = FactoredScheme
 
   case class MetaV2F(v: MVI, fi: MFI) extends MetaFactorEdge {

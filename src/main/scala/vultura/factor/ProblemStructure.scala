@@ -2,6 +2,8 @@ package vultura.factor
 
 import vultura.util.TreeWidth
 
+import scala.annotation.tailrec
+
 /** Describes the structure of a markov network, without the factor values (parameters). */
 trait ProblemStructure {
   type VI = Int
@@ -51,7 +53,20 @@ trait ProblemStructure {
   lazy val neighboursOfVariableInc: Array[Array[VI]] =
     factorIdxOfVariable.zipWithIndex.map{ case (fs,v) => fs.flatMap(fi => scopeOfFactor(fi)) }
 
-  def isTree: Boolean = ???
+  def isTree: Boolean = {
+    @tailrec
+    def findCycle(remaining: List[Set[Int]] = scopeOfFactor.map(_.toSet)(collection.breakOut),
+                  closed: Set[Int] = Set()): Boolean = remaining match {
+      case Nil => true
+      case n :: tail if n.isEmpty => findCycle(tail,closed)
+      case n :: _ =>
+        val elim = n.head
+        val (x,y) = remaining.partition(_.contains(elim))
+        val flatX: Set[Int] = (x.flatMap(identity)(collection.breakOut): Set[Int]) - elim
+        flatX.size == (x.map(_.size).sum - x.size) && findCycle(flatX :: y, closed + elim)
+    }
+    findCycle()
+  }
 }
 
 /** Implementation of [[ProblemStructure]]. */

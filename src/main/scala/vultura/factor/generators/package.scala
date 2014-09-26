@@ -73,7 +73,7 @@ package object generators {
             domainSize: Int = 2,
             fgen: FactorGenerator = expGauss(),
             random: Random = new Random(0)): Problem = {
-    val numVars = numFactors * (k-1) + 1
+    val numVars = math.max(k + (numFactors-1) * (k-1),k)
     val domains = Array.fill(numVars)(domainSize)
     val factors = Seq.iterate((k,fgen(Seq.range(0,k),domains,random)),numFactors){case (nextVar,_) =>
       (nextVar + (k-1),fgen(random.nextInt(nextVar) +: Array.range(nextVar, nextVar + (k-1)),domains,random))
@@ -130,7 +130,8 @@ package object generators {
 
 trait FactorGenerator extends ((Seq[Int],IndexedSeq[Int],Random) => Factor) {
   def generate(variables: Array[Int], domains: Array[Int], random: Random): Factor
-  final def apply(v1: Seq[Int], v2: IndexedSeq[Int], v3: Random): Factor = generate(v1.toArray.sorted,v2.toArray,v3)
+  final def apply(variables: Seq[Int], domains: IndexedSeq[Int], random: Random): Factor =
+    generate(variables.toArray.sorted,domains.toArray,random)
 }
 
 trait SimpleGenerator extends FactorGenerator {

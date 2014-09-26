@@ -1,7 +1,8 @@
 package vultura.factor
 
+import org.scalacheck.Prop
 import org.specs2.matcher.{MatchResult, Expectable, Matcher}
-import vultura.factor.inference.{ParFunI, JunctionTree}
+import vultura.factor.inference.{MarginalI, ParFunI, JunctionTree}
 
 /**
  * Matchers for use with FastFactor objects.
@@ -35,7 +36,25 @@ trait FastFactorMatchers {
       result(
         math.abs(obtainedZ - exactZ) < tol,
         "has same Z as exact inference",
-        f"has different Z compared to exact inference (got $obtainedZ, exact is $exactZ)",
+        s"has different Z compared to exact inference (got $obtainedZ, exact is $exactZ)",
+        t
+      )
+    }
+  }
+
+  def haveExactMarginals(tol: Double = 1e-9) = new Matcher[MarginalI]{
+    def apply[S <: MarginalI](t: Expectable[S]): MatchResult[S] = {
+      val p = t.value.problem
+      val jt = new JunctionTree(p)
+      val error: Option[(Int, Double)] = p.variables.map(v =>
+        v -> (jt.variableBelief(v).values zip t.value.variableBelief(v).values)
+          .map{case (x,y) => math.abs(x-y)}
+          .max
+      ).find(_._2 > tol)
+      result(
+        error.isEmpty,
+        "has exact marginals",
+        s"differs in marginals by ${error.get._2} for variable ${error.get._1}",
         t
       )
     }
