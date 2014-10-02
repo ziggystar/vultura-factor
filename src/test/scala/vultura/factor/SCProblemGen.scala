@@ -19,4 +19,14 @@ trait SCProblemGen {
       seed <- Arbitrary.arbitrary[Long]
     } yield vultura.factor.generators.treeK(n, cliqueSize, domainSize, pot, new Random(seed))
   )
+
+  def gridProblem = Gen.sized(n =>
+    for{
+      width <- Gen.choose(1,n-1)
+      height = n - width
+      domainSize <- Gen.choose(2,3)
+      pot <- somePotential
+      seed <- Arbitrary.arbitrary[Long]
+    } yield vultura.factor.generators.grid(width,height,domainSize,pot, new Random(seed))
+  )
 }

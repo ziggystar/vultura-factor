@@ -10,7 +10,7 @@ import org.specs2.matcher.MatchResult
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
  */
-class FeatureTest extends Specification with FastFactorMatchers {
+class FeatureTest extends Specification with FactorMatchers {
   val simpleGrid = grid(6,6,2,expGauss(1))
   val simpleGridLog = simpleGrid.toRing(LogD)
   val clauseGrid = grid(6,6,2,sigmaClause(1d))

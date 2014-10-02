@@ -11,7 +11,7 @@ import scala.util.Random
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
  */
-class SinglyLCMFTest extends Specification with FastFactorMatchers {
+class SinglyLCMFTest extends Specification with FactorMatchers {
   def factoredProblem(size: Int): Problem = generators.factorized(size,2,generators.expGauss(1),new Random(1))
 
   val singleVarProblem: Problem = factoredProblem(1)

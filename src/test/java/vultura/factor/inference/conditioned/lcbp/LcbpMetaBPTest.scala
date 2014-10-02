@@ -27,11 +27,16 @@ class LcbpMetaBPTest extends Specification {
      */
     "on 3x3 grid" ! cmpExactLcbp(FactoredScheme.fromInfluenceMap(grid(3, 3),Map(0->Set(0,1,3,4),8->Set(8,7,5,4)))) ^
     "on 3x1 grid" ! cmpExactLcbp(FactoredScheme.fromInfluenceMap(grid(3,1), Map(0->Set(0,1),2->Set(1,2)))) ^
+    "on 3x2 grid (simplified)" ! cmpExactLcbp(FactoredScheme.fromInfluenceMap(grid(3,2).simplify, Map(0->Set(0,1,3,4),5->Set(1,2,4,5))), Some("foo")) ^
     "on 3x2 grid" ! cmpExactLcbp(FactoredScheme.fromInfluenceMap(grid(3,2), Map(0->Set(0,1,3,4),5->Set(1,2,4,5))))
 
-  def cmpExactLcbp(scheme: FactoredScheme) = {
-    val lcbp_exact = new LCBP(scheme.problem,scheme.toGScheme, tol=1e-12, maxIterations = 1000000)
+  def cmpExactLcbp(scheme: FactoredScheme, printDot: Option[String] = None) = {
+    val lcbp_exact = new LCBPGeneral(scheme)//new LCBP(scheme.problem,scheme.toGScheme, tol=1e-12, maxIterations = 1000000)
     val lcbp_bp = new LcbpMetaBP(scheme, tol=1e-12, maxUpdates = 1000000)
+    printDot.foreach{ pref =>
+      lcbp_exact.calibrator.toDot.toPDF(s"$pref-lcbp-exact.pdf")
+      lcbp_bp.calibrator.toDot.toPDF(s"$pref-lcbp-bp.pdf")
+    }
     (lcbp_bp.metaStructure.isTree.aka("meta problem is a tree") must beTrue) and
       (lcbp_exact.calibrator.isConverged.aka("lcbp exact converged") must beTrue) and
       (lcbp_bp.calibrator.isConverged.aka("lcbp bp converged") must beTrue) and

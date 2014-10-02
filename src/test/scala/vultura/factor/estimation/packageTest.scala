@@ -11,7 +11,7 @@ import org.specs2.matcher.MatchResult
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
  */
-class packageTest extends Specification with FastFactorMatchers {
+class packageTest extends Specification with FactorMatchers {
 
   override def is: Fragments =
     "learning on random problems, completely observed" ^

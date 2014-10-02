@@ -9,7 +9,7 @@ import scala.util.Random
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
  */
-class JunctionTreeTest extends Specification with FastFactorMatchers{
+class JunctionTreeTest extends Specification with FactorMatchers{
   val p1 = grid(2,2,2,expGauss(1))
   def shuffle[A](xs: Seq[A], seed: Long = 0) = new Random(seed).shuffle(xs)
 

@@ -265,3 +265,8 @@ class LCBP(val problem: Problem,
   /** @return Natural logarithm of partition function. */
   override def logZ: Double = calibrator.edgeValue(LogPartition)
 }
+
+object LCBP{
+  def apply(scheme: FactoredScheme, tol: Double = 1e-12, maxIterations: Int = 1000000): LCBP =
+    new LCBP(scheme.problem, scheme.toGScheme, tol, maxIterations)
+}

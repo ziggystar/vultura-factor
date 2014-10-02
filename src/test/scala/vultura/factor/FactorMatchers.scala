@@ -8,7 +8,7 @@ import vultura.factor.inference.{MarginalI, ParFunI, JunctionTree}
  * Matchers for use with FastFactor objects.
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
  */
-trait FastFactorMatchers {
+trait FactorMatchers {
   def haveSameStructureAs(ref: Factor): Matcher[Factor] = new Matcher[Factor]{
     def apply[S <: Factor](t: Expectable[S]): MatchResult[S] = result(
       ref.variables.deep == t.value.variables.deep && ref.values.size == t.value.values.size,

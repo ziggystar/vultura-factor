@@ -10,7 +10,7 @@ import Utils._
  * User: Thomas Geier
  * Date: 2/13/13
  */
-class FactorTest extends Specification with FastFactorMatchers {
+class FactorTest extends Specification with FactorMatchers {
 
   def incTest(reg: Array[Int], doms: Array[Int]): (Int, Seq[Int]) = (incrementCounter(reg,doms),reg.toSeq)
   def incTest2(reg: Array[Int], doms: Array[Int]): (Int, Seq[Int]) = (incrementCounter2(reg,doms),reg.toSeq)
