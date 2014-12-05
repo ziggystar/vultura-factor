@@ -43,4 +43,4 @@ libraryDependencies += "org.specs2" %% "specs2" % "2.3.+" % "test"
 libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.11.+" % "test"
 
 //for vultura-util
-resolvers += "tgeier repository@companion" at "http://companion.informatik.uni-ulm.de/~tgeier/mvn"
+resolvers += "mvn@mirkwood" at "http://mirkwood.informatik.uni-ulm.de/mvn"
