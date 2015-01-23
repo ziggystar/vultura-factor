@@ -2,7 +2,6 @@ package vultura.factor.inference.calibration
 
 import vultura.util._
 import vultura.util.graph.DotGraph
-import collection.mutable
 import scala.collection.mutable
 
 /**

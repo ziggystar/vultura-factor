@@ -28,7 +28,7 @@ trait Ring[@specialized(Double) T]{
   def decode(p: Array[T]): Array[Double] = sys.error("not supported")
   def encode(p: Array[Double]): Array[T] = sys.error("not supported")
   def log(x: T): Double = sys.error("not supported")
-  def pow(x: T, e: Double): T
+  def pow(x: T, e: Double): T = sys.error("not supported")
 }
 
 object Ring{

@@ -1,7 +1,5 @@
 package vultura.factor
 
-import vultura.util.TreeWidth
-
 import scala.annotation.tailrec
 
 /** Describes the structure of a markov network, without the factor values (parameters). */
