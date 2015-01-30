@@ -1,5 +1,6 @@
 package vultura.propagation
 
+import gnu.trove.map.hash.TIntObjectHashMap
 import vultura.util.SIIndex
 
 import scala.collection.mutable
@@ -51,22 +52,27 @@ trait RepNode[R]{self: Node =>
 
 trait NodeAD extends Node with RepNode[Array[Double]]
 
-case class CP[N <: Node : ClassTag, Impl](query: Iterable[N], rules: Seq[Rule[N,N,Impl]]){
+case class CP[N <: Node : ClassTag, Impl](query: Iterable[N], rules: Seq[Rule[N,N,Impl]] = Seq()){
   def nodes: Set[N] = Iterator
-    .iterate(query.toSet)(ns => ns.flatMap(n => dependenciesOf(n).getOrElse(Seq())))
+    .iterate(query.toSet)(ns => ns ++ ns.flatMap(n => dependenciesOf(n).getOrElse(Seq())))
     .sliding(2).dropWhile(slide => slide(0).size != slide(1).size)
     .next().head
   def dependenciesOf(n: N): Option[IndexedSeq[N]] = rules.find(_.isDefinedAt(n)).map(_.dependencies(n))
   def descendantsOf(n: N): IndexedSeq[N] = nodes.filter(other => dependenciesOf(other).exists(_.contains(n))).toIndexedSeq
   def implementationOf(n: N): Option[Impl] = rules.find(_.isDefinedAt(n)).map(_.implementation(n))
   def addToQuery[N2 >: N <: Node : ClassTag](qs: Iterable[N2]): CP[N2,Impl] = widen[N2].copy(query = query ++ qs)
-  def appendRule[N2 >: N <: Node : ClassTag, T <: N2,D <: N2](rule: Rule[T,D,Impl]): CP[N2,Impl] = widen[N2].appendRule(rule)
+  def appendRule[N2 >: N <: Node : ClassTag, T <: N2: ClassTag,D <: N2](rule: Rule[T,D,Impl]): CP[N2,Impl] = widen[N2].appendRuleSameType(rule.widen[N2])
   private def appendRuleSameType(rule: Rule[N,N,Impl]) = this.copy(rules = rules :+ rule)
   def widen[N2 >: N <: Node : ClassTag] = CP[N2,Impl](query, rules.map(_.widen[N2]))
 }
 
 trait Valuation[N <: Node]{
   def apply(n: N): n.Type
+}
+object Valuation{
+  def constant[N <: Node](x: N#Type) = new Valuation[N]{
+    override def apply(n: N): n.Type = x.asInstanceOf[n.Type]
+  }
 }
 trait PartialValuation[N <: Node]{
   def apply(n: N): Option[n.Type]
@@ -80,6 +86,11 @@ trait Differ[-N <: Node, -R]{
   def diff(n: N, oldValue: R, newValue: R): Double
 }
 
+object MaxDiff extends Differ[NodeAD,Array[Double]]{
+  override def diff(n: NodeAD, oldValue: Array[Double], newValue: Array[Double]): Double =
+    oldValue.zip(newValue).map{case (x,y) => math.abs(x - y)}.max
+}
+
 trait Calibrator[Impl]{
   def calibrate[N <: Node](cp: CP[N,Impl]): Calibrated[N]
 }
@@ -91,10 +102,15 @@ class RoundRobinAD[N <: Node with RepNode[Array[Double]]](cp: CP[N, ImplAD],
   private val nodes = nodesIndex.elements
   val implementations = nodes.map(n => cp.implementationOf(n).orNull)
   private val state: Array[Array[Double]] = nodes.map(_.construct)(collection.breakOut)
-  //at position i, holds a spare array with the size for representing node(i)
-  private val tempStorage: Array[Array[Double]] = {
-    val lookup = new mutable.HashMap[Int,Array[Double]]()
-    state.map(a => lookup.getOrElseUpdate(a.size,new Array[Double](a.size)))
+  val stateSizes: Array[Int] = state.map(_.length)
+  //to retrieve the temporal result array for node at position `i`, look at `tempStorage(tempStorageIndex(i))`
+  //this could be optimized by placing the indices into tempStorage into an array (replacing stateSizes)
+  private val tempStorage: TIntObjectHashMap[Array[Double]] = {
+    val lookup = new TIntObjectHashMap[Array[Double]](20)
+    stateSizes.distinct.foreach{ l =>
+      lookup.put(l,new Array[Double](l))
+    }
+    lookup
   }
   /** Those nodes that have to be provided with an initial value. */
   def inputNodes: IndexedSeq[N] = nodes.filterNot(n => cp.implementationOf(n).isDefined)
@@ -125,14 +141,18 @@ class RoundRobinAD[N <: Node with RepNode[Array[Double]]](cp: CP[N, ImplAD],
       var i = 0
       while (i < nodes.size) {
         if (!isValid(i)) {
-          converged = false
           val node = nodes(i)
           val impl = implementations(i)
-          val tempArray = tempStorage(i)
+          val stateSize: Int = stateSizes(i)
+          val newResult = tempStorage.get(stateSize)
           //NPE at this line means we have an invalid parameter node here, which means initialization is broken
-          impl.compute(cp.dependenciesOf(node).get.map(n => state(nodesIndex(n)))(collection.breakOut), tempArray)
-          val diff = differ.diff(node, state(i), tempArray)
-          if(diff < maxDiff){
+          impl.compute(cp.dependenciesOf(node).get.map(n => state(nodesIndex(n)))(collection.breakOut), newResult)
+          val diff = differ.diff(node, state(i), newResult)
+          if(diff > maxDiff){
+            converged = false
+            //update value by swapping
+            tempStorage.put(stateSize, state(i))
+            state(i) = newResult
             //invalidate descendants
             for(desc <- cp.descendantsOf(node)){
               isValid(nodesIndex(desc)) = false
