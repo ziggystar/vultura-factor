@@ -11,7 +11,7 @@ import scala.util.Either.RightProjection
   * It provides several inference methods based on the exact junction tree algorithm. */
 case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[Double]) extends ProblemStructure {
 
-  override def scopeOfFactor: Array[Array[VI]] = factors.map(_.variables)(collection.breakOut)
+  lazy val scopeOfFactor: Array[Array[VI]] = factors.map(_.variables)(collection.breakOut)
 
   def factorsOfVariable(v: Int): Array[Factor] = factorIdxOfVariable(v).map(factors)
 

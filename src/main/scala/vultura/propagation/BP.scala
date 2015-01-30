@@ -19,7 +19,10 @@ case class BP(ps: ProblemStructure, ring: Ring[Double]){
 
     def productOf(factors: IndexedSeq[FactorNode], result: FactorNode): ImplAD = new ImplAD {
       val spt = SumProductTask(result.variables,ps.domains,factors.map(_.variables)(collection.breakOut),ring)
-      def compute: (Array[Array[Double]], Array[Double]) => Unit = spt.sumProduct(_,_)
+      def compute: (Array[Array[Double]], Array[Double]) => Unit = (ins,r) => {
+        spt.sumProduct(ins,r)
+        ring.normalizeInplace(r)
+      }
     }
   }
   //end generic code
@@ -51,4 +54,7 @@ case class BP(ps: ProblemStructure, ring: Ring[Double]){
   object VBelRule extends RuleAD[VBel,F2V] with ProductRule[VBel,F2V] {
     override def dependencies(v1: VBel): IndexedSeq[F2V] = ps.factorIdxOfVariable(v1.vi).map(F2V(_,v1.vi))
   }
+
+  def calibrationProblem: CP[BPNode, ImplAD] =
+    CP(ps.variables.map(VBel)) appendRule V2FRule appendRule F2VRule appendRule VBelRule
 }

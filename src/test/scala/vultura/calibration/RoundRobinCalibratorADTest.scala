@@ -4,7 +4,7 @@ import org.specs2._
 import org.specs2.specification.Fragments
 import vultura.propagation._
 
-class AveragingCPTest extends Specification {
+class RoundRobinCalibratorADTest extends Specification {
 
   trait DoubleNode extends NodeAD {
     override type Type = Double

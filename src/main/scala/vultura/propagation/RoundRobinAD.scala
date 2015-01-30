@@ -12,6 +12,7 @@ class RoundRobinAD[N <: Node with RepNode[Array[Double]]](cp: CP[N, ImplAD],
   private val nodesIndex: SIIndex[N] = new SIIndex(cp.nodes)
   private val nodes = nodesIndex.elements
   val implementations = nodes.map(n => cp.implementationOf(n).orNull)
+  val descendants: IndexedSeq[IndexedSeq[N]] = nodes.map(cp.descendantsOf)
   private val state: Array[Array[Double]] = nodes.map(_.construct)(collection.breakOut)
   val stateSizes: Array[Int] = state.map(_.length)
   //to retrieve the temporal result array for node at position `i`, look at `tempStorage(tempStorageIndex(i))`
@@ -65,7 +66,7 @@ class RoundRobinAD[N <: Node with RepNode[Array[Double]]](cp: CP[N, ImplAD],
             tempStorage.put(stateSize, state(i))
             state(i) = newResult
             //invalidate descendants
-            for(desc <- cp.descendantsOf(node)){
+            for(desc <- descendants(i)){
               isValid(nodesIndex(desc)) = false
             }
           }
