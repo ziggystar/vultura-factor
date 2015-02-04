@@ -2,24 +2,25 @@ package vultura.propagation
 
 import vultura.factor.{Ring, SumProductTask, Factor, ProblemStructure}
 
+import scala.reflect.ClassTag
+
 case class BP(ps: ProblemStructure, ring: Ring[Double]){
 
   //  slightly generic code
-  trait FactorNode {self: NodeAD =>
-    type Type = Factor
+  trait FactorNode extends NodeAD {
+    type TRep = Factor
     def variables: Array[ps.VI]
 
     def construct: Array[Double] = new Array[Double](variables.map(ps.domains).product)
-    def store(t: Factor, r: Array[Double]): Unit = System.arraycopy(t.values,0,r,0,r.size)
-    def load(r: Array[Double]): Factor = Factor(variables,r.clone())
+    def store(r: TRep, i: TImpl): Unit = System.arraycopy(r.values,0,i,0,i.length)
+    def load(i: TImpl): TRep = Factor(variables,i.clone())
   }
 
-  trait ProductRule[T <: FactorNode,F <: FactorNode] {self: RuleAD[T,F] =>
-    override def implementation(v: T): ImplAD = productOf(self.dependencies(v),v)
-
-    def productOf(factors: IndexedSeq[FactorNode], result: FactorNode): ImplAD = new ImplAD {
+  trait ProductRule[T <: FactorNode,F <: FactorNode] extends TypedRule[ADImpl,T,F] {
+    override def typedImplementation(t: T): ADImpl#RuleType = productOf(typedDependenciesOf(t),t)
+    def productOf(factors: IndexedSeq[FactorNode], result: FactorNode): ADImpl#RuleType = {
       val spt = SumProductTask(result.variables,ps.domains,factors.map(_.variables)(collection.breakOut),ring)
-      def compute: (Array[Array[Double]], Array[Double]) => Unit = (ins,r) => {
+      (ins,r) => {
         spt.sumProduct(ins,r)
         ring.normalizeInplace(r)
       }
@@ -27,34 +28,36 @@ case class BP(ps: ProblemStructure, ring: Ring[Double]){
   }
   //end generic code
 
-  trait BPNode extends NodeAD
-  trait BPFactorNode extends BPNode with FactorNode
-  
-  case class Parameter(fi: ps.FI) extends BPFactorNode{
+  case class Parameter(fi: ps.FI) extends FactorNode{
     val variables: Array[ps.FI] = ps.scopeOfFactor(fi)
   }
-  case class V2F(vi: ps.VI, fi: ps.FI) extends BPFactorNode {
+  case class V2F(vi: ps.VI, fi: ps.FI) extends FactorNode {
     val variables: Array[ps.VI] = Array(vi)
   }
-  case class F2V(fi: ps.FI, vi: ps.VI) extends BPFactorNode {
+  case class F2V(fi: ps.FI, vi: ps.VI) extends FactorNode {
     val variables: Array[ps.VI] = Array(vi)
   }
-  case class VBel(vi: ps.VI) extends BPFactorNode {
+  case class VBel(vi: ps.VI) extends FactorNode {
     val variables = Array(vi)
   }
 
-  object V2FRule extends RuleAD[V2F,F2V] with ProductRule[V2F,F2V] {
-    override def dependencies(v: V2F): IndexedSeq[F2V] = ps.factorIdxOfVariable(v.vi).filterNot(_ == v.fi).map(F2V(_,v.vi))
+  object V2FRule extends ProductRule[V2F,F2V] {
+    override def tTag: ClassTag[V2F] = implicitly[ClassTag[V2F]]
+    override def typedDependenciesOf(v: V2F): IndexedSeq[F2V] =
+      ps.factorIdxOfVariable(v.vi).filterNot(_ == v.fi).map(F2V(_,v.vi))
   }
 
-  object F2VRule extends RuleAD[F2V,BPFactorNode] with ProductRule[F2V,BPFactorNode] {
-    override def dependencies(v1: F2V): IndexedSeq[BPFactorNode] = Parameter(v1.fi) +: ps.scopeOfFactor(v1.fi).filterNot(_ == v1.vi).map(V2F(_,v1.fi))
+  object F2VRule extends ProductRule[F2V,FactorNode] {
+    override def tTag: ClassTag[F2V] = implicitly[ClassTag[F2V]]
+    override def typedDependenciesOf(t: F2V): IndexedSeq[FactorNode] =
+      Parameter(t.fi) +: ps.scopeOfFactor(t.fi).filterNot(_ == t.vi).map(V2F(_,t.fi))
   }
 
-  object VBelRule extends RuleAD[VBel,F2V] with ProductRule[VBel,F2V] {
-    override def dependencies(v1: VBel): IndexedSeq[F2V] = ps.factorIdxOfVariable(v1.vi).map(F2V(_,v1.vi))
+  object VBelRule extends ProductRule[VBel,F2V] {
+    override def tTag: ClassTag[VBel] = implicitly[ClassTag[VBel]]
+    override def typedDependenciesOf(v1: VBel): IndexedSeq[F2V] =
+      ps.factorIdxOfVariable(v1.vi).map(F2V(_,v1.vi))
   }
 
-  def calibrationProblem: CP[BPNode, ImplAD] =
-    CP(ps.variables.map(VBel)) appendRule V2FRule appendRule F2VRule appendRule VBelRule
+  def calibrationProblem: CP[ADImpl] = CP(ps.variables.map(VBel), V2FRule andThen F2VRule andThen VBelRule)
 }

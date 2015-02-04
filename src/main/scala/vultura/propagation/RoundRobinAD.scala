@@ -6,9 +6,10 @@ import vultura.util.SIIndex
 import scala.collection.mutable
 
 /** Simple calibrator that traverses the nodes in the same order until convergence. */
-class RoundRobinAD[N <: Node with RepNode[Array[Double]]](cp: CP[N, ImplAD],
-                                                          differ: Differ[N,Array[Double]],
-                                                          initializer: Valuation[N]){
+class RoundRobinAD(cp: CP[ADImpl],
+                   differ: Differ[ADImpl#NodeType],
+                   initializer: IValuation[ADImpl#NodeType]){
+  type N = ADImpl#NodeType
   private val nodesIndex: SIIndex[N] = new SIIndex(cp.nodes)
   private val nodes = nodesIndex.elements
   val implementations = nodes.map(n => cp.implementationOf(n).orNull)
@@ -27,18 +28,18 @@ class RoundRobinAD[N <: Node with RepNode[Array[Double]]](cp: CP[N, ImplAD],
   /** Those nodes that have to be provided with an initial value. */
   def inputNodes: IndexedSeq[N] = nodes.filterNot(n => cp.implementationOf(n).isDefined)
 
-  def calibrate(params: Valuation[N],
+  def calibrate(params: IValuation[N],
                 maxDiff: Double = 1e-9,
                 maxLoops: Long = 1000,
-                specificInitializer: Option[PartialValuation[N]] = None): Calibrated[N] = {
+                specificInitializer: IValuation[N] = IValuation.empty): Calibrated[N] = {
     val isValid: mutable.BitSet = new mutable.BitSet(nodes.size)
     //initialize the nodes
     nodes.zip(state).zipWithIndex.foreach{case ((n,ad),i) =>
         if(cp.implementationOf(n).isDefined) {
-          n.store(specificInitializer.flatMap(_.apply(n)).getOrElse(initializer(n)), ad)
+          specificInitializer.orElse(initializer).istore(n,ad)
           isValid(i) = false
         } else {
-          n.store(params(n), ad)
+          params.istore(n,ad)
           isValid(i) = true
         }
     }
@@ -58,7 +59,7 @@ class RoundRobinAD[N <: Node with RepNode[Array[Double]]](cp: CP[N, ImplAD],
           val stateSize: Int = stateSizes(i)
           val newResult = tempStorage.get(stateSize)
           //NPE at this line means we have an invalid parameter node here, which means initialization is broken
-          impl.compute(cp.dependenciesOf(node).get.map(n => state(nodesIndex(n)))(collection.breakOut), newResult)
+          impl.apply(cp.dependenciesOf(node).get.map(n => state(nodesIndex(n)))(collection.breakOut), newResult)
           val diff = differ.diff(node, state(i), newResult)
           if(diff > maxDiff){
             converged = false
@@ -76,10 +77,23 @@ class RoundRobinAD[N <: Node with RepNode[Array[Double]]](cp: CP[N, ImplAD],
       }
     }
     new Calibrated[N] {
-      val myState = state.clone()
       override def totalUpdates: Long = loops
       override def isConverged: Boolean = converged
-      override def apply(n: N): n.Type = n.load(myState(nodesIndex(n)))
+      override def ival: IValuation[N] = new IValuation[N] {
+        val myState = state.clone()
+        override def isDefinedAt(n: N): Boolean = nodesIndex.contains(n)
+        override def istore(n: N, r: N#TImpl): Unit = {
+          val v: Array[Double] = myState(nodesIndex(n))
+          System.arraycopy(v,0,r,0,v.length)
+        }
+      }
     }
   }
 }
+
+trait Calibrated[N <: Node]{
+  def totalUpdates: Long
+  def isConverged: Boolean
+  def ival: IValuation[N]
+}
+
