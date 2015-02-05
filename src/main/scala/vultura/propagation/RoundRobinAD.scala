@@ -12,8 +12,13 @@ class RoundRobinAD(cp: CP[ADImpl],
   type N = ADImpl#NodeType
   private val nodesIndex: SIIndex[N] = new SIIndex(cp.nodes)
   private val nodes = nodesIndex.elements
-  val implementations = nodes.map(n => cp.implementationOf(n).orNull)
-  val descendants: IndexedSeq[IndexedSeq[N]] = nodes.map(cp.descendantsOf)
+  val descendants: Array[Array[Int]] =
+    nodes.map(n => cp.descendantsOf(n).map(nodesIndex.forward)(collection.breakOut): Array[Int])(collection.breakOut)
+  //contains null entries for nodes without rules
+  val implementations: Array[ADImpl#RuleType] = nodes.map(n => cp.implementationOf(n).orNull)(collection.breakOut)
+  //contains null entries for nodes without rules
+  val dependencies: Array[Array[Int]] =
+    nodes.map(n => cp.dependenciesOf(n).map(_.map(n => nodesIndex(n))(collection.breakOut): Array[Int]).orNull)(collection.breakOut)
   private val state: Array[Array[Double]] = nodes.map(_.construct)(collection.breakOut)
   val stateSizes: Array[Int] = state.map(_.length)
   //to retrieve the temporal result array for node at position `i`, look at `tempStorage(tempStorageIndex(i))`
@@ -27,6 +32,7 @@ class RoundRobinAD(cp: CP[ADImpl],
   }
   /** Those nodes that have to be provided with an initial value. */
   def inputNodes: IndexedSeq[N] = nodes.filterNot(n => cp.implementationOf(n).isDefined)
+  def hasRule(nodeIdx: Int): Boolean = implementations(nodeIdx) != null
 
   def calibrate(params: IValuation[N],
                 maxDiff: Double = 1e-9,
@@ -59,7 +65,7 @@ class RoundRobinAD(cp: CP[ADImpl],
           val stateSize: Int = stateSizes(i)
           val newResult = tempStorage.get(stateSize)
           //NPE at this line means we have an invalid parameter node here, which means initialization is broken
-          impl.apply(cp.dependenciesOf(node).get.map(n => state(nodesIndex(n)))(collection.breakOut), newResult)
+          impl.apply(dependencies(i).map(state)(collection.breakOut), newResult)
           val diff = differ.diff(node, state(i), newResult)
           if(diff > maxDiff){
             converged = false
@@ -68,7 +74,7 @@ class RoundRobinAD(cp: CP[ADImpl],
             state(i) = newResult
             //invalidate descendants
             for(desc <- descendants(i)){
-              isValid(nodesIndex(desc)) = false
+              isValid(desc) = false
             }
           }
           isValid(i) = true
