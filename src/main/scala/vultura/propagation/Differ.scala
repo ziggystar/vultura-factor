@@ -8,6 +8,15 @@ trait Differ[-N <: Node]{
 }
 
 object MaxDiff extends Differ[NodeAD]{
-  override def diff(n: NodeAD, oldValue: Array[Double], newValue: Array[Double]): Double =
-    oldValue.zip(newValue).map{case (x,y) => math.abs(x - y)}.max
+  override def diff(n: NodeAD, oldValue: Array[Double], newValue: Array[Double]): Double = {
+    var i = 0
+    var max = Double.MinValue
+    while(i < oldValue.length){
+      val d = math.abs(oldValue(i) - newValue(i))
+      if(d > max)
+        max = d
+      i += 1
+    }
+    max
+  }
 }
