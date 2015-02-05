@@ -3,20 +3,22 @@ package vultura.calibration
 import org.specs2._
 import org.specs2.specification.Fragments
 import vultura.factor.inference.calibration.{BPResult, LBP}
-import vultura.factor.{Factor, LogD, Problem}
+import vultura.factor._
 import vultura.factor.generators._
 import vultura.propagation._
 
-class BPTest extends Specification {
-  val p1: Problem = grid(10,10,4).toRing(LogD).simplify
-  val bp1: BP = BP(p1,LogD)
+class BPTest extends Specification with FactorMatchers {
+  val p1: Problem = grid(20,20,4).simplify.toRing(LogD)
+  val bp1: BP = BP(p1,p1.ring)
 
   val neutralValuation: RValuation[BPTest.this.bp1.FactorNode] = new RValuation[bp1.FactorNode]{
     override def isDefinedAt(n: BPTest.this.bp1.FactorNode): Boolean = true
     override def rval(n: BPTest.this.bp1.FactorNode): n.TRep = Factor.maxEntropy(n.variables,bp1.ps.domains,bp1.ring)
   }
 
-  override def is: Fragments = {
+  override def is: Fragments =
+    "compare propagation.BP result with inference.propagation.LBP result" ! {
+    val other: BPResult = LBP.infer(p1)
     val cp = bp1.calibrationProblem
     val calibrator = new RoundRobinAD(cp,MaxDiff,neutralValuation.widen.toIVal)
     val result = calibrator.calibrate(new IValuation[bp1.Parameter] {
@@ -24,12 +26,8 @@ class BPTest extends Specification {
       override def istore(n: bp1.Parameter, r: bp1.Parameter#TImpl): Unit =
         System.arraycopy(p1.factors(n.fi).values,0,r,0,r.length)
     }.widen)
-    val other: BPResult = LBP.infer(p1)
-    cp.query.foreach{ case n@bp1.VBel(i) =>
-      println(s"$n -> ${result.ival.rvaluation.rval(n)}")
-      println(s"$n -> ${other.variableBelief(i)}")
-    }
-    //make a test out of this
-    ???
+    cp.query.collect{ case n: bp1.VBel =>
+      result.ival.rvaluation.rval(n).asInstanceOf[Factor] must haveValuesCloseTo(other.variableBelief(n.vi),1e-4)
+    }.reduce(_ and _)
   }
 }
