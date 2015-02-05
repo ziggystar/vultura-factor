@@ -12,15 +12,19 @@ class RoundRobinAD(cp: CP[ADImpl],
   type N = ADImpl#NodeType
   private val nodesIndex: SIIndex[N] = new SIIndex(cp.nodes)
   private val nodes = nodesIndex.elements
-  val descendants: Array[Array[Int]] =
+  private val descendants: Array[Array[Int]] =
     nodes.map(n => cp.descendantsOf(n).map(nodesIndex.forward)(collection.breakOut): Array[Int])(collection.breakOut)
   //contains null entries for nodes without rules
-  val implementations: Array[ADImpl#RuleType] = nodes.map(n => cp.implementationOf(n).orNull)(collection.breakOut)
+  private val implementations: Array[ADImpl#RuleType] = nodes.map(n => cp.implementationOf(n).orNull)(collection.breakOut)
   //contains null entries for nodes without rules
-  val dependencies: Array[Array[Int]] =
+  private val dependencies: Array[Array[Int]] =
     nodes.map(n => cp.dependenciesOf(n).map(_.map(n => nodesIndex(n))(collection.breakOut): Array[Int]).orNull)(collection.breakOut)
+  //these objects will get reused for calling the implementation methods
+  private val inputArrays: Array[Array[Array[Double]]] =
+    (0 to dependencies.foldLeft(0){case (m,a) => if(a == null) m else math.max(m,a.length)})
+      .map(l => new Array[Array[Double]](l))(collection.breakOut)
   private val state: Array[Array[Double]] = nodes.map(_.construct)(collection.breakOut)
-  val stateSizes: Array[Int] = state.map(_.length)
+  private val stateSizes: Array[Int] = state.map(_.length)
   //to retrieve the temporal result array for node at position `i`, look at `tempStorage(tempStorageIndex(i))`
   //this could be optimized by placing the indices into tempStorage into an array (replacing stateSizes)
   private val tempStorage: TIntObjectHashMap[Array[Double]] = {
@@ -65,7 +69,18 @@ class RoundRobinAD(cp: CP[ADImpl],
           val stateSize: Int = stateSizes(i)
           val newResult = tempStorage.get(stateSize)
           //NPE at this line means we have an invalid parameter node here, which means initialization is broken
-          impl.apply(dependencies(i).map(state)(collection.breakOut), newResult)
+          val deps: Array[Int] = dependencies(i)
+          val input: Array[Array[Double]] = inputArrays(deps.length)
+
+          {
+            var i = 0
+            while(i < input.length){
+              input(i) = state(deps(i))
+              i += 1
+            }
+          }
+
+          impl.apply(input, newResult)
           val diff = differ.diff(node, state(i), newResult)
           if(diff > maxDiff){
             converged = false
