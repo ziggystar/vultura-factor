@@ -16,6 +16,7 @@ trait ProblemStructure {
   def variables: Range = 0 until numVariables
   lazy val variableSet: Set[Int] = (0 until numVariables).toSet
 
+  /** Number of incident factors to variable. Indexed by variable index. */
   lazy val degrees: Array[Int] = {
     val r = new Array[Int](numVariables)
     for{

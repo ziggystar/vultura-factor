@@ -29,6 +29,7 @@ trait Ring[@specialized(Double) T]{
   def encode(p: Array[Double]): Array[T] = sys.error("not supported")
   def log(x: T): Double = sys.error("not supported")
   def pow(x: T, e: Double): T = sys.error("not supported")
+  def div(n: T, d: T): T = sys.error("not supported")
 }
 
 object Ring{
@@ -129,6 +130,8 @@ object NormalD extends Ring[Double]{
   override def log(x: Double): Double = math.log(x)
 
   override def pow(x: Double, e: Double): Double = math.pow(x,e)
+
+  override def div(n: Double, d: Double): Double = n / d
 
   override def toString: String = "normal domain"
 }
@@ -235,5 +238,6 @@ object LogD extends Ring[Double] {
   override def encode(p: Array[Double]): Array[Double] = p.map(math.log)
   override def log(x: Double): Double = x
   override def pow(x: Double, e: Double): Double = x * e
+  override def div(n: Double, d: Double): Double = n - d
   override def toString: String = "log domain"
 }
