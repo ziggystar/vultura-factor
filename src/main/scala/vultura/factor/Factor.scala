@@ -98,6 +98,10 @@ case class Factor(variables: Array[Int], values: Array[Double]) {
 }
 
 object Factor{
+  /** The constant one factor. */
+  def neutral(variables: Array[Var], domains: Array[Var], ring: Ring[Double]): Factor =
+    fromFunction(variables,domains,_ => ring.one)
+
   implicit class RichRing(val ring: Ring[Double]) extends AnyVal {
     def encode(f: Factor): Factor = f.copy(values=ring.encode(f.values))
     def decode(f: Factor): Factor = f.copy(values=ring.decode(f.values))
