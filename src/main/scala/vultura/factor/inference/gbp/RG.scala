@@ -20,15 +20,12 @@ trait RG {
 }
 
 case class MapRG(problemStructure: ProblemStructure, regions: Set[Reg], childMap: Map[Reg,Set[Reg]]) extends RG {
-  val tranChildMap: Map[Reg, Set[Reg]] = vultura.util.transitiveClosure(childMap)
-  val parentMap: Map[Reg, Set[Reg]] = vultura.util.reverseMultiMap(childMap)
-  val tranParentMap: Map[Reg, Set[Reg]] = vultura.util.transitiveClosure(parentMap)
+  val tranChildMap: Map[Reg, Set[Reg]] = vultura.util.transitiveClosure(childMap).withDefaultValue(Set())
+  val parentMap: Map[Reg, Set[Reg]] = vultura.util.reverseMultiMap(childMap).withDefaultValue(Set())
+  val tranParentMap: Map[Reg, Set[Reg]] = vultura.util.transitiveClosure(parentMap).withDefaultValue(Set())
   override def parents(r: Reg): Set[Reg] = parentMap(r)
-
   override def children(r: Reg): Set[Reg] = childMap(r)
-
   override def successors(r: Reg): Set[Reg] = tranChildMap(r)
-
   override def ancestors(r: Reg): Set[Reg] = tranParentMap(r)
 }
 
