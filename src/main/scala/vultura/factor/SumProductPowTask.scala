@@ -20,6 +20,9 @@ case class SumProductPowTask(domainSizes: Array[Int],
   val remainSize: Int = Factor.mapMultiply(remainingVars,domainSizes)
   val allFactors: Array[Array[Var]] = factorGroups.flatMap(_._2)(collection.breakOut)
   val groupPow: Array[Double] = factorGroups.map(_._1)(collection.breakOut)
+  //index into a flattened argument array
+  val factorIndex: Array[Array[Int]] =
+    groupSize.scanLeft(0)(_ + _).init.zipWithIndex.map{case (offset,i) => (offset until (offset + groupSize(i))).toArray}
 
   //collect all variables
   val (cliqueOrdering: Array[Int], margVars: Array[Int]) = {
@@ -42,7 +45,7 @@ case class SumProductPowTask(domainSizes: Array[Int],
   val counter: Array[Int] = new Array[Int](counterSize)
   val factorPointers: Array[Array[Int]] = factorGroups.map(x => new Array[Int](x._2.length))(collection.breakOut)
 
-  final def sumProduct(factorValues: Array[Array[Array[Double]]], result: Array[Double]) {
+  final def sumProduct(factorValues: Array[Array[Double]], result: Array[Double]) {
     //TODO maybe the clearing is not needed
     SumProductTask.arrayClear(counter)
 
@@ -70,7 +73,7 @@ case class SumProductPowTask(domainSizes: Array[Int],
           var fi = 0
           val pTemp = prodTemp(fg)
           while (fi < groupSize(fg)) {
-            pTemp(fi) = factorValues(fg)(fi)(factorPointers(fg)(fi))
+            pTemp(fi) = factorValues(factorIndex(fg)(fi))(factorPointers(fg)(fi))
             factorPointers(fg)(fi) += lookups(fg)(fi)(overflow)
             fi += 1
           }
@@ -120,7 +123,7 @@ object SumProductPowTask {
       factorGroups.map { case (p, fs) => (p, fs.map(_.variables)(collection.breakOut): Array[Array[Int]])}(collection.breakOut)
     val task = SumProductPowTask(domains, ring, remaining, scopes)
     val result = new Array[Double](remaining.map(domains).product)
-    task.sumProduct(factorGroups.map(_._2.map(_.values)(collection.breakOut): Array[Array[Double]])(collection.breakOut),result)
+    task.sumProduct(factorGroups.flatMap(_._2.map(_.values))(collection.breakOut),result)
     Factor(remaining,result)
   }
 }
