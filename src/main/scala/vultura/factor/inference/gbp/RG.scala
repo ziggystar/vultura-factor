@@ -19,6 +19,10 @@ trait RG {
   def descendants(r: Reg): Set[Reg]
   def outerRegions: Set[Reg] = regions.filter(r => parents(r).isEmpty)
   def innerRegions: Set[Reg] = regions -- outerRegions
+  /** All descendants and the region itself. */
+  def interior(r: Reg): Set[Reg] = ancestors(r) + r
+  /** All regions that are parent to an interior region of `r`, but are not interior themselves. */
+  def boundary(r: Reg): Set[Reg] = interior(r).flatMap(parents) -- interior(r)
 }
 
 case class MapRG(problemStructure: ProblemStructure, regions: Set[Reg], childMap: Map[Reg,Set[Reg]]) extends RG {
