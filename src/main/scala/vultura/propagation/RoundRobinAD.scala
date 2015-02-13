@@ -6,9 +6,9 @@ import vultura.util.SIIndex
 import scala.collection.mutable
 
 /** Simple calibrator that traverses the nodes in the same order until convergence. */
-class RoundRobinAD(cp: CP[ADImpl],
-                   differ: Differ[ADImpl#NodeType],
-                   initializer: IValuation[ADImpl#NodeType]){
+class RoundRobinAD(val cp: CP[ADImpl],
+                   val differ: Differ[ADImpl#NodeType],
+                   val initializer: IValuation[ADImpl#NodeType]){
   type N = ADImpl#NodeType
   private val nodesIndex: SIIndex[N] = new SIIndex(cp.nodes)
   private val nodes = nodesIndex.elements

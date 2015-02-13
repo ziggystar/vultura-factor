@@ -4,6 +4,7 @@ import scala.annotation.tailrec
 
 /** Describes the structure of a markov network, without the factor values (parameters). */
 trait ProblemStructure {
+
   type VI = Int
   type FI = Int
   /** The domain size for each variable. Variable indices start at zero and are consecutive. */
@@ -66,6 +67,9 @@ trait ProblemStructure {
     }
     findCycle()
   }
+
+  def isCompatible(other: ProblemStructure): Boolean =
+    domains.deep == other.domains.deep && scopeOfFactor.deep == other.scopeOfFactor.deep
 }
 
 /** Implementation of [[ProblemStructure]]. */

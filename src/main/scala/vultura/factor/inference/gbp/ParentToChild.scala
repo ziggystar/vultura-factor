@@ -1,7 +1,8 @@
 package vultura.factor.inference.gbp
 
-import vultura.factor.{ProblemStructure, SumProductTask, Factor, Ring}
-import vultura.propagation.{CP, ADImpl, TypedRule, NodeAD}
+import vultura.factor._
+import vultura.factor.inference.MarginalI
+import vultura.propagation._
 
 import scala.reflect.ClassTag
 
@@ -38,11 +39,11 @@ case class ParentToChild(rg: RG, ring: Ring[Double]) {
     override def variables: Array[VI] = ps.scopeOfFactor(fi)
   }
   case class DownEdge(parent: Reg, child: Reg) extends FactorNode{
-    override def variables: Array[VI] = child.variables.toArray
+    override def variables: Array[VI] = child.variables.toArray.sorted
   }
   //region belief
   case class RBel(r: Reg) extends FactorNode{
-    override def variables: Array[VI] = r.variables.toArray
+    override def variables: Array[VI] = r.variables.toArray.sorted
   }
 
   val allEdges: IndexedSeq[DownEdge] = (for {
@@ -74,7 +75,7 @@ case class ParentToChild(rg: RG, ring: Ring[Double]) {
   def factorsForRegion(r: Reg): IndexedSeq[Parameter] =
     selfAndDescendants(r).flatMap(d => d.factors.map(Parameter))(collection.breakOut)
 
-  def selfAndDescendants(r: Reg): Set[Reg] = rg.successors(r) + r
+  def selfAndDescendants(r: Reg): Set[Reg] = rg.descendants(r) + r
 
   object UpdateRule extends ProductRule[DownEdge,FactorNode]{
     override def tTag: ClassTag[DownEdge] = implicitly[ClassTag[DownEdge]]
@@ -92,4 +93,26 @@ case class ParentToChild(rg: RG, ring: Ring[Double]) {
   }
 
   def calibrationProblem: CP[ADImpl] = CP(rg.regions.map(RBel), UpdateRule andThen RBelRule)
+
+  def parametersFromProblem(p: Problem): IValuation[FactorNode] = new IValuation[Parameter] {
+    override def isDefinedAt(n: Parameter): Boolean = true
+    override def istore(n: Parameter, r: Parameter#TImpl): Unit =
+      System.arraycopy(p.factors(n.fi).values,0,r,0,r.length)
+  }.widen
+
+  def margParI(iValuation: IValuation[FactorNode], p: Problem): MarginalI = new MarginalI{
+    require(rg.problemStructure.isCompatible(p))
+    val regionForVariable: Map[Int,RBel] =
+      p.variables.map(v => v -> RBel(rg.regions.find(_.variables.contains(v)).get))(collection.breakOut)
+
+    /** @return marginal distribution of variable in encoding specified by `ring`. */
+    override def variableBelief(vi: Val): Factor = {
+      val r = regionForVariable(vi)
+      val builder: Array[Double] = r.construct
+      val regResult = iValuation.istore(r,builder)
+      Factor.multiplyRetain(ring)(p.domains)(Seq(r.load(builder)),Array(vi))
+    }
+
+    override def problem: Problem = p
+  }
 }
