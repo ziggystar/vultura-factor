@@ -1,6 +1,5 @@
 package vultura.factor
 
-import org.scalacheck.Prop
 import org.specs2.matcher.{MatchResult, Expectable, Matcher}
 import vultura.factor.inference.{MarginalI, ParFunI, JunctionTree}
 
@@ -26,28 +25,61 @@ trait FactorMatchers {
     )
   }
 
-  def beSimilarTo(ref: Factor, tol: Double = 1e-7): Matcher[Factor] =
+  def beSimilarTo(ref: Factor, tol: Double): Matcher[Factor] =
     haveSameStructureAs(ref) and haveValuesCloseTo(ref,tol)
 
-  def haveExactZ(tol: Double = 1e-7): Matcher[ParFunI] = new Matcher[ParFunI]{
+  def haveSameLogZ(inference: Problem => ParFunI, tol: Double): Matcher[ParFunI] = new Matcher[ParFunI]{
     def apply[S <: ParFunI](t: Expectable[S]): MatchResult[S] = {
-      val obtainedZ: Double = t.value.Z
-      val exactZ: Double = new JunctionTree(t.value.problem).Z
+      val obtainedZ: Double = t.value.logZ
+      val otherZ: Double = inference(t.value.problem).logZ
       result(
-        math.abs(obtainedZ - exactZ) < tol,
+        math.abs(obtainedZ - otherZ) < tol,
         "has same Z as exact inference",
-        s"has different Z compared to exact inference (got $obtainedZ, exact is $exactZ)",
+        s"has different Z compared to exact inference (got $obtainedZ, provided is $otherZ)",
+        t
+      )
+    }
+  }
+  def haveSameLogZ(other: ParFunI, tol: Double): Matcher[ParFunI] = new Matcher[ParFunI]{
+    def apply[S <: ParFunI](t: Expectable[S]): MatchResult[S] = {
+      val obtainedZ: Double = t.value.logZ
+      val otherZ = other.logZ
+      result(
+        math.abs(obtainedZ - otherZ) < tol,
+        "has same Z as exact inference",
+        s"has different Z compared to exact inference (got $obtainedZ, provided is $otherZ)",
         t
       )
     }
   }
 
-  def haveExactMarginals(tol: Double = 1e-9) = new Matcher[MarginalI]{
+
+  def haveExactMarginals(tol: Double = 1e-9) = haveSameMarginals(new JunctionTree(_),tol)
+  def haveExactZ(tol: Double = 1e-9) = haveSameLogZ(new JunctionTree(_),tol)
+
+  def haveSameMarginals(inference: Problem => MarginalI, tol: Double): Matcher[MarginalI] = new Matcher[MarginalI]{
     def apply[S <: MarginalI](t: Expectable[S]): MatchResult[S] = {
       val p = t.value.problem
-      val jt = new JunctionTree(p)
+      val other = inference(p)
       val error: Option[(Int, Double)] = p.variables.map(v =>
-        v -> (jt.variableBelief(v).values zip t.value.variableBelief(v).values)
+        v -> (other.variableBelief(v).values zip t.value.variableBelief(v).values)
+          .map{case (x,y) => math.abs(x-y)}
+          .max
+      ).find(_._2 > tol)
+      result(
+        error.isEmpty,
+        "has exact marginals",
+        s"differs in marginals by ${error.get._2} for variable ${error.get._1}",
+        t
+      )
+    }
+  }
+
+  def haveSameMarginals(other: MarginalI, tol: Double): Matcher[MarginalI] = new Matcher[MarginalI]{
+    def apply[S <: MarginalI](t: Expectable[S]): MatchResult[S] = {
+      val p = t.value.problem
+      val error: Option[(Int, Double)] = p.variables.map(v =>
+        v -> (other.variableBelief(v).values zip t.value.variableBelief(v).values)
           .map{case (x,y) => math.abs(x-y)}
           .max
       ).find(_._2 > tol)
@@ -68,5 +100,4 @@ trait FactorMatchers {
       t
     )
   }
-
 }
