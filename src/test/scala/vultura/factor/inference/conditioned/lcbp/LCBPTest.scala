@@ -41,9 +41,13 @@ class LCBPTest extends Specification {
     p^
     "exactness on trees" ^
       "chain l=5" ! {
-        val p = grid(3,1)
-        new LCBP(p,FactoredScheme(p,Map(1->Set(1))).toGScheme).logZ must beCloseTo(p.logZ, 1e-6)
+        val p = grid(2,1,random = new Random(12))
+        val lcbp: LCBP = new LCBP(p, FactoredScheme.fromInfluenceMap(p, Map(0 -> Set(0))).toGScheme)
+        println(lcbp.calibrator.toCSV)
+        lcbp.calibrator.toDot.toPDF("test.pdf")
+        lcbp.logZ must beCloseTo(p.logZ, 1e-8)
       }.orSkip
 
-  def convergedAndExactTo(lcbp:LCBP, tol: Double) = (lcbp.calibrator.isConverged.aka("converged") must beTrue) and (lcbp.logZ must beCloseTo(lcbp.problem.logZ, tol))
+  def convergedAndExactTo(lcbp:LCBP, tol: Double) =
+    (lcbp.calibrator.isConverged.aka("converged") must beTrue) and (lcbp.logZ.aka("log z") must beCloseTo(lcbp.problem.logZ, tol))
 }

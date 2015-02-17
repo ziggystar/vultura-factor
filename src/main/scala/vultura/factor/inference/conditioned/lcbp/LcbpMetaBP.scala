@@ -1,13 +1,14 @@
 package vultura.factor.inference.conditioned.lcbp
 
 import vultura.factor._
-import vultura.factor.inference.ParFunI
+import vultura.factor.inference.MargParI
 import vultura.factor.inference.calibration._
+import vultura.factor.inference.conditioned._
 
 /** BP on the meta problem.
  */
 class LcbpMetaBP(val scheme: FactoredScheme, val maxUpdates: Long = 1000000, val tol: Double = 1e-12)
-  extends LcbpFactoredBase with ParFunI {
+  extends LcbpFactoredBase with MargParI {
   override type ST = FactoredScheme
 
   case class MetaV2F(v: MVI, fi: MFI) extends MetaFactorEdge {
@@ -139,4 +140,21 @@ class LcbpMetaBP(val scheme: FactoredScheme, val maxUpdates: Long = 1000000, val
 
   /** @return Natural logarithm of partition function. */
   override def logZ: Double = calibrator.edgeValue(cdLogZ).value
+
+
+  /** @return marginal distribution of variable in encoding specified by `ring`. */
+  override def variableBelief(vi: Var): Factor = {
+    val conditions: Seq[Condition] = scheme.conditionsOf(Set(vi)).toSeq
+    val metaScope_x: Set[MFI] = scheme.conditionersOf(Set(vi)).map(var2metaVar(_))
+    val (metaScope,mfi) = metaScopes.zipWithIndex.find{case (msc,_) => metaScope_x.subsetOf(msc.toSet)}.get
+    val mfactorBel = Factor(metaScope, calibrator.edgeValue(MetaFBel(mfi)))
+    require(metaScope.size == metaScope_x.size) //dunno if this hold, if not marginalize
+    val conditionWeights = conditions.map{c =>
+      val mappedCond: Map[Var, Val] = c.map{case (k,v) => var2metaVar(k) -> v}
+      mfactorBel.eval(metaScope,metaScope.map(mappedCond))
+    }
+    val conditionedVariableBeliefs: IndexedSeq[VBel#TOut] = conditions.map(c => calibrator.edgeValue(VBel(vi,c)))(collection.breakOut)
+    val values = linearCombination(conditionWeights.toArray,conditionedVariableBeliefs)
+    Factor(Array(vi),values)
+  }
 }
