@@ -15,6 +15,8 @@ trait ProblemStructure {
   val numFactors: Int = scopeOfFactor.size
 
   def variables: Range = 0 until numVariables
+  def factorIndices: Range = 0 until numFactors
+
   lazy val variableSet: Set[Int] = (0 until numVariables).toSet
 
   /** Number of incident factors to variable. Indexed by variable index. */
