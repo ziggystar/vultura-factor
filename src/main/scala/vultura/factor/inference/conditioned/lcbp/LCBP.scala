@@ -257,7 +257,13 @@ class LCBP(val problem: Problem,
   def iteration: Long = calibrator.iteration
 
   /** @return marginal distribution of variable in encoding specified by `ring`. */
-  override def variableBelief(vi: Int): Factor = ???
+  override def variableBelief(vi: Int): Factor = {
+    val conditions = scheme.variableConditions(vi)
+    val conditionedBeliefs: IndexedSeq[Factor] = conditions.map(c => calibrator.edgeValue(VariableBelief(vi,c)))(collection.breakOut)
+    val logWeights: Array[Double] = conditions.map(c => if (c.isEmpty) LogD.one else calibrator.edgeValue(LogConditionWeight(c)))(collection.breakOut)
+    val weights = NormalD.normalize(LogD.decode(logWeights))
+    linearCombination(weights,conditionedBeliefs)
+  }
 
   /** @return Partition function in encoding specified by `ring`. */
   override def Z: Double = math.exp(logZ)
