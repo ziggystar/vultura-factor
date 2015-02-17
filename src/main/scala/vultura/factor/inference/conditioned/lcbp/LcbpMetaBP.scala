@@ -147,11 +147,12 @@ class LcbpMetaBP(val scheme: FactoredScheme, val maxUpdates: Long = 1000000, val
     val conditions: Seq[Condition] = scheme.conditionsOf(Set(vi)).toSeq
     val metaScope_x: Set[MFI] = scheme.conditionersOf(Set(vi)).map(var2metaVar(_))
     val (metaScope,mfi) = metaScopes.zipWithIndex.find{case (msc,_) => metaScope_x.subsetOf(msc.toSet)}.get
-    val mfactorBel = Factor(metaScope, calibrator.edgeValue(MetaFBel(mfi)))
-    require(metaScope.size == metaScope_x.size) //dunno if this hold, if not marginalize
-    val conditionWeights = conditions.map{c =>
-      val mappedCond: Map[Var, Val] = c.map{case (k,v) => var2metaVar(k) -> v}
-      mfactorBel.eval(metaScope,metaScope.map(mappedCond))
+    val mfactorBel = Factor.multiplyRetain(metaRing)(metaStructure.domains)(Seq(Factor(metaScope, calibrator.edgeValue(MetaFBel(mfi)))),metaScope)
+    val conditionWeights: Seq[Double] = conditions.map{c =>
+      if(c.isEmpty) metaRing.one else {
+        val mappedCond: Map[Var, Val] = c.map { case (k, v) => var2metaVar(k) -> v}
+        mfactorBel.eval(metaScope, metaScope.map(mappedCond))
+      }
     }
     val conditionedVariableBeliefs: IndexedSeq[VBel#TOut] = conditions.map(c => calibrator.edgeValue(VBel(vi,c)))(collection.breakOut)
     val values = linearCombination(conditionWeights.toArray,conditionedVariableBeliefs)
