@@ -2,6 +2,7 @@ package vultura.factor.inference.conditioned.lcbp
 
 import vultura.factor.inference.calibration._
 import vultura.factor._
+import vultura.factor.inference.conditioned.Condition
 import vultura.factor.inference.{JunctionTree, ParFunI, MargParI, JointMargI}
 import vultura.util.{SSet, ArrayIndex}
 
@@ -12,7 +13,7 @@ import scala.runtime.ObjectRef
 case class LCBPGeneral(scheme: FactoredScheme,
                        inferer: Problem => MargParI with JointMargI = p => new JunctionTree(p),
                        maxUpdates: Long = 100000,
-                       tol: Double = 1e-9) extends LcbpBase with ParFunI {
+                       tol: Double = 1e-9) extends LcbpBase with MargParI {
   //the scheme type we require
   override type ST = FactoredScheme
 
@@ -51,7 +52,7 @@ case class LCBPGeneral(scheme: FactoredScheme,
   }
 
   val contributions: IndexedSeq[EnergyContrib] =
-    (problem.variables.map(VariableContribution) ++ (0 until problem.factors.size).map(FactorContribution))
+    problem.variables.map(VariableContribution) ++ (0 until problem.factors.size).map(FactorContribution)
 
   private val ssetOfMPCliques: SSet[Int] = new SSet(contributions.map(_.mpVariables.toSet).toSet)
 
@@ -153,4 +154,18 @@ case class LCBPGeneral(scheme: FactoredScheme,
 
   /** @return Natural logarithm of partition function. */
   override def logZ: Double = calibrator.edgeValue(cdLogZ).value
+
+  /** @return marginal distribution of variable in encoding specified by `ring`. */
+  override def variableBelief(vi: Var): Factor = {
+    val conditions: Seq[Condition] = scheme.conditionsOf(Set(vi)).toSeq
+    val conditionClique = calibrator.edgeValue(MetaProblem).elem //get meta distribution
+      .decodedCliqueBelief(scheme.conditionersOf(Set(vi)).map(mcVariablesIdx.forward).toArray.sorted)
+    val conditionWeights = conditions.map{c =>
+      val mappedCond: Map[Var, Val] = c.map{case (k,v) => mcVariablesIdx.forward(k) -> v}
+      conditionClique.eval(conditionClique.variables.map(mappedCond),mcDomains)
+    }
+    val conditionedVariableBeliefs: IndexedSeq[VBel#TOut] = conditions.map(c => calibrator.edgeValue(VBel(vi,c)))(collection.breakOut)
+    val values = linearCombination(conditionWeights.toArray,conditionedVariableBeliefs)
+    Factor(Array(vi),values)
+  }
 }

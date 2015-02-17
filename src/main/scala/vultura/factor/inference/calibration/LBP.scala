@@ -1,7 +1,7 @@
 package vultura.factor.inference.calibration
 
-import vultura.factor.inference.MargParI
-import vultura.factor.{Factor, Problem, SumProductTask}
+import vultura.factor.inference.{JointMargI, MargParI}
+import vultura.factor.{Var, Factor, Problem, SumProductTask}
 
 import scala.collection.mutable
 
@@ -9,15 +9,16 @@ case class LBP(problem: Problem) {
 
   sealed trait BPMessage extends MEdge {self: Product =>
     def v: Int
-    def f: Factor
+    def fi: Int
+    def f: Factor = problem.factors(fi)
     final type TOut = Array[Double]
     def create: TOut = new Array[Double](problem.domains(v))
     override def copy(t: TOut): TOut = t.clone()
   }
 
-  case class V2F(v: Int, f: Factor) extends BPMessage {
+  case class V2F(v: Int, fi: Int) extends BPMessage {
     override type InEdge = F2V
-    override def inputs: IndexedSeq[InEdge] = for(nf <- problem.factorsOfVariable(v) if nf != f) yield F2V(nf,v)
+    override def inputs: IndexedSeq[InEdge] = for(nfi <- problem.factorIdxOfVariable(v) if nfi != fi) yield F2V(nfi,v)
     def mCompute() = {
       //this must be lazy, otherwise inputs gets called indefinitely
       val spTask = SumProductTask(
@@ -33,9 +34,9 @@ case class LBP(problem: Problem) {
     }
   }
 
-  case class F2V(f: Factor, v: Int) extends BPMessage {
+  case class F2V(fi: Int, v: Int) extends BPMessage {
     override type InEdge = V2F
-    override def inputs: IndexedSeq[InEdge] = for(nv <- f.variables if nv != v) yield V2F(nv,f)
+    override def inputs: IndexedSeq[InEdge] = for(nv <- f.variables if nv != v) yield V2F(nv,fi)
     override def mCompute() = {
       val spTask = SumProductTask(
         remainingVars = Array(v),
@@ -59,9 +60,9 @@ case class LBP(problem: Problem) {
   }
 
   val edges: Iterable[BPMessage] = for{
-    f <- problem.factors
-    v <- f.variables
-    edge <- Seq(F2V(f,v),V2F(v,f))
+    fi <- 0 until problem.numFactors
+    v <- problem.scopeOfFactor(fi)
+    edge <- Seq(F2V(fi,v),V2F(v,fi))
   } yield edge
 
   val maxEntInitializer = new EdgeValues[BPMessage] {
@@ -76,24 +77,49 @@ object LBP{
     val lbp = LBP(p)
     val cp = new MutableFIFOCalibrator(lbp.edges)(ConvergenceTest.MaxDiff(tol), maxIterations, lbp.maxEntInitializer)
     new BPResult{
-      override def v2f(m: (Int, Factor)): Factor = Factor(Array(m._1),cp.edgeValue(lbp.V2F(m._1,m._2)))
-      override def f2v(m: (Factor, Int)): Factor = Factor(Array(m._2),cp.edgeValue(lbp.F2V(m._1,m._2)))
+      override def rawMessageValue(m: Message): Array[Double] = cp.edgeValue(m match {
+        case V2FMsg(vi,fi) => lbp.V2F(vi,fi)
+        case F2VMsg(fi,vi) => lbp.F2V(fi,vi)
+      })
       override def problem: Problem = p
     }
   }
 }
 
 /** A mixin to calculate variable beliefs and the log partition function from BP messages. */
-trait BPResult extends MargParI {
-  def v2f(m: (Int,Factor)): Factor
-  def f2v(m: (Factor,Int)): Factor
+trait BPResult extends MargParI with JointMargI {
+  sealed trait Message{
+    def vi: Int
+    def fi: Int
+
+    def variables: Array[Int] = Array(vi)
+    def factorScope: Array[Int] = problem.scopeOfFactor(fi)
+    lazy val varIndexInFactorScope: Int = factorScope.indexOf(vi)
+  }
+  case class V2FMsg(vi: Int, fi: Int) extends Message
+  case class F2VMsg(fi: Int, vi: Int) extends Message
+
+  def rawMessageValue(m: Message): Array[Double]
+
+  def messageValue(m: Message): Factor = Factor(m.variables,rawMessageValue(m))
+
   def problem: Problem
   /** @return marginal distribution of variable in encoding specified by `ring`. */
   override def variableBelief(vi: Int): Factor =
-    Factor.multiply(problem.ring)(problem.domains)(problem.factorsOfVariable(vi).map(f => f2v((f,vi)))).normalize(problem.ring)
+    Factor.multiply(problem.ring)(problem.domains)(problem.factorIdxOfVariable(vi).map(fi => messageValue(F2VMsg(fi,vi)))).normalize(problem.ring)
 
-  def factorBelief(f: Factor): Factor =
-    Factor.multiply(problem.ring)(problem.domains)(f.variables.map(v => v2f((v,f))) :+ f).normalize(problem.ring)
+  def factorBelief(fi: Int): Factor = {
+    val f = problem.factors(fi)
+    Factor.multiply(problem.ring)(problem.domains)(problem.scopeOfFactor(fi).map(vi => messageValue(V2FMsg(vi,fi))) :+ f).normalize(problem.ring)
+  }
+
+  /** Throws if no clique contains `vars`.
+    * @return Normalized belief over given variables in encoding specified by problem ring. */
+  override def cliqueBelief(vars: Array[Var]): Factor = {
+    val scope = vars.toSet
+    val containingFactorIdx = problem.scopeOfFactor.zipWithIndex.find(fsc => scope.subsetOf(fsc._1.toSet)).get._2
+    Factor.multiplyRetain(problem.ring)(problem.domains)(Seq(factorBelief(containingFactorIdx)),vars)
+  }
 
   /** This is lazy to prevent accessing elements in derived classes early.
    * @return Partition function in encoding specified by `ring`. */
@@ -118,13 +144,12 @@ trait BPResult extends MargParI {
 
     {
       //factor entropies and factor log-expectations
-      var i = 0
-      while (i < problem.factors.length) {
-        val f = problem.factors(i)
-        val fb: Array[Double] = factorBelief(f).values
+      var fi = 0
+      while (fi < problem.factors.length) {
+        val fb: Array[Double] = factorBelief(fi).values
         factorEntropy = factorEntropy + problem.ring.entropy(fb)
-        logExp = logExp + problem.ring.logExpectation(fb, f.values)
-        i += 1
+        logExp = logExp + problem.ring.logExpectation(fb, problem.factors(fi).values)
+        fi += 1
       }
     }
 

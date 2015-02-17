@@ -191,12 +191,12 @@ case class MaxMedianHeuristic[-I](heuristics: Seq[NumericVariableHeuristic[I]], 
 object VariableSelection{
   val HV_MaxDegree = NumericVariableHeuristic("Max Degree", (_: Any,p) => v => p.degreeOfVariable(v).toDouble)
   val HV_TTC = NumericVariableHeuristic[ExtendedBPResult]("TTC", (bp,p) => v =>
-    p.factorsOfVariable(v).map(f =>
-      math.max(bp.lastUpdate(Left((v,f))), bp.lastUpdate(Right((f,v))))
+    p.factorIdxOfVariable(v).map(f =>
+      math.max(bp.lastUpdate(bp.V2FMsg(v,f)), bp.lastUpdate(bp.F2VMsg(f,v)))
     ).max.toDouble)
   val HV_TTC_Mean = NumericVariableHeuristic[ExtendedBPResult]("TTC-Mean", (bp,p) => v =>
-    p.factorsOfVariable(v).foldLeft(0d){case (acc, f) =>
-      acc + bp.lastUpdate(Left((v,f))) + bp.lastUpdate(Right((f,v)))
+    p.factorIdxOfVariable(v).foldLeft(0d){case (acc, f) =>
+      acc + bp.lastUpdate(bp.V2FMsg(v,f)) + bp.lastUpdate(bp.F2VMsg(f,v))
     } / p.factorsOfVariable(v).size
   )
   val HV_MinEntropy = NumericVariableHeuristic[MargParI]("MinEntropy", (mp,p) => v =>
