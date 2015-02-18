@@ -19,8 +19,8 @@ trait FactorMatchers {
   def haveValuesCloseTo(ref: Factor, tol: Double = 1e-7): Matcher[Factor] = new Matcher[Factor]{
     def apply[S <: Factor](t: Expectable[S]): MatchResult[S] = result(
       Factor.maxDiff(t.value,ref,NormalD) < tol,
-      "has close marginals to " + ref,
-      "differs in some value by  " + Factor.maxDiff(t.value,ref,NormalD),
+      s"$t has close marginals to " + ref,
+      s"$t differs in some value by  " + Factor.maxDiff(t.value,ref,NormalD),
       t
     )
   }
@@ -68,8 +68,8 @@ trait FactorMatchers {
       ).find(_._2 > tol)
       result(
         error.isEmpty,
-        "has exact marginals",
-        s"differs in marginals by ${error.get._2} for variable ${error.get._1}",
+        s"$t has exact marginals",
+        s"${t.description} differs in marginals by ${error.get._2} for variable ${error.get._1}",
         t
       )
     }
@@ -86,7 +86,7 @@ trait FactorMatchers {
       result(
         error.isEmpty,
         "has exact marginals",
-        s"differs in marginals by ${error.get._2} for variable ${error.get._1}",
+        s"${t.description} differs in marginals by ${error.get._2} for variable ${error.get._1}",
         t
       )
     }

@@ -1,5 +1,7 @@
 package vultura.factor
 
+import java.lang.management.{ThreadMXBean, ManagementFactory}
+
 import scala.language.reflectiveCalls
 import scala.util.Random
 import vultura.factor
@@ -96,6 +98,20 @@ object Benchmarks {
   def main(args: Array[String]) {
     for(t <- tasks){
       benchmarkTask(t)
+    }
+  }
+
+  def printCPUTime[A](f: => A, label: String = ""): A = {
+    val bean: ThreadMXBean = ManagementFactory.getThreadMXBean
+    if(bean.isCurrentThreadCpuTimeSupported){
+      val now = bean.getCurrentThreadCpuTime
+      val r = f
+      val t = (bean.getCurrentThreadCpuTime - now).toDouble * 1e-9
+      println(s"$label took ${t}s")
+      r
+    } else {
+      println("no thread cpu time support")
+      f
     }
   }
 }
