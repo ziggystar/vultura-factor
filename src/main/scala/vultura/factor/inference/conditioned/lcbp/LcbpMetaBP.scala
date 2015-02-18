@@ -144,12 +144,12 @@ class LcbpMetaBP(val scheme: FactoredScheme, val maxUpdates: Long = 1000000, val
 
   /** @return marginal distribution of variable in encoding specified by `ring`. */
   override def variableBelief(vi: Var): Factor = {
-    val conditions: Seq[Condition] = scheme.conditionsOf(Set(vi)).toSeq
+    val conditions: Array[Condition] = scheme.conditionsOf(Set(vi)).toArray
     val metaScope_x: Set[MFI] = scheme.conditionersOf(Set(vi)).map(var2metaVar(_))
     //find the correct meta factor (it has to exist)
     val (metaScope,mfi) = metaScopes.zipWithIndex.find{case (msc,_) => msc.toSet == metaScope_x}.get
     val mfactorBel = Factor(metaScope, calibrator.edgeValue(MetaFBel(mfi)))
-    val conditionWeights: Seq[Double] = conditions.map{c =>
+    val conditionWeights: Array[Double] = conditions.map{c =>
       if(c.isEmpty) metaRing.one else {
         val mappedCond: Map[Var, Val] = c.map { case (k, v) => var2metaVar(k) -> v}
         val values: Array[Val] = metaScope.map(mappedCond)
@@ -157,7 +157,7 @@ class LcbpMetaBP(val scheme: FactoredScheme, val maxUpdates: Long = 1000000, val
       }
     }
     val conditionedVariableBeliefs: IndexedSeq[VBel#TOut] = conditions.map(c => calibrator.edgeValue(VBel(vi,c)))(collection.breakOut)
-    val values = linearCombination(conditionWeights.toArray,conditionedVariableBeliefs)
+    val values = linearCombination(metaRing.decode(conditionWeights),conditionedVariableBeliefs)
     Factor(Array(vi),values)
   }
 }
