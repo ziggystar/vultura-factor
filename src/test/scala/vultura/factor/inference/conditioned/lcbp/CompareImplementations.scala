@@ -4,7 +4,6 @@ import org.specs2._
 import org.specs2.specification.Fragments
 import vultura.factor.{Benchmarks, FactorMatchers}
 import vultura.factor.generators._
-import vultura.util.Benchmark
 
 class CompareImplementations extends Specification with FactorMatchers {
   val treeSplit0 = FactoredScheme.withMaxDistance(Set(0),1, grid(2,1))
@@ -30,7 +29,9 @@ class CompareImplementations extends Specification with FactorMatchers {
 
   def allExactOn(scheme: FactoredScheme) = foreach(LCBPAlg.all){(a:LCBPAlg) =>
     val r = a.inferWithScheme(scheme,tol=1e-15)
-    (r._2.aka("converged") must beTrue) and (r._1.as(_ => a.toString) must haveExactMarginals())
+    (r._2.aka("converged") must beTrue) and
+      (r._1.as(_ => a.toString) must haveExactMarginals()) and
+      (r._1.as(_ => a.toString) must haveExactZ())
   }
 
   def exactAgreeOn(s: FactoredScheme) = agreeOn(Seq(OldLCBP,LCBP_G_Exact),s)

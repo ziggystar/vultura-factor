@@ -11,16 +11,16 @@ trait FactorMatchers {
   def haveSameStructureAs(ref: Factor): Matcher[Factor] = new Matcher[Factor]{
     def apply[S <: Factor](t: Expectable[S]): MatchResult[S] = result(
       ref.variables.deep == t.value.variables.deep && ref.values.size == t.value.values.size,
-      "has same structure as " + ref,
-      "differs in structure from " + ref,
+      s"${t.description} has same structure as " + ref,
+      s"${t.description} differs in structure from " + ref,
       t
     )
   }
   def haveValuesCloseTo(ref: Factor, tol: Double = 1e-7): Matcher[Factor] = new Matcher[Factor]{
     def apply[S <: Factor](t: Expectable[S]): MatchResult[S] = result(
       Factor.maxDiff(t.value,ref,NormalD) < tol,
-      s"$t has close marginals to " + ref,
-      s"$t differs in some value by  " + Factor.maxDiff(t.value,ref,NormalD),
+      s"${t.description} has close marginals to " + ref,
+      s"${t.description} differs in some value by  " + Factor.maxDiff(t.value,ref,NormalD),
       t
     )
   }
@@ -34,8 +34,8 @@ trait FactorMatchers {
       val otherZ: Double = inference(t.value.problem).logZ
       result(
         math.abs(obtainedZ - otherZ) < tol,
-        "has same Z as exact inference",
-        s"has different Z compared to exact inference (got $obtainedZ, provided is $otherZ)",
+        s"${t.description} has same Z as exact inference",
+        s"${t.description} has different Z compared to exact inference (got $obtainedZ, provided is $otherZ)",
         t
       )
     }
@@ -46,8 +46,8 @@ trait FactorMatchers {
       val otherZ = other.logZ
       result(
         math.abs(obtainedZ - otherZ) < tol,
-        "has same Z as exact inference",
-        s"has different Z compared to exact inference (got $obtainedZ, provided is $otherZ)",
+        s"${t.description} has same Z as exact inference",
+        s"${t.description} has different Z compared to exact inference (got $obtainedZ, provided is $otherZ)",
         t
       )
     }
