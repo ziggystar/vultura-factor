@@ -15,8 +15,8 @@ class CompareImplementations extends Specification with FactorMatchers {
   val treeSplit1 = FactoredScheme.withMaxDistance(Set(5),2, treeK(4, 3, random = new Random(0)))
   val treeSplit2 = FactoredScheme.withMaxDistance(Set(5),2, treeK(10, 3, random = new Random(0)))
   val grid3x3_center = FactoredScheme.withMaxDistance(Set(4),3,grid(3,3,random = new Random(0)))
-  val centerConditionedString = FactoredScheme.withMaxDistance(Set(2),1,grid(5,1,4,factorGenerator = expGauss(3),random = new Random(0)))
-  val multiConditionedString = FactoredScheme.withMaxDistance(Set(2,4,6),1,grid(8,1,4,factorGenerator = expGauss(3),random = new Random(0)))
+  val centerConditionedString = FactoredScheme.withMaxDistance(Set(2),1,grid(5,1,2,factorGenerator = expGauss(3),random = new Random(0)))
+  val multiConditionedString = FactoredScheme.withMaxDistance(Set(2,4,6),1,grid(8,1,2,factorGenerator = expGauss(3),random = new Random(0)))
   override def is: Fragments =
     "all exact on singly split tree 1" ! allExactOn(treeSplit1) ^
     "all exact on singly split tree 2" ! allExactOn(treeSplit2) ^

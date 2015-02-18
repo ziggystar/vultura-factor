@@ -146,12 +146,14 @@ class LcbpMetaBP(val scheme: FactoredScheme, val maxUpdates: Long = 1000000, val
   override def variableBelief(vi: Var): Factor = {
     val conditions: Seq[Condition] = scheme.conditionsOf(Set(vi)).toSeq
     val metaScope_x: Set[MFI] = scheme.conditionersOf(Set(vi)).map(var2metaVar(_))
-    val (metaScope,mfi) = metaScopes.zipWithIndex.find{case (msc,_) => metaScope_x.subsetOf(msc.toSet)}.get
-    val mfactorBel = Factor.multiplyRetain(metaRing)(metaStructure.domains)(Seq(Factor(metaScope, calibrator.edgeValue(MetaFBel(mfi)))),metaScope)
+    //find the correct meta factor (it has to exist)
+    val (metaScope,mfi) = metaScopes.zipWithIndex.find{case (msc,_) => msc.toSet == metaScope_x}.get
+    val mfactorBel = Factor(metaScope, calibrator.edgeValue(MetaFBel(mfi)))
     val conditionWeights: Seq[Double] = conditions.map{c =>
       if(c.isEmpty) metaRing.one else {
         val mappedCond: Map[Var, Val] = c.map { case (k, v) => var2metaVar(k) -> v}
-        mfactorBel.eval(metaScope, metaScope.map(mappedCond))
+        val values: Array[Val] = metaScope.map(mappedCond)
+        mfactorBel.eval(values, metaStructure.domains)
       }
     }
     val conditionedVariableBeliefs: IndexedSeq[VBel#TOut] = conditions.map(c => calibrator.edgeValue(VBel(vi,c)))(collection.breakOut)
