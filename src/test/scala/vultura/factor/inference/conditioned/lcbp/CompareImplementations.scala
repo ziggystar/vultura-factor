@@ -25,7 +25,7 @@ class CompareImplementations extends Specification with FactorMatchers {
     "exact lcbp agree on singly conditioned 3x3" ! exactAgreeOn(grid3x3_center) ^
     "bp lcbp agree on singly conditioned 3x3" ! bpAgreeOn(grid3x3_center)
 
-  def allExactOn(scheme: FactoredScheme) = foreach(LCBPAlg.all){(a:LCBPAlg[_]) =>
+  def allExactOn(scheme: FactoredScheme) = foreach(LCBPAlg.all){(a:LCBPAlg) =>
     val r = a.inferWithScheme(scheme,tol=1e-15)
     (r._2.aka("converged") must beTrue) and (r._1 must haveExactMarginals())
   }
@@ -34,14 +34,16 @@ class CompareImplementations extends Specification with FactorMatchers {
   def bpAgreeOn(s: FactoredScheme) = agreeOn(Seq(LCBP_BP,LCBP_G_BP),s)
   def allAgreeOn(s: FactoredScheme) = agreeOn(LCBPAlg.all,s)
 
-  def agreeOn(algs: Seq[LCBPAlg[_]],scheme: FactoredScheme) = {
+  def agreeOn(algs: Seq[LCBPAlg],scheme: FactoredScheme) = {
     val ra = algs.head.inferWithScheme(scheme)
     def raConv = ra._2.aka(s"${algs.head} converged") must beTrue
-    raConv and foreach(algs.tail) { (a: LCBPAlg[_]) =>
+    raConv and foreach(algs.tail) { (a: LCBPAlg) =>
       val r = a.inferWithScheme(scheme)
       def conv = r._2.aka(s"$a converged") must beTrue
       def agree = r._1.aka(a.toString) must haveSameMarginals(ra._1, 1e-9)
       conv and agree
     }
   }
+
+  def debugOn(alg: LCBPAlg) = ???
 }
