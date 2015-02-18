@@ -53,4 +53,10 @@ object FactoredScheme{
       else collect(from ++ from.flatMap(vi => problem.neighboursOfVariableEx(vi)), d - 1)
     fromInfluenceMap(problem,variables.map(v => v -> collect(Set(v)))(collection.breakOut))
   }
+
+  /** Condition the problem completely on the given variables. This yields a scheme that corresponds
+    * to a balanced and statically ordered CBP tree.
+    */
+  def fullyConditioned(variables: Set[Int], problem: Problem): FactoredScheme =
+    fromInfluenceMap(problem,variables.map(_ -> problem.variableSet)(collection.breakOut))
 }

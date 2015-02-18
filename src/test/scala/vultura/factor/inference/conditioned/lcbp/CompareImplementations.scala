@@ -1,23 +1,26 @@
 package vultura.factor.inference.conditioned.lcbp
 
 import org.specs2._
-import org.specs2.matcher.Matcher
 import org.specs2.specification.Fragments
 import vultura.factor.FactorMatchers
 import vultura.factor.generators._
-
-import scala.util.Random
 
 /**
  * Created by thomas on 17.02.15.
  */
 class CompareImplementations extends Specification with FactorMatchers {
-  val treeSplit1 = FactoredScheme.withMaxDistance(Set(5),2, treeK(4, 3, random = new Random(0)))
-  val treeSplit2 = FactoredScheme.withMaxDistance(Set(5),2, treeK(10, 3, random = new Random(0)))
-  val grid3x3_center = FactoredScheme.withMaxDistance(Set(4),3,grid(3,3,random = new Random(0)))
-  val centerConditionedString = FactoredScheme.withMaxDistance(Set(2),1,grid(5,1,2,factorGenerator = expGauss(3),random = new Random(0)))
-  val multiConditionedString = FactoredScheme.withMaxDistance(Set(2,4,6),1,grid(8,1,2,factorGenerator = expGauss(3),random = new Random(0)))
+  val treeSplit0 = FactoredScheme.withMaxDistance(Set(0),1, grid(2,1))
+  val treeSplit1 = FactoredScheme.withMaxDistance(Set(5),2, treeK(4, 3))
+  val treeSplit2 = FactoredScheme.withMaxDistance(Set(5),2, treeK(10, 3))
+  val grid3x3_center = FactoredScheme.withMaxDistance(Set(4),3,grid(3,3))
+  val centerConditionedString = FactoredScheme.withMaxDistance(Set(2),1,grid(5,1,2,factorGenerator = expGauss(3)))
+  val multiConditionedString = FactoredScheme.withMaxDistance(Set(2,4,6),1,grid(8,1,2,factorGenerator = expGauss(3)))
+
+  debugOn("bad_margs_bp")(LCBP_BP,treeSplit0)
+  debugOn("bad_margs_exact")(LCBP_G_Exact,treeSplit0)
+
   override def is: Fragments =
+    "all exact on singly split tree 0" ! allExactOn(treeSplit0) ^
     "all exact on singly split tree 1" ! allExactOn(treeSplit1) ^
     "all exact on singly split tree 2" ! allExactOn(treeSplit2) ^
     "all exact on center-conditioned string" ! allExactOn(centerConditionedString) ^
@@ -45,5 +48,9 @@ class CompareImplementations extends Specification with FactorMatchers {
     }
   }
 
-  def debugOn(alg: LCBPAlg) = ???
+  def debugOn(label: String)(alg: LCBPAlg,scheme: FactoredScheme, tol: Double =1e-9, maxIter: Int = 100000) = {
+    val dot = alg.graphFromScheme(scheme,tol,maxIter)
+    dot.toPDF(s"lcbp-debug-$label.pdf")
+
+  }
 }
