@@ -12,11 +12,14 @@ trait LcbpBase {
   def scheme: ST
   def problem: Problem = scheme.problem
 
-  def linearCombination(weights: Array[Double], factors: IndexedSeq[Array[Double]]): Array[Double] = {
-    def sumFactors(fs: Array[Array[Double]], ring: Ring[Double]): Array[Double] =
-      fs.transpose.map(ring.sumA)(collection.breakOut)
+  def linearCombination(_weights: Array[Double], factors: IndexedSeq[Array[Double]]): Array[Double] = {
+    assert(_weights.size == factors.size)
 
-    assert(weights.size == factors.size)
+    //we normalize here, since otherwise all subclasses would have to take care of this
+    val weights = NormalD.normalize(_weights)
+
+    def sumFactors(fs: Array[Array[Double]], ring: Ring[Double]): Array[Double] =
+    fs.transpose.map(ring.sumA)(collection.breakOut)
 
     if(problem.ring == NormalD) {
       val weighted: Array[Array[Double]] = factors.zip(weights).map{case (f,w) => f.map(_ * w)}(collection.breakOut)
