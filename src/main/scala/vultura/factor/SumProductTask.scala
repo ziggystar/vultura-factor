@@ -66,6 +66,37 @@ case class SumProductTask(remainingVars: Array[Int],
     }
   }
 
+  final def sumProductNormalize(factorValues: IndexedSeq[Array[Double]], result: Array[Double]) {
+    //TODO maybe the clearing is not needed
+    SumProductTask.arrayClear(counter)
+    SumProductTask.arrayClear(factorPointers)
+    var remainIdx = 0
+    var cnt = 0
+    while(remainIdx < remainSize){
+      var margIdx = 0
+      while(margIdx < margSize){
+        //increment counter
+        val overflow = increment(cnt)
+        cnt += 1
+        //calculate the factor contributions
+        //NOTE: we collect the factor values for the counter state before its update in this loop!
+        var fi = 0
+        while(fi < numFactors){
+          prodTemp(fi) = factorValues(fi)(factorPointers(fi))
+          factorPointers(fi) += lookups(fi)(overflow)
+          fi += 1
+        }
+        //multiply factor values
+        margTemp(margIdx) = ring.prodA(prodTemp)
+        margIdx += 1
+      }
+      //now sum over marginalized variables for one assignment to the remaining variables
+      result(remainIdx) = ring.sumA(margTemp)
+      remainIdx += 1
+    }
+    ring.normalizeInplace(result)
+  }
+
   /** Increments the counter.
     * Mutates the `counter` member.
     * @param count The current step number of the counter.

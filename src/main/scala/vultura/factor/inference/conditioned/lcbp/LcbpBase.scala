@@ -104,13 +104,11 @@ trait LcbpBase {
 
     if(fixedFactors.isEmpty)
       (ins: IndexedSeq[Array[Double]], result: Array[Double]) => {
-        spTask.sumProduct(ins,result)
-        ring.normalizeInplace(result)
+        spTask.sumProductNormalize(ins,result)
       }
     else
       (ins: IndexedSeq[Array[Double]], result: Array[Double]) => {
-        spTask.sumProduct(ins ++ values,result)
-        ring.normalizeInplace(result)
+        spTask.sumProductNormalize(ins ++ values,result)
       }
   }
 

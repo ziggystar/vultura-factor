@@ -37,7 +37,7 @@ trait LcbpFactoredBase extends LcbpBase {
   //below follows support code
 
   trait MetaFactorEdge extends FactorEdge{self: Product =>
-    override def domains: Array[Int] = metaStructure.domains
+    val domains: Array[Int] = metaStructure.domains
   }
 
   /** Return the index of the meta factor that covers exactly the conditioners of the given variable set.
