@@ -38,6 +38,7 @@ class CompareImplementations extends Specification with FactorMatchers {
       "all exact on singly split tree 1" ! allExactOn(asLog(treeSplit1)) ^
       "all exact on singly split tree 2" ! allExactOn(asLog(treeSplit2)) ^
       "all exact on center-conditioned 1D" ! allExactOn(asLog(centerConditionedString)) ^
+      "all exact on multi-conditioned 1D small" ! allExactOn(asLog(multiConditionedStringSmall)) ^
       "all exact on multi-conditioned 1D" ! allExactOn(asLog(multiConditionedString)) ^
       "exact lcbp agree on singly conditioned 3x3" ! exactAgreeOn(asLog(grid3x3_center)) ^
       "bp lcbp agree on singly conditioned 3x3" ! bpAgreeOn(asLog(grid3x3_center)) ^
