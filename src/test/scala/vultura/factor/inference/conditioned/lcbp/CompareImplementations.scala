@@ -1,9 +1,13 @@
 package vultura.factor.inference.conditioned.lcbp
 
+import java.io.{PrintStream, FileOutputStream}
+
 import org.specs2._
 import org.specs2.specification.Fragments
 import vultura.factor.{LogD, Benchmarks, FactorMatchers}
 import vultura.factor.generators._
+
+import scala.util.Random
 
 class CompareImplementations extends Specification with FactorMatchers {
   val treeSplit0 = FactoredScheme.withMaxDistance(Set(0),1, grid(2,1))
@@ -12,12 +16,10 @@ class CompareImplementations extends Specification with FactorMatchers {
   val grid3x3_center = FactoredScheme.withMaxDistance(Set(4),3,grid(3,3))
   val centerConditionedString = FactoredScheme.withMaxDistance(Set(2),1,grid(5,1,2,factorGenerator = expGauss(3)))
   val multiConditionedString = FactoredScheme.withMaxDistance(Set(2,4,6),1,grid(8,1,2,factorGenerator = expGauss(3)))
+  val multiConditionedStringSmall = FactoredScheme.withMaxDistance(Set(2,3),0,grid(6,1,2,factorGenerator = expGauss(3), random = new Random(3)))
   val metaLoop1 = FactoredScheme.withMaxDistance((for (x <- 0 to 2; y <- 0 to 2) yield (1 + 3 * x) + (1 + 3 * y) * 9).toSet,2,grid(9,9))
 
   def asLog(fs: FactoredScheme): FactoredScheme = fs.copy(problem = fs.problem.toRing(LogD))
-
-  debugOn("bad_margs_bp")(LCBP_BP,treeSplit0)
-  debugOn("bad_margs_exact")(LCBP_G_Exact,treeSplit0)
 
   override def is: Fragments =
     "normal ring" ^
@@ -25,6 +27,7 @@ class CompareImplementations extends Specification with FactorMatchers {
       "all exact on singly split tree 1" ! allExactOn(treeSplit1) ^
       "all exact on singly split tree 2" ! allExactOn(treeSplit2) ^
       "all exact on center-conditioned 1D" ! allExactOn(centerConditionedString) ^
+      "all exact on multi-conditioned 1D small" ! allExactOn(multiConditionedStringSmall) ^
       "all exact on multi-conditioned 1D" ! allExactOn(multiConditionedString) ^
       "exact lcbp agree on singly conditioned 3x3" ! exactAgreeOn(grid3x3_center) ^
       "bp lcbp agree on singly conditioned 3x3" ! bpAgreeOn(grid3x3_center) ^
@@ -67,7 +70,12 @@ class CompareImplementations extends Specification with FactorMatchers {
   }
 
   def debugOn(label: String)(alg: LCBPAlg,scheme: FactoredScheme, tol: Double =1e-9, maxIter: Int = 100000) = {
-    val dot = alg.graphFromScheme(scheme,tol,maxIter)
+    val r = alg.infer(scheme,tol,maxIter)
+    val dot = alg.calibrationGraph(r)
     dot.toPDF(s"lcbp-debug-$label.pdf")
+    val csv = alg.nodeCSV(r)
+    val out = new PrintStream(new FileOutputStream(s"node_values_$label.csv"))
+    out.print(csv)
+    out.close()
   }
 }
