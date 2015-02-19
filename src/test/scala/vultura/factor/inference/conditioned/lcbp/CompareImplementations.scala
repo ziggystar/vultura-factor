@@ -2,7 +2,7 @@ package vultura.factor.inference.conditioned.lcbp
 
 import org.specs2._
 import org.specs2.specification.Fragments
-import vultura.factor.{Benchmarks, FactorMatchers}
+import vultura.factor.{LogD, Benchmarks, FactorMatchers}
 import vultura.factor.generators._
 
 class CompareImplementations extends Specification with FactorMatchers {
@@ -18,6 +18,7 @@ class CompareImplementations extends Specification with FactorMatchers {
   debugOn("bad_margs_exact")(LCBP_G_Exact,treeSplit0)
 
   override def is: Fragments =
+    "old lcbp exact on split tree 0 with log ring" ! exactOn(OldLCBP,treeSplit0.copy(problem = treeSplit0.problem.toRing(LogD))) ^
     "all exact on singly split tree 0" ! allExactOn(treeSplit0) ^
     "all exact on singly split tree 1" ! allExactOn(treeSplit1) ^
     "all exact on singly split tree 2" ! allExactOn(treeSplit2) ^
@@ -27,7 +28,9 @@ class CompareImplementations extends Specification with FactorMatchers {
     "bp lcbp agree on singly conditioned 3x3" ! bpAgreeOn(grid3x3_center) ^
     "all agree on meta loop" ! agreeOn(LCBPAlg.all.filterNot(_ == OldLCBP),metaLoop1,1000000) //old implementation takes forever
 
-  def allExactOn(scheme: FactoredScheme) = foreach(LCBPAlg.all){(a:LCBPAlg) =>
+  def allExactOn(scheme: FactoredScheme) = foreach(LCBPAlg.all)(exactOn(_,scheme))
+
+  def exactOn(a: LCBPAlg, scheme: FactoredScheme) = {
     val r = a.inferWithScheme(scheme,tol=1e-15)
     (r._2.aka("converged") must beTrue) and
       (r._1.as(_ => a.toString) must haveExactMarginals()) and

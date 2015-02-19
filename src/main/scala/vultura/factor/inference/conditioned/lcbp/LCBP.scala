@@ -13,16 +13,25 @@ class LCBP(val problem: Problem,
            val scheme: GScheme,
            val tol: Double = 1e-12,
            val maxIterations: Int = 1000000) extends MargParI {
-  require(problem.ring == NormalD, "linear combination of messages only implemented for normal domain")
-
   type FactorIdx = Int
 
-  //TODO make this work for the Log ring
   def linearCombination(weights: Array[Double], factors: IndexedSeq[Factor]): Factor = {
-    assert(weights.size == factors.size)
-    def elementWiseSum(a1: Array[Double], a2: Array[Double]) = a1.zip(a2).map{case (x1,x2) => x1 + x2}
-    val weighted = factors.zip(weights).map{case (f,w) => f.map(_ * w)}
-    weighted.reduce[Factor]{case (f1,f2) => f1.copy(values=elementWiseSum(f1.values,f2.values))}
+    def sumFactors(fs: Array[Factor], ring: Ring[Double]): Factor = {
+      //all factors require to have the same structure
+      Factor(fs.head.variables, fs.map(_.values).transpose.map(ring.sumA)(collection.breakOut))
+    }
+
+    if(problem.ring == NormalD) {
+      assert(weights.size == factors.size)
+      val weighted: Array[Factor] = factors.zip(weights).map{case (f,w) => f.map(_ * w)}(collection.breakOut)
+      sumFactors(weighted,NormalD)
+    } else {
+      val weighted: Array[Factor] = factors.zip(weights).map{ case (f,w) =>
+        val logWeight = math.log(w)
+        f.map(_ + logWeight)
+      }(collection.breakOut)
+      sumFactors(weighted,LogD)
+    }
   }
 
   sealed trait LCBPEdge extends Edge { self: Product =>
