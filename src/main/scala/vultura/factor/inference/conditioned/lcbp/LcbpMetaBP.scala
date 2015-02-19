@@ -12,14 +12,14 @@ class LcbpMetaBP(val scheme: FactoredScheme, val maxUpdates: Long = 1000000, val
   override type ST = FactoredScheme
 
   case class MetaV2F(v: MVI, fi: MFI) extends MetaFactorEdge {
-    override def variables: Array[MVI] = Array(v)
+    val variables: Array[MVI] = Array(v)
     override type InEdge = MetaF2V
     override def inputs: IndexedSeq[InEdge] =
       for(nf <- metaStructure.factorIdxOfVariable(v) if nf != fi) yield MetaF2V(nf,v)
     def mCompute() = {
       //this must be lazy, otherwise inputs gets called indefinitely
       val spTask = SumProductTask(
-        remainingVars = Array(v),
+        remainingVars = variables,
         domainSizes = metaStructure.domains,
         inputs.map(f2v => Array(f2v.v))(collection.breakOut),
         metaRing
@@ -32,7 +32,7 @@ class LcbpMetaBP(val scheme: FactoredScheme, val maxUpdates: Long = 1000000, val
   }
 
   case class MetaF2V(fi: MFI, v: MVI) extends MetaFactorEdge {
-    override def variables: Array[MVI] = Array(v)
+    val variables: Array[MVI] = Array(v)
     override type InEdge = MetaFactorEdge
     //first input is the factor value, tail are the incoming messages (except the one from `v`)
     override def inputs: IndexedSeq[InEdge] =
@@ -42,10 +42,10 @@ class LcbpMetaBP(val scheme: FactoredScheme, val maxUpdates: Long = 1000000, val
   }
 
   case class MetaFBel(fi: MFI) extends MetaFactorEdge {
-    override def variables: Array[Int] = metaStructure.scopeOfFactor(fi)
+    val variables: Array[Int] = metaStructure.scopeOfFactor(fi)
     override type InEdge = MetaFactorEdge
     override def inputs: IndexedSeq[InEdge] =
-      metaFactorEdge(fi) +: (for(mvi <- metaStructure.scopeOfFactor(fi)) yield MetaV2F(mvi,fi))
+      metaFactorEdge(fi) +: (for(mvi <- variables) yield MetaV2F(mvi,fi))
     /** These computations don't have to be thread-safe. */
     override def mCompute(): (IndexedSeq[InEdge#TOut], TOut) => Unit =
       constructSPTask(inputs.map(_.variables), variables, Seq(), metaStructure.domains, metaRing)
@@ -65,15 +65,16 @@ class LcbpMetaBP(val scheme: FactoredScheme, val maxUpdates: Long = 1000000, val
 
   case class CCP(fc: C, vc: C) extends DoubleEdge {
     override type InEdge = MetaFBel
-    val mfc = conditionToMetaCondition(fc)
-    val mvc = conditionToMetaCondition(vc)
+    val mfc: Condition = conditionToMetaCondition(fc)
+    val mvc: Condition = conditionToMetaCondition(vc)
+    assert(mvc.keySet.subsetOf(mfc.keySet))
 
     //the factor belief of the meta problem we require
     val edge: MetaFBel = MetaFBel(containingMetaClique(mfc.keys))
     //we marginalize and retain these variables
-    val retainVars: Array[Int] = mvc.keys.toArray.sorted
+    val retainVars: Array[Int] = (mfc.keySet -- mvc.keySet).toArray.sorted
     //and that's the assignment we are interested in
-    val conditionValues: Array[Int] = retainVars.map(mvc)
+    val conditionValues: Array[Int] = retainVars.map(mfc)
 
     override def inputs: IndexedSeq[InEdge] = IndexedSeq(edge)
 
