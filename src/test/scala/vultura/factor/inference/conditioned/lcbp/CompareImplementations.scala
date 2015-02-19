@@ -14,19 +14,31 @@ class CompareImplementations extends Specification with FactorMatchers {
   val multiConditionedString = FactoredScheme.withMaxDistance(Set(2,4,6),1,grid(8,1,2,factorGenerator = expGauss(3)))
   val metaLoop1 = FactoredScheme.withMaxDistance((for (x <- 0 to 2; y <- 0 to 2) yield (1 + 3 * x) + (1 + 3 * y) * 9).toSet,2,grid(9,9))
 
+  def asLog(fs: FactoredScheme): FactoredScheme = fs.copy(problem = fs.problem.toRing(LogD))
+
   debugOn("bad_margs_bp")(LCBP_BP,treeSplit0)
   debugOn("bad_margs_exact")(LCBP_G_Exact,treeSplit0)
 
   override def is: Fragments =
-    "old lcbp exact on split tree 0 with log ring" ! exactOn(OldLCBP,treeSplit0.copy(problem = treeSplit0.problem.toRing(LogD))) ^
-    "all exact on singly split tree 0" ! allExactOn(treeSplit0) ^
-    "all exact on singly split tree 1" ! allExactOn(treeSplit1) ^
-    "all exact on singly split tree 2" ! allExactOn(treeSplit2) ^
-    "all exact on center-conditioned 1D" ! allExactOn(centerConditionedString) ^
-    "all exact on multi-conditioned 1D" ! allExactOn(multiConditionedString) ^
-    "exact lcbp agree on singly conditioned 3x3" ! exactAgreeOn(grid3x3_center) ^
-    "bp lcbp agree on singly conditioned 3x3" ! bpAgreeOn(grid3x3_center) ^
-    "all agree on meta loop" ! agreeOn(LCBPAlg.all.filterNot(_ == OldLCBP),metaLoop1,1000000) //old implementation takes forever
+    "normal ring" ^
+      "all exact on singly split tree 0" ! allExactOn(treeSplit0) ^
+      "all exact on singly split tree 1" ! allExactOn(treeSplit1) ^
+      "all exact on singly split tree 2" ! allExactOn(treeSplit2) ^
+      "all exact on center-conditioned 1D" ! allExactOn(centerConditionedString) ^
+      "all exact on multi-conditioned 1D" ! allExactOn(multiConditionedString) ^
+      "exact lcbp agree on singly conditioned 3x3" ! exactAgreeOn(grid3x3_center) ^
+      "bp lcbp agree on singly conditioned 3x3" ! bpAgreeOn(grid3x3_center) ^
+      "all agree on meta loop" ! agreeOn(LCBPAlg.all.filterNot(_ == OldLCBP),metaLoop1,1000000) ^ //old implementation takes forever
+    p^
+    "log ring" ^
+      "all exact on singly split tree 0" ! allExactOn(asLog(treeSplit0)) ^
+      "all exact on singly split tree 1" ! allExactOn(asLog(treeSplit1)) ^
+      "all exact on singly split tree 2" ! allExactOn(asLog(treeSplit2)) ^
+      "all exact on center-conditioned 1D" ! allExactOn(asLog(centerConditionedString)) ^
+      "all exact on multi-conditioned 1D" ! allExactOn(asLog(multiConditionedString)) ^
+      "exact lcbp agree on singly conditioned 3x3" ! exactAgreeOn(asLog(grid3x3_center)) ^
+      "bp lcbp agree on singly conditioned 3x3" ! bpAgreeOn(asLog(grid3x3_center)) ^
+      "all agree on meta loop" ! agreeOn(LCBPAlg.all.filterNot(_ == OldLCBP),asLog(metaLoop1),1000000) //old implementation takes forever
 
   def allExactOn(scheme: FactoredScheme) = foreach(LCBPAlg.all)(exactOn(_,scheme))
 

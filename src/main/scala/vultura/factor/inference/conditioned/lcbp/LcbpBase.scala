@@ -12,14 +12,22 @@ trait LcbpBase {
   def scheme: ST
   def problem: Problem = scheme.problem
 
-  require(problem.ring == NormalD, "linear combination of messages only implemented for normal domain")
-
-  //TODO make this work for the Log ring
   def linearCombination(weights: Array[Double], factors: IndexedSeq[Array[Double]]): Array[Double] = {
+    def sumFactors(fs: Array[Array[Double]], ring: Ring[Double]): Array[Double] =
+      fs.transpose.map(ring.sumA)(collection.breakOut)
+
     assert(weights.size == factors.size)
-    def elementWiseSum(a1: Array[Double], a2: Array[Double]): Array[Double] = a1.zip(a2).map{case (x1,x2) => x1 + x2}
-    val weighted = factors.zip(weights).map{case (f,w) => f.map(_ * w)}
-    weighted reduce elementWiseSum
+
+    if(problem.ring == NormalD) {
+      val weighted: Array[Array[Double]] = factors.zip(weights).map{case (f,w) => f.map(_ * w)}(collection.breakOut)
+      sumFactors(weighted,NormalD)
+    } else {
+      val weighted: Array[Array[Double]] = factors.zip(weights).map{ case (f,w) =>
+        val logWeight = math.log(w)
+        f.map(_ + logWeight)
+      }(collection.breakOut)
+      sumFactors(weighted,LogD)
+    }
   }
 
   trait LcbpMessage extends MEdge {self: Product =>
