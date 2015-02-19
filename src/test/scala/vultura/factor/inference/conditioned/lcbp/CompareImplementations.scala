@@ -72,9 +72,9 @@ class CompareImplementations extends Specification with FactorMatchers {
   def debugOn(label: String)(alg: LCBPAlg,scheme: FactoredScheme, tol: Double =1e-9, maxIter: Int = 100000) = {
     val r = alg.infer(scheme,tol,maxIter)
     val dot = alg.calibrationGraph(r)
-    dot.toPDF(s"lcbp-debug-$label.pdf")
+    dot.toPDF(s"lcbp-debug-${label}_${alg.toString}.pdf")
     val csv = alg.nodeCSV(r)
-    val out = new PrintStream(new FileOutputStream(s"node_values_$label.csv"))
+    val out = new PrintStream(new FileOutputStream(s"node_values_${label}_${alg.toString}.csv"))
     out.print(csv)
     out.close()
   }
