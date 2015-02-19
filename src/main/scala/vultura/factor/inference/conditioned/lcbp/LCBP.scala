@@ -16,6 +16,7 @@ class LCBP(val problem: Problem,
   type FactorIdx = Int
 
   def linearCombination(weights: Array[Double], factors: IndexedSeq[Factor]): Factor = {
+    assert(math.abs(1-weights.sum) < 1e-9, "weights must sum to one")
     def sumFactors(fs: Array[Factor], ring: Ring[Double]): Factor = {
       //all factors require to have the same structure
       Factor(fs.head.variables, fs.map(_.values).transpose.map(ring.sumA)(collection.breakOut))
@@ -30,7 +31,7 @@ class LCBP(val problem: Problem,
         val logWeight = math.log(w)
         f.map(_ + logWeight)
       }(collection.breakOut)
-      sumFactors(weighted,LogD)
+      sumFactors(weighted, LogD)
     }
   }
 
@@ -118,7 +119,6 @@ class LCBP(val problem: Problem,
     override def compute(ins: IndexedSeq[LCBPEdge#TOut]): TOut = {
       val dist = ins.head.asInstanceOf[Array[Double]]
       val rest  = ins.view.tail.map(_.asInstanceOf[Factor])
-      assert(math.abs(dist.sum - 1) < 0.0001, "got something not normalized here")
       linearCombination(dist,rest.force.toIndexedSeq)
     }
 
@@ -257,7 +257,7 @@ class LCBP(val problem: Problem,
     override def edgeValue(e: LCBPEdge): e.type#TOut = e match {
       case FactorEdge(vars) => Factor.maxEntropy(vars,problem.domains,problem.ring).asInstanceOf[e.TOut]
       case ve: ValueEdge => problem.ring.one.asInstanceOf[e.TOut]
-      case cd: ConditionDistribution => Array.fill(cd.conditions.size)(problem.ring.one).asInstanceOf[e.TOut]
+      case cd: ConditionDistribution => NormalD.normalize(Array.fill(cd.conditions.size)(NormalD.one)).asInstanceOf[e.TOut]
     }
   }
 
