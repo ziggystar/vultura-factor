@@ -12,8 +12,9 @@ organization := "de.uni-ulm"
 20.0.3: tie-breaking for variable selection heuristics in ConditionedInference
 20.0.4: moved code from competition solver into library; added code for OpenBitSet from apache lucene
 21.0.0: extract probabilistic inference code into separate project
+22.0.0: fix different LCBP implementations
 */
-version := "22.0.0-DEV"
+version := "22.0.0"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 
