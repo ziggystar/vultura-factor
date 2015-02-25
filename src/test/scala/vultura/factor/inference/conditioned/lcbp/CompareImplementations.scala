@@ -49,8 +49,8 @@ class CompareImplementations extends Specification with FactorMatchers {
   def exactOn(a: LCBPAlg, scheme: FactoredScheme) = {
     val r = a.inferWithScheme(scheme,tol=1e-15)
     (r._2.aka("converged") must beTrue) and
-      (r._1.as(_ => a.toString) must haveExactMarginals()) and
-      (r._1.as(_ => a.toString) must haveExactZ())
+      (r._1.as(_ => a.toString) must haveExactZ()) and
+      (r._1.as(_ => a.toString) must haveExactMarginals())
   }
 
   def exactAgreeOn(s: FactoredScheme) = agreeOn(Seq(OldLCBP,LCBP_G_Exact),s)

@@ -15,26 +15,6 @@ class LCBP(val problem: Problem,
            val maxIterations: Int = 1000000) extends MargParI {
   type FactorIdx = Int
 
-  def linearCombination(weights: Array[Double], factors: IndexedSeq[Factor]): Factor = {
-    assert(math.abs(1-weights.sum) < 1e-9, "weights must sum to one")
-    def sumFactors(fs: Array[Factor], ring: Ring[Double]): Factor = {
-      //all factors require to have the same structure
-      Factor(fs.head.variables, fs.map(_.values).transpose.map(ring.sumA)(collection.breakOut))
-    }
-
-    if(problem.ring == NormalD) {
-      assert(weights.size == factors.size)
-      val weighted: Array[Factor] = factors.zip(weights).map{case (f,w) => f.map(_ * w)}(collection.breakOut)
-      sumFactors(weighted,NormalD)
-    } else {
-      val weighted: Array[Factor] = factors.zip(weights).map{ case (f,w) =>
-        val logWeight = math.log(w)
-        f.map(_ + logWeight)
-      }(collection.breakOut)
-      sumFactors(weighted, LogD)
-    }
-  }
-
   sealed trait LCBPEdge extends Edge { self: Product =>
     override type InEdge <: LCBPEdge
   }
@@ -119,7 +99,7 @@ class LCBP(val problem: Problem,
     override def compute(ins: IndexedSeq[LCBPEdge#TOut]): TOut = {
       val dist = ins.head.asInstanceOf[Array[Double]]
       val rest  = ins.view.tail.map(_.asInstanceOf[Factor])
-      linearCombination(dist,rest.force.toIndexedSeq)
+      Factor.linearCombination(dist, rest.force.toIndexedSeq, problem.ring)
     }
 
     /** First entry is the condition distribution. The rest are the messages from the factor. */
@@ -278,7 +258,7 @@ class LCBP(val problem: Problem,
       matching.foldLeft(LogD.zero){case (s,cm) => LogD.sum(s,calibrator.edgeValue(LogConditionWeight(cm)))}
     }
     val weights = NormalD.normalize(LogD.decode(logWeights))
-    linearCombination(weights,conditionedBeliefs)
+    Factor.linearCombination(weights, conditionedBeliefs, problem.ring)
   }
 
   /** @return Partition function in encoding specified by `ring`. */

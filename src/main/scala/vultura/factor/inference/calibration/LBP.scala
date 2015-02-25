@@ -73,16 +73,21 @@ case class LBP(problem: Problem) {
 
 object LBP{
   /** Convenient inference method. */
-  def infer(p: Problem, maxIterations: Int = 1000000, tol: Double = 1e-10) = {
+  def infer(p: Problem, maxIterations: Int = 1000000, tol: Double = 1e-10) = inferWithStats(p, maxIterations, tol)._1
+
+  /** Convenient inference method.
+    * @return Second is true if converged, third is number of update steps. */
+  def inferWithStats(p: Problem, maxIterations: Int = 1000000, tol: Double = 1e-10): (BPResult,Boolean,Long) = {
     val lbp = LBP(p)
     val cp = new MutableFIFOCalibrator(lbp.edges)(ConvergenceTest.MaxDiff(tol), maxIterations, lbp.maxEntInitializer)
-    new BPResult{
+    val bpResult = new BPResult{
       override def rawMessageValue(m: Message): Array[Double] = cp.edgeValue(m match {
         case V2FMsg(vi,fi) => lbp.V2F(vi,fi)
         case F2VMsg(fi,vi) => lbp.F2V(fi,vi)
       })
       override def problem: Problem = p
     }
+    (bpResult,cp.isConverged,cp.iteration)
   }
 }
 

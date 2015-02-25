@@ -419,4 +419,25 @@ object Factor{
     }
     result
   }
+
+  def linearCombination(weights: Array[Double], factors: IndexedSeq[Factor], ring: Ring[Double]): Factor = {
+    assert(math.abs(1-weights.sum) < 1e-9, "weights must sum to one")
+    //all factors require to have the same structure
+    assert(factors.map(_.values.length).toSet.size == 1)
+    def sumFactors(fs: Array[Factor], ring: Ring[Double]): Factor = {
+      Factor(fs.head.variables, fs.map(_.values).transpose.map(ring.sumA)(collection.breakOut))
+    }
+
+    if(ring == NormalD) {
+      assert(weights.size == factors.size)
+      val weighted: Array[Factor] = factors.zip(weights).map{case (f,w) => f.map(_ * w)}(collection.breakOut)
+      sumFactors(weighted,NormalD)
+    } else {
+      val weighted: Array[Factor] = factors.zip(weights).map{ case (f,w) =>
+        val logWeight = math.log(w)
+        f.map(_ + logWeight)
+      }(collection.breakOut)
+      sumFactors(weighted, LogD)
+    }
+  }
 }
