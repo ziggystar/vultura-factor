@@ -14,8 +14,9 @@ organization := "de.uni-ulm"
 21.0.0: extract probabilistic inference code into separate project
 22.0.0: fix different LCBP implementations
 22.1.0: Add fully factorized CBP inference; some refactorings
+22.2.0: add interactions on second layer of two-tier grid problem generator
 */
-version := "22.1.0"
+version := "22.2.0"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 
