@@ -15,8 +15,9 @@ organization := "de.uni-ulm"
 22.0.0: fix different LCBP implementations
 22.1.0: Add fully factorized CBP inference; some refactorings
 22.2.0: add interactions on second layer of two-tier grid problem generator
+22.3.0: fix merge/commit accident where FullyConditionedBP from 22.1.0 was missing from 22.2.0
 */
-version := "22.2.0"
+version := "22.3.0"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 
