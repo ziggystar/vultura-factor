@@ -50,7 +50,7 @@ libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.11.6" % "test"
 resolvers += "mvn@mirkwood" at "http://mirkwood.informatik.uni-ulm.de/mvn"
 
 //--- fixing exit code for jenkins
-testResultLogger in (Test, test) := new TestResultLogger {
+testResultLogger in (Test, testOnly) := new TestResultLogger {
   import sbt.Tests._
   def run(log: Logger, results: Output, taskName: String): Unit = {
     println("Exit code always 0...as you wish")
