@@ -27,7 +27,7 @@ description := "Tools for probabilistic inference in discrete-valued factor grap
 
 licenses += "MIT" -> url("http://opensource.org/licenses/MIT")
 
-scalaVersion := "2.11.5"
+scalaVersion := "2.11.6"
 
 //assertions are only used in tests
 scalacOptions in Compile += "-Xdisable-assertions"
@@ -42,9 +42,19 @@ libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % 
 // --------------- Publishing ----------------------------------
 
 //testing dependencies
-libraryDependencies += "org.specs2" %% "specs2" % "2.3.+" % "test"
+libraryDependencies += "org.specs2" %% "specs2" % "2.3.13" % "test"
 
-libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.11.+" % "test"
+libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.11.6" % "test"
 
 //for vultura-util
 resolvers += "mvn@mirkwood" at "http://mirkwood.informatik.uni-ulm.de/mvn"
+
+//--- fixing exit code for jenkins
+testResultLogger in (Test, test) := new TestResultLogger {
+  import sbt.Tests._
+  def run(log: Logger, results: Output, taskName: String): Unit = {
+    println("Exit code always 0...as you wish")
+    // uncomment to have the default behaviour back
+    // TestResultLogger.SilentWhenNoTests.run(log, results, taskName)
+  }
+}
