@@ -33,10 +33,6 @@ class LcbpMetaBPTest extends Specification {
   def cmpExactLcbp(scheme: FactoredScheme, printDot: Option[String] = None) = {
     val lcbp_exact = new LCBPGeneral(scheme)//new LCBP(scheme.problem,scheme.toGScheme, tol=1e-12, maxIterations = 1000000)
     val lcbp_bp = new LcbpMetaBP(scheme, tol=1e-12, maxUpdates = 1000000)
-    printDot.foreach{ pref =>
-      lcbp_exact.calibrator.toDot.toPDF(s"$pref-lcbp-exact.pdf")
-      lcbp_bp.calibrator.toDot.toPDF(s"$pref-lcbp-bp.pdf")
-    }
     (lcbp_bp.metaStructure.isTree.aka("meta problem is a tree") must beTrue) and
       (lcbp_exact.calibrator.isConverged.aka("lcbp exact converged") must beTrue) and
       (lcbp_bp.calibrator.isConverged.aka("lcbp bp converged") must beTrue) and
