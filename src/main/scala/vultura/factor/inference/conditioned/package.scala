@@ -1,13 +1,13 @@
 package vultura.factor.inference
 
-import vultura.factor.{Factor, Problem}
+import vultura.factor.{Val, Var, Factor, Problem}
 
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
  */
 package object conditioned {
-  type Condition = Map[Int,Int]
-  type GCondition = Map[Int,Set[Int]]
+  type Condition = Map[Var,Val]
+  type GCondition = Map[Var,Set[Val]]
 
   /** Extracts zeros from a factor, and returns a generalized condition, capturing those. */
   def extractCondition(f: Factor, problem: Problem): GCondition = {
