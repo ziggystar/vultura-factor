@@ -4,6 +4,8 @@
 
 Include the following in your `build.sbt` file:
 
+    resolvers += "mirkwood" at "http://mirkwood.informatik.uni-ulm.de/mvn"
+
     libraryDependencies += "de.uni-ulm" %% "vultura-factor" % "22.3.0"
 
 It is worth checking `build.sbt` for the current version.
