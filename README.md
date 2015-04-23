@@ -1,5 +1,13 @@
 # Library for probabilistic inference
 
+## Usage
+
+Include the following in your `build.sbt` file:
+
+    libraryDependencies += "de.uni-ulm" %% "vultura-factor" % "22.3.0"
+
+It is worth checking `build.sbt` for the current version.
+
 ## Fast Implementation of Sum/Product on Factors
 
 See either `vultura.factor.Factor` companion for on-the-fly operations, or
