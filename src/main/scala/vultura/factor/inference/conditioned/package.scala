@@ -6,7 +6,9 @@ import vultura.factor.{Val, Var, Factor, Problem}
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
  */
 package object conditioned {
+  /** (Partial) assignment to a set of variables. */
   type Condition = Map[Var,Val]
+  /** Generalized condition constraints variables to a subset of values, each. */
   type GCondition = Map[Var,Set[Val]]
 
   /** Extracts zeros from a factor, and returns a generalized condition, capturing those. */

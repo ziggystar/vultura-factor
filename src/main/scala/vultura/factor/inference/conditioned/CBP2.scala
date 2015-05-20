@@ -157,6 +157,7 @@ trait VariableSelection[-I] {
   def apply(information: I, p: Problem, rand: Random): Set[GCondition]
 }
 
+/** A special type of variable selection that branches on all possible assignments to a set of variables. */
 trait CompleteSplitVariableSelection[-I] extends VariableSelection[I]{
   final override def apply(information: I, p: Problem, rand: Random): Set[GCondition] = {
     val v = selectVariable(information,p).pickRandom(rand)

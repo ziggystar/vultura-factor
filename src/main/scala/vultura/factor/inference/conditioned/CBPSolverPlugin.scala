@@ -10,6 +10,7 @@ import vultura.util.TreeWidth
 trait CBPSolverPlugin[S]{
   def name: String
   implicit def result2mpi: S <:< MargParI
+  /** @return Left is an exact result, while right is the approximate result. */
   def create(p: Problem): Either[MargParI,S]
   def incremental(oldState: S, newProblem: Problem): Either[MargParI,S] = create(newProblem)
 }
