@@ -80,14 +80,11 @@ object LBP{
   def inferWithStats(p: Problem, maxIterations: Int = 1000000, tol: Double = 1e-10): (BPResult,Boolean,Long) = {
     val lbp = LBP(p)
     val cp = new MutableFIFOCalibrator(lbp.edges)(ConvergenceTest.MaxDiff(tol), maxIterations, lbp.maxEntInitializer)
-    val bpResult = new BPResult{
-      override def rawMessageValue(m: Message): Array[Double] = cp.edgeValue(m match {
-        case V2FMsg(vi,fi) => lbp.V2F(vi,fi)
-        case F2VMsg(fi,vi) => lbp.F2V(fi,vi)
-      })
-      override def problem: Problem = p
-    }
-    (bpResult,cp.isConverged,cp.iteration)
+    val ebp = new StoredResult(p,{
+      case v2f: BPResult#V2FMsg => cp.edgeValue(lbp.V2F(v2f.vi,v2f.fi))
+      case f2v: BPResult#F2VMsg => cp.edgeValue(lbp.F2V(f2v.fi, f2v.vi))
+    })
+    (ebp,cp.isConverged,cp.iteration)
   }
 }
 
@@ -164,4 +161,37 @@ trait BPResult extends MargParI with JointMargI {
 
   /** @return Partition function in encoding specified by `ring`. */
   override def Z: Double = math.exp(logZ)
+}
+
+/** Stores just the raw message values of a BP run.
+  * This class should not retain any references to other classes, and thus avoids memory leaks.
+  */
+class StoredResult(val problem: Problem, messages: BPResult#Message => Array[Double]) extends BPResult {
+
+  val msgF2V: Array[Array[Array[Double]]] =
+    problem.scopeOfFactor.zipWithIndex.map{case (scope,fi) => scope.map(v => new Array[Double](problem.domains(v)))}
+  val msgV2F: Array[Array[Array[Double]]] =
+    problem.scopeOfFactor.zipWithIndex.map{case (scope,fi) => scope.map(v => new Array[Double](problem.domains(v)))}
+
+  {//copy stuff; this is not functional to avoid closing on `v2f` and `f2v`; and for performance
+  var fi = 0
+    while(fi < problem.numFactors){
+      val scope = problem.scopeOfFactor(fi)
+      var vii = 0
+      while(vii < scope.length){
+        val vi = scope(vii)
+
+        msgF2V(fi)(vii) = messages(F2VMsg(fi, vi))
+        msgV2F(fi)(vii) = messages(V2FMsg(vi, fi))
+
+        vii += 1
+      }
+      fi += 1
+    }
+  }
+
+  override def rawMessageValue(m: Message): Array[Double] = m match {
+    case V2FMsg(vi,fi) => msgV2F(fi)(m.varIndexInFactorScope)
+    case F2VMsg(fi,vi) => msgF2V(fi)(m.varIndexInFactorScope)
+  }
 }
