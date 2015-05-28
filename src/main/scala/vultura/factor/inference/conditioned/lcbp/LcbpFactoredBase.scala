@@ -40,7 +40,7 @@ trait LcbpFactoredBase extends LcbpBase {
     val domains: Array[Int] = metaStructure.domains
   }
 
-  /** Return the index of the meta factor that covers exactly the conditioners of the given variable set.
+  /** Return the index of a meta factor that covers the conditioners of the given variable set.
     * @param baseVars Usually this is a single variable or a factor scope.
     * @return Index of a meta factor.
     */
@@ -50,6 +50,7 @@ trait LcbpFactoredBase extends LcbpBase {
   }
 
   //in which meta factor are the variable contributions collected
+  //note that we already pool factors, and variable contributions are aggregated in some factor contribution
   val variableContributionAssignment: Array[MFI] =
     problem.variables.map(v => metaFactorIndexOfBaseConditioners(Set(v)))(collection.breakOut)
 
@@ -85,7 +86,7 @@ trait LcbpFactoredBase extends LcbpBase {
 
     /** These computations don't have to be thread-safe. */
     override def mCompute(): (scala.IndexedSeq[InEdge#TOut], TOut) => Unit = { (ins,result) =>
-      for(i <- 0 until result.size) result(i) = metaRing.one
+      for(i <- result.indices) result(i) = metaRing.one
 
       for( ((_,idx),DoubleRef(x)) <- inputLookup zip ins) {
         result(idx) = metaRing.prod(result(idx), x)
