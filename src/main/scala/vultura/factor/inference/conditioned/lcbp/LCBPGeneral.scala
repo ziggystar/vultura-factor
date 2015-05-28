@@ -114,8 +114,7 @@ case class LCBPGeneral(scheme: FactoredScheme,
     val fcVariablesMP: Array[Int] = fcVariables.map(mcVariablesIdx.forward)
     /** These computations don't have to be thread-safe. */
     override def mCompute(): (IndexedSeq[InEdge#TOut], TOut) => Unit = { (ins,resultRef) =>
-      val infResult: MargParI with JointMargI = ins(0
-      ).elem
+      val infResult: MargParI with JointMargI = ins(0).elem
       val belief = infResult.decodedCliqueBelief(clique)
       val summed = Factor.multiplyRetain(NormalD)(mcDomains)(Seq(belief),fcVariablesMP)
       resultRef.value = summed.eval(fcCondition, mcDomains)

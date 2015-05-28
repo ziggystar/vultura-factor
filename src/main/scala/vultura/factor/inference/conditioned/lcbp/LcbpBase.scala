@@ -2,6 +2,7 @@ package vultura.factor.inference.conditioned.lcbp
 
 import vultura.factor._
 import vultura.factor.inference.calibration.MEdge
+import vultura.util.SIIndex
 
 /** This trait defines the message for LCBP, excluding calculation of the meta problem.
   * This means it still requires a mixin of type `dunno yet` to provide inference on the meta problem.
@@ -220,7 +221,7 @@ trait LcbpBase {
 
   }
   
-  /** The contribution the the average energy from this variable.
+  /** The contribution the average energy from this variable.
     * This is just the entropy of the conditioned variable belief
     * to the power of one minus degree. */
   case class FVariable(v: Int, vc: C) extends DoubleEdge{
@@ -249,6 +250,40 @@ trait LcbpBase {
     }
 
     override def drawColor: String = "aquamarine"
+  }
+
+  /** The term that is added to the condition distribution.
+    * Belongs to a factor-variable connection under a certain factor condition. */
+  case class DeltaTerm(fi: Int, fc: C) extends DoubleEdge {
+    override type InEdge = BPEdge
+    val inputIndex: SIIndex[BPEdge] = new SIIndex(for {
+      vi <- problem.factors(fi).variables
+      vc: C = scheme.superConditionOf(fc, Set(vi))
+      i <- Seq(F2V(fi, vi, fc), F2VAgg(fi, vi, vc), V2F(vi, fi, vc))
+    } yield i)
+
+    override def inputs: IndexedSeq[InEdge] = inputIndex.elements
+
+    /** These computations don't have to be thread-safe. */
+    override def mCompute(): (IndexedSeq[Array[Double]], DoubleRef) => Unit = (ins,result) => {
+      def get(bpe: BPEdge): Array[Double] = ins(inputIndex(bpe))
+      val ring = problem.ring
+      def decode(d: Double): Double = ring.decode(Array(d))(0)
+      def encode(d: Double): Double = ring.encode(Array(d))(0)
+      val r: Double = ring.prodA((for {
+        vi <- problem.factors(fi).variables
+        vc: C = scheme.superConditionOf(fc, Set(vi))
+        mai_ca = get(F2V(fi, vi, fc))
+        mai_ci = get(F2VAgg(fi, vi, vc))
+        mia_ci = get(V2F(vi, fi, vc))
+        xi <- 0 until problem.domains(vi)
+      } yield {
+          val delta = encode(decode(mai_ca(xi)) - decode(mai_ci(xi)))
+          val exp = ring.prod(mia_ci(xi), delta)
+          ring.pow(mia_ci(xi), exp)
+        })(collection.breakOut))
+      result.value = math.log(decode(r))
+    }
   }
 
 

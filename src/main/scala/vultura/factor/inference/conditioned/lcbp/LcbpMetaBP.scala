@@ -7,7 +7,7 @@ import vultura.factor.inference.conditioned._
 
 /** BP on the meta problem.
  */
-class LcbpMetaBP(val scheme: FactoredScheme, val maxUpdates: Long = 1000000, val tol: Double = 1e-12)
+class LcbpMetaBP(val scheme: FactoredScheme, val maxUpdates: Long = 1000000, val tol: Double = 1e-12, val useDeltaTerm: Boolean = true)
   extends LcbpFactoredBase with MargParI {
   override type ST = FactoredScheme
 

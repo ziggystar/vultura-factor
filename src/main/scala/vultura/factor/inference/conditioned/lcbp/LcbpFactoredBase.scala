@@ -7,6 +7,9 @@ import vultura.util.{ArrayIndex, CrossProductIndexer}
 /** This trait exposes the meta problem by providing a [[ProblemStructure]] and edges
   * computing the factor values of the meta-factors. */
 trait LcbpFactoredBase extends LcbpBase {
+
+  /** Whether to apply the correction term. This influences the values of the factors. */
+  def useDeltaTerm: Boolean
   override type ST <: FactoredScheme
 
   //meta variable index
@@ -67,15 +70,26 @@ trait LcbpFactoredBase extends LcbpBase {
     val inputLookup: IndexedSeq[(DoubleEdge, Int)] = {
       val baseVariables: Array[Var] = variables.map(var2metaVar.backward)
 
+      //collect all members of factor- and variableContributionAssignment that are assigned to this MetaFactor
+      //(with index mfi).
+      //If you wonder whether the FVariable get used too often (since they will be accessed with factor conditions,
+      //instead of their usual variable conditions), this is correct and basically pre-multiplies the variable
+      //contribution into the according factor-contributions
       val contributions: Array[Condition => DoubleEdge] =
         variableContributionAssignment.zipWithIndex
-          .collect{ case (assign, vi) if assign == mfi => FVariable(vi, _: Condition)} ++
+          .collect{ case (assign: MFI, baseVI) if assign == mfi => FVariable(baseVI, _: Condition)} ++
           factorContributionAssignment.zipWithIndex
-            .collect{ case (assign, fi) if assign == mfi => FFactor(fi, _: Condition)}
+            .collect{ case (assign: MFI, baseFI) if assign == mfi => FFactor(baseFI, _: Condition)} ++
+          (
+            if (useDeltaTerm) factorContributionAssignment.zipWithIndex
+              .collect{ case (assign: MFI, baseFI) if assign == mfi => DeltaTerm(baseFI, _: Condition)}
+            else Seq()
+          )
+
 
       for {
         (assignment, idx) <- new CrossProductIndexer(baseVariables.map(problem.domains)).zipWithIndex
-        condition = baseVariables.zip(assignment).toMap
+        condition = baseVariables.zip(assignment).toMap //this will be the condition argument to the base messages
         contrib <- contributions
       } yield (contrib(condition),idx)
     }
@@ -85,7 +99,7 @@ trait LcbpFactoredBase extends LcbpBase {
     override def inputs: IndexedSeq[InEdge] = inputLookup.map(_._1)
 
     /** These computations don't have to be thread-safe. */
-    override def mCompute(): (scala.IndexedSeq[InEdge#TOut], TOut) => Unit = { (ins,result) =>
+    override def mCompute(): (IndexedSeq[DoubleRef], TOut) => Unit = { (ins,result) =>
       for(i <- result.indices) result(i) = metaRing.one
 
       for( ((_,idx),DoubleRef(x)) <- inputLookup zip ins) {
