@@ -168,3 +168,5 @@ case class LCBPGeneral(scheme: FactoredScheme,
     Factor(Array(vi),values)
   }
 }
+
+

@@ -17,7 +17,7 @@ trait LcbpFactoredBase extends LcbpBase {
   //meta factor index
   type MFI = Int
 
-  val var2metaVar: ArrayIndex[Int] = new ArrayIndex[Int](scheme.allConditioners)
+  val var2metaVar: ArrayIndex[Int] = new ArrayIndex[Int](scheme.allConditioners.toSeq.sorted)
 
   def metaConditionersOf(vs: Set[Int]): Set[Int] = scheme.conditionersOf(vs).map(var2metaVar.forward)
   //using variable indices from meta problem, don't collect factors in super factors

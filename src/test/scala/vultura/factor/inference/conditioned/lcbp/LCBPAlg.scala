@@ -20,7 +20,17 @@ trait LCBPAlg { self: Product =>
 }
 
 object LCBPAlg {
-  val all = Seq(OldLCBP,LCBP_G_Exact,LCBP_G_BP,LCBP_BP(corrected = false), LCBP_BP(corrected = true))
+  val all = Seq(
+    OldLCBP,
+    LCBP_G_Exact,
+    LCBP_G_BP,
+    LCBP_BP(corrected = false),
+    LCBP_BP(corrected = true),
+    LCBP_G_F_Exact(false),
+    LCBP_G_F_Exact(true),
+    LCBP_G_F_BP(false),
+    LCBP_G_F_BP(true)
+  )
 }
 
 
@@ -68,4 +78,28 @@ case class LCBP_BP(corrected: Boolean) extends LCBPAlg {
   override def nodeCSV(r: R): String = r.calibrator.toCSV
 
   override def toString: String = "LCBP_BP" + (if(corrected) "+Cor" else "")
+}
+
+/** The new lcbp implementation, using exact meta inference with junction tree. */
+case class LCBP_G_F_Exact(corrected: Boolean) extends LCBPAlg {
+  override type R = LCBPFactoredGeneral
+
+  override def infer(s: FactoredScheme, tol: Double, maxIter: Int): R =
+    new LCBPFactoredGeneral(s, maxUpdates = maxIter, tol = tol, useDeltaTerm = corrected)
+  override def result(r: R): (MargParI, Boolean) = (r,r.calibrator.isConverged)
+  override def calibrationGraph(r: R): DotGraph[_] = r.calibrator.toDot
+  override def nodeCSV(r: R): String = r.calibrator.toCSV
+  override def toString: String = "LCBP_G_F_Exact" + (if(corrected) "+Cor" else "")
+}
+
+/** The new lcbp implementation, using bp as meta inference as plugin for general solver. */
+case class LCBP_G_F_BP(corrected: Boolean) extends LCBPAlg {
+  override type R = LCBPFactoredGeneral
+
+  override def infer(s: FactoredScheme, tol: Double, maxIter: Int): R =
+    new LCBPFactoredGeneral(s, inferer = px => LBP.infer(px,maxIter,tol),maxUpdates = maxIter, tol = tol, useDeltaTerm = corrected)
+  override def result(r: R): (MargParI, Boolean) = (r,r.calibrator.isConverged)
+  override def calibrationGraph(r: R): DotGraph[_] = r.calibrator.toDot
+  override def nodeCSV(r: R): String = r.calibrator.toCSV
+  override def toString: String = "LCBP_G_F_BP" + (if(corrected) "+Cor" else "")
 }

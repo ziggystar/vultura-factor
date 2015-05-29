@@ -11,6 +11,7 @@ import scala.util.Random
  * Date: 5/31/13
  */
 case class Factor(variables: Array[Int], values: Array[Double]) {
+  //TODO find out where this is used and then remove this requirement
   require(Factor.isStrictlyIncreasing(variables), "variables are not ordered increasingly")
 
   /** Check whether this factor is independent of some variable. (with no tolerance!) */
