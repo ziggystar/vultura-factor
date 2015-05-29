@@ -1,5 +1,6 @@
 package vultura.factor.generators
 
+import vultura.factor.inference.conditioned.lcbp.FactoredScheme
 import vultura.factor.{Problem, LabeledPS, FactorGenerator}
 
 import scala.collection.immutable
@@ -61,4 +62,18 @@ case class GridH2(cellWidth: Int = 3, cellHeight: Int = 3, cellRows: Int = 3, ce
       },
       random = random
     )
+
+  /** Generates a [[FactoredScheme]], where all variables on the second layer are conditioners, and their conditionees
+    * are the variables on the lower level that are connected with them.
+    * @param maxDist
+    */
+  def generateScheme(domainSize: Int, lowerPot: FactorGenerator, interPot: FactorGenerator, upperPot: FactorGenerator, random: Random, maxDist: Int = 2): FactoredScheme = {
+    val p = generate(domainSize, lowerPot, interPot, upperPot, random)
+    val scheme_dist = FactoredScheme.withMaxDistance(labeledPS.variables.filter(_._3 == 1).map(labeledPS.variableIndex.forward),maxDist,p)
+    val s = scheme_dist.copy(conditionRelations = scheme_dist.conditionRelations.map{
+      case r@(condee,conds) if labeledPS.variableIndex.backward(condee)._3 == 0 => r
+      case (condee,conds) => (condee,conds.filter(c => c == condee || labeledPS.variableIndex.backward(c)._3 == 0))
+    })
+    s
+  }
 }

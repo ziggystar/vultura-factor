@@ -39,8 +39,11 @@ class MutableFIFOCalibrator[E <: MEdge](val problem: Iterable[E])(
   //the successors of an edge
   val successors: IndexedSeq[Array[EI]] = {
     //if edges is closed, the following cast succeeds (because E is a valid super type)
-    val fromTo: IndexedSeq[(EI, EI)] = for (toI <- 0 until numEdges; fromI <- predecessors(toI)) yield (fromI, toI)
-    ((0 until numEdges) map fromTo.groupByMap(_._1, _._2).withDefaultValue(IndexedSeq())).map(_.toArray)
+    val result = Array.fill(numEdges)(mutable.Buffer[EI]())
+    for (toI <- 0 until numEdges; fromI <- predecessors(toI)) yield {
+      result(fromI) += toI
+    }
+    result.map(_.toArray)
   }
 
   /** Access initializer only through method to avoid keeping a reference to it. */

@@ -11,7 +11,17 @@ case class FactoredScheme(problem: Problem, conditionRelations: Map[Var,Set[Var]
   val conditioners: Map[Var, Set[Var]] = conditionRelations.withDefaultValue(Set.empty)
   def allConditioners: Set[Int] = problem.variableSet.flatMap(conditioners)
 
-  def conditionersOf(vs: Set[Int]): Set[Int] = vs.map(conditioners).foldLeft(Set[Int]())(_ ++_)
+  def conditionersOf(vs: Set[Int]): Set[Int] = {
+    val builder = Set.newBuilder[Int]
+    val vsIt = vs.iterator
+    while(vsIt.hasNext){
+      val cIt = conditioners(vsIt.next()).iterator
+      while(cIt.hasNext){
+        builder += cIt.next()
+      }
+    }
+    builder.result()
+  }
 
   def allAssignmentsTo(variables: Set[Int]): Set[GC] =
     variables.foldLeft(Set(Map(): GC)){case (acc, v) =>

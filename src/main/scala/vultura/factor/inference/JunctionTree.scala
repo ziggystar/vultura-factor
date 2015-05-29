@@ -22,7 +22,7 @@ class JunctionTree(val problem: Problem, val variableOrderer: VariableOrderer = 
   val Z = mlogZ
 
   lazy val calibratedCliques: Map[Set[Var],Factor] =
-    calibratedTrees.map(_.flatten).flatten.groupBy(_.variables.toSet).map{case (k,v) => k -> v.head}
+    calibratedTrees.flatMap(_.flatten).groupBy(_.variables.toSet).map{case (k,v) => k -> v.head}
   lazy val ssetCliques = new SSet(calibratedCliques.keySet)
 
   def uncalibratedTrees: Seq[Tree[Factor]] = {

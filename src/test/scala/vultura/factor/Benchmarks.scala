@@ -56,9 +56,9 @@ object Benchmarks {
   }
 
 
-  def benchmark(task: () => Unit, name: String = "anonymous benchmark"): Unit = {
-    warmup(task)
-    val times = Seq.fill(5)(measure(task()))
+  def benchmark(task: () => Unit, name: String = "anonymous benchmark", repeats: Int = 5, warmup: Boolean = true): Unit = {
+    if(warmup) this.warmup(task)
+    val times = Seq.fill(repeats)(measure(task()))
     println(f"$name\tmean: ${times.mean}%.6fs\tsd: ${times.sd}%.6f")
   }
 

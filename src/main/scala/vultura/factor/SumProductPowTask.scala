@@ -47,12 +47,12 @@ case class SumProductPowTask(domainSizes: Array[Int],
 
   final def sumProduct(factorValues: Array[Array[Double]], result: Array[Double]) {
     //TODO maybe the clearing is not needed
-    SumProductTask.arrayClear(counter)
+    java.util.Arrays.fill(counter,0)
 
     {
       var i = 0
       while(i < factorPointers.length){
-        SumProductTask.arrayClear(factorPointers(i))
+        java.util.Arrays.fill(factorPointers(i),0)
         i += 1
       }
     }

@@ -1,5 +1,7 @@
 package vultura.factor
 
+import com.sun.deploy.util.ArrayUtil
+
 /** An instance of this class represents a sum-product operation on some factors with. The only thing that may change
   * are the values of the involved factors. Using this class to represents a sp-operation allows for very fast
   * operation.
@@ -13,12 +15,12 @@ case class SumProductTask(remainingVars: Array[Int],
                           domainSizes: Array[Int],
                           factorVariables: Array[Array[Int]],
                           ring: Ring[Double]){
-  val numFactors: Int = factorVariables.size
+  val numFactors: Int = factorVariables.length
   val remainSize: Int = Factor.mapMultiply(remainingVars,domainSizes)
 
   //collect all variables
   val (cliqueOrdering: Array[Int], margVars: Array[Int]) = {
-    val allVars: Array[Int] = factorVariables.flatten.toSet.toArray
+    val allVars: Array[Int] = factorVariables.flatten.distinct
     //reorder, so that all margVars are at beginning
     val mv: Array[Int] = allVars.filterNot(remainingVars.contains)
     (mv ++ remainingVars,mv)
@@ -38,8 +40,8 @@ case class SumProductTask(remainingVars: Array[Int],
 
   final def sumProduct(factorValues: IndexedSeq[Array[Double]], result: Array[Double]) {
     //TODO maybe the clearing is not needed
-    SumProductTask.arrayClear(counter)
-    SumProductTask.arrayClear(factorPointers)
+    java.util.Arrays.fill(counter,0)
+    java.util.Arrays.fill(factorPointers,0)
     var remainIdx = 0
     var cnt = 0
     while(remainIdx < remainSize){
@@ -68,8 +70,8 @@ case class SumProductTask(remainingVars: Array[Int],
 
   final def sumProductNormalize(factorValues: IndexedSeq[Array[Double]], result: Array[Double]) {
     //TODO maybe the clearing is not needed
-    SumProductTask.arrayClear(counter)
-    SumProductTask.arrayClear(factorPointers)
+    java.util.Arrays.fill(counter,0)
+    java.util.Arrays.fill(factorPointers,0)
     var remainIdx = 0
     var cnt = 0
     while(remainIdx < remainSize){
@@ -116,15 +118,5 @@ case class SumProductTask(remainingVars: Array[Int],
       }
     }
     overflow
-  }
-}
-
-object SumProductTask{
-  final def arrayClear(da: Array[Int]): Unit = {
-    var i = 0
-    while(i < da.length){
-      da(i) = 0
-      i += 1
-    }
   }
 }
