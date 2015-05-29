@@ -270,7 +270,7 @@ trait LcbpBase {
       val ring = problem.ring
       def decode(d: Double): Double = ring.decode(Array(d))(0)
       def encode(d: Double): Double = ring.encode(Array(d))(0)
-      val r: Double = ring.prodA((for {
+      val r: Double = (for {
         vi <- problem.factors(fi).variables
         vc: C = scheme.superConditionOf(fc, Set(vi))
         mai_ca = get(F2V(fi, vi, fc))
@@ -278,11 +278,17 @@ trait LcbpBase {
         mia_ci = get(V2F(vi, fi, vc))
         xi <- 0 until problem.domains(vi)
       } yield {
-          val delta = encode(decode(mai_ca(xi)) - decode(mai_ci(xi)))
-          val exp = ring.prod(mia_ci(xi), delta)
-          ring.pow(mia_ci(xi), exp)
-        })(collection.breakOut))
-      result.value = math.log(decode(r))
+          val delta = decode(mai_ca(xi)) - decode(mai_ci(xi))
+          val dec_mia_ci: Double = decode(mia_ci(xi))
+          val exponent = dec_mia_ci *  delta //decoded
+          if(dec_mia_ci == 0 && exponent == 0){
+            0
+          } else {
+            //the exponentiation in log-space
+            exponent * math.log(dec_mia_ci)
+          }
+        })(collection.breakOut).sum
+      result.value = r
     }
   }
 

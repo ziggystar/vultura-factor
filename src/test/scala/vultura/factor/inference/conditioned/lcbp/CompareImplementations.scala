@@ -54,7 +54,7 @@ class CompareImplementations extends Specification with FactorMatchers {
   }
 
   def exactAgreeOn(s: FactoredScheme) = agreeOn(Seq(OldLCBP,LCBP_G_Exact),s)
-  def bpAgreeOn(s: FactoredScheme) = agreeOn(Seq(LCBP_BP,LCBP_G_BP),s)
+  def bpAgreeOn(s: FactoredScheme) = agreeOn(Seq(LCBP_BP(false),LCBP_BP(true),LCBP_G_BP),s)
   def allAgreeOn(s: FactoredScheme, maxIter: Int = 100000, printTimes: Boolean = false) =
     agreeOn(LCBPAlg.all,s,maxIter, printTimes = printTimes)
 

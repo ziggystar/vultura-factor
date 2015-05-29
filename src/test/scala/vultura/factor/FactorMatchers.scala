@@ -35,7 +35,7 @@ trait FactorMatchers {
       result(
         math.abs(obtainedZ - otherZ) < tol,
         s"${t.description} has same Z as exact inference",
-        s"${t.description} has different Z compared to exact inference (got $obtainedZ, ${t.description} is $otherZ)",
+        f"${t.description} has different Z as expected: ${t.description}: $obtainedZ, expected: $otherZ, diff: ${math.abs(obtainedZ - otherZ)}})",
         t
       )
     }

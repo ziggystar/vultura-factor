@@ -20,7 +20,7 @@ trait LCBPAlg { self: Product =>
 }
 
 object LCBPAlg {
-  val all = Seq(OldLCBP,LCBP_G_Exact,LCBP_G_BP,LCBP_BP)
+  val all = Seq(OldLCBP,LCBP_G_Exact,LCBP_G_BP,LCBP_BP(corrected = false), LCBP_BP(corrected = true))
 }
 
 
@@ -58,11 +58,14 @@ case object LCBP_G_BP extends LCBPAlg {
 }
 
 /** The native lcbp_bp implementation using a native bp implementation for meta inference. */
-case object LCBP_BP extends LCBPAlg {
+case class LCBP_BP(corrected: Boolean) extends LCBPAlg {
   override type R = LcbpMetaBP
 
-  override def infer(s: FactoredScheme, tol: Double, maxIter: Int): LCBP_BP.R = new LcbpMetaBP(s,maxIter,tol)
-  override def result(r: LCBP_BP.R): (MargParI, Boolean) = (r,r.calibrator.isConverged)
-  override def calibrationGraph(r: LCBP_BP.R): DotGraph[_] = r.calibrator.toDot
+  override def infer(s: FactoredScheme, tol: Double, maxIter: Int): R =
+    new LcbpMetaBP(s,maxIter,tol,useDeltaTerm = corrected)
+  override def result(r: R): (MargParI, Boolean) = (r,r.calibrator.isConverged)
+  override def calibrationGraph(r: R): DotGraph[_] = r.calibrator.toDot
   override def nodeCSV(r: R): String = r.calibrator.toCSV
+
+  override def toString: String = "LCBP_BP" + (if(corrected) "+Cor" else "")
 }

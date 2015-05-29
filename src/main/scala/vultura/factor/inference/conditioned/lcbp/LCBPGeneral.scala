@@ -11,7 +11,7 @@ import scala.runtime.ObjectRef
 /** LCBP inference where inference on the meta problem can be any inference algorithm.
  */
 case class LCBPGeneral(scheme: FactoredScheme,
-                       inferer: Problem => MargParI with JointMargI = p => new JunctionTree(p),
+                       inferer: Problem => JointMargI with ParFunI = p => new JunctionTree(p),
                        maxUpdates: Long = 100000,
                        tol: Double = 1e-9) extends LcbpBase with MargParI {
   //the scheme type we require
@@ -52,7 +52,7 @@ case class LCBPGeneral(scheme: FactoredScheme,
   }
 
   val contributions: IndexedSeq[EnergyContrib] =
-    problem.variables.map(VariableContribution) ++ (0 until problem.factors.size).map(FactorContribution)
+    problem.variables.map(VariableContribution) ++ problem.factors.indices.map(FactorContribution)
 
   private val ssetOfMPCliques: SSet[Int] = new SSet(contributions.map(_.mpVariables.toSet).toSet)
 
@@ -78,7 +78,7 @@ case class LCBPGeneral(scheme: FactoredScheme,
 
   case object MetaProblem extends LcbpMessage {
     override type InEdge = DoubleEdge
-    override type TOut = ObjectRef[MargParI with JointMargI]
+    override type TOut = ObjectRef[JointMargI with ParFunI]
 
     override def copy(t: TOut): TOut = new ObjectRef(t.elem)
 
@@ -114,7 +114,7 @@ case class LCBPGeneral(scheme: FactoredScheme,
     val fcVariablesMP: Array[Int] = fcVariables.map(mcVariablesIdx.forward)
     /** These computations don't have to be thread-safe. */
     override def mCompute(): (IndexedSeq[InEdge#TOut], TOut) => Unit = { (ins,resultRef) =>
-      val infResult: MargParI with JointMargI = ins(0).elem
+      val infResult: JointMargI with ParFunI = ins(0).elem
       val belief = infResult.decodedCliqueBelief(clique)
       val summed = Factor.multiplyRetain(NormalD)(mcDomains)(Seq(belief),fcVariablesMP)
       resultRef.value = summed.eval(fcCondition, mcDomains)

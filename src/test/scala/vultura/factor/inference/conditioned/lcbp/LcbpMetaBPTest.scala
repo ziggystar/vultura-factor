@@ -2,6 +2,7 @@ package vultura.factor.inference.conditioned.lcbp
 
 import org.specs2.Specification
 import org.specs2.specification.Fragments
+import vultura.factor.LogD
 import vultura.factor.generators._
 
 /**
@@ -27,12 +28,15 @@ class LcbpMetaBPTest extends Specification {
      */
     "on 3x3 grid" ! cmpExactLcbp(FactoredScheme.fromInfluenceMap(grid(3, 3),Map(0->Set(0,1,3,4),8->Set(8,7,5,4)))) ^
     "on 3x1 grid" ! cmpExactLcbp(FactoredScheme.fromInfluenceMap(grid(3,1), Map(0->Set(0,1),2->Set(1,2)))) ^
-    "on 3x2 grid (simplified)" ! cmpExactLcbp(FactoredScheme.fromInfluenceMap(grid(3,2).simplify, Map(0->Set(0,1,3,4),5->Set(1,2,4,5))), Some("foo")) ^
-    "on 3x2 grid" ! cmpExactLcbp(FactoredScheme.fromInfluenceMap(grid(3,2), Map(0->Set(0,1,3,4),5->Set(1,2,4,5))))
+    "on 3x2 grid (simplified)" ! cmpExactLcbp(FactoredScheme.fromInfluenceMap(grid(3,2).simplify, Map(0->Set(0,1,3,4),5->Set(1,2,4,5)))) ^
+    "on 3x2 grid" ! cmpExactLcbp(FactoredScheme.fromInfluenceMap(grid(3,2), Map(0->Set(0,1,3,4),5->Set(1,2,4,5)))) ^
+   p^
+   "must yield finite result when using log ring" !
+     cmpExactLcbp(FactoredScheme.fromInfluenceMap(grid(3,1).toRing(LogD), Map(0->Set(0,1),2->Set(1,2))), useDeltaTerm = true)
 
-  def cmpExactLcbp(scheme: FactoredScheme, printDot: Option[String] = None) = {
+  def cmpExactLcbp(scheme: FactoredScheme, printDot: Option[String] = None, useDeltaTerm: Boolean = false) = {
     val lcbp_exact = new LCBPGeneral(scheme)//new LCBP(scheme.problem,scheme.toGScheme, tol=1e-12, maxIterations = 1000000)
-    val lcbp_bp = new LcbpMetaBP(scheme, tol=1e-15, maxUpdates = 1000000)
+    val lcbp_bp = new LcbpMetaBP(scheme, tol=1e-15, maxUpdates = 1000000, useDeltaTerm = useDeltaTerm)
     (lcbp_bp.metaStructure.isTree.aka("meta problem is a tree") must beTrue) and
       (lcbp_exact.calibrator.isConverged.aka("lcbp exact converged") must beTrue) and
       (lcbp_bp.calibrator.isConverged.aka("lcbp bp converged") must beTrue) and
