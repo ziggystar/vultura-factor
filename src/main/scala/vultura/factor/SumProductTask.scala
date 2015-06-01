@@ -1,7 +1,5 @@
 package vultura.factor
 
-import com.sun.deploy.util.ArrayUtil
-
 /** An instance of this class represents a sum-product operation on some factors with. The only thing that may change
   * are the values of the involved factors. Using this class to represents a sp-operation allows for very fast
   * operation.

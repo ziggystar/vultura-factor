@@ -3,6 +3,7 @@ package vultura.factor
 import vultura.factor.Benchmarks._
 import vultura.factor.generators._
 import vultura.factor.generators.GridH2
+import vultura.factor.generators.lcbp.GridProblem
 import vultura.factor.inference.conditioned._
 import vultura.factor.inference.conditioned.lcbp._
 

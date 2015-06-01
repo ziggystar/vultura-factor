@@ -1,9 +1,10 @@
-package vultura.factor.inference.conditioned
+package vultura.factor.generators.lcbp
 
-import vultura.factor.inference.conditioned.lcbp.{DCon, LScheme, GScheme}
-import vultura.factor.{LogD, Problem}
-import scala.util.Random
 import vultura.factor.inference.BeliefPropagation
+import vultura.factor.inference.conditioned.lcbp.{FactoredScheme, DCon, GScheme, LScheme}
+import vultura.factor.{LogD, Problem}
+
+import scala.util.Random
 
 /**
  * Creates a square grid inference problem together with a `GScheme` with up to four variables distributed `margin` away
@@ -38,6 +39,12 @@ case class GridProblem(width: Int, margin: Int, influence: Int, coupling: Double
     y <- 0 until width
     cvars = conditionVariables.filter{case (cx,cy) => influences(cx,cy)(x,y)}
   } yield variable(x,y) -> DCon(cvars.map{case (cx,cy) => LScheme.split(variable(cx,cy),problem.domains)}:_*)).toMap)
+
+  val fScheme: FactoredScheme = FactoredScheme(problem, (for{
+    x <- 0 until width
+    y <- 0 until width
+    cvars: Set[Int] = conditionVariables.filter{case (cx,cy) => influences(cx,cy)(x,y)}.map(xy => variable(xy._1,xy._2))(collection.breakOut)
+  } yield variable(x,y) -> cvars).toMap)
 
   def cbp(tol: Double, iterations: Int): (Double, Boolean) = {
     val variables: Seq[Int] = conditionVariables.map({case (x, y) => variable(x, y)})

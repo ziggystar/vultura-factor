@@ -2,7 +2,7 @@ package vultura.factor
 
 import org.specs2.Specification
 import org.specs2.specification.Fragments
-import vultura.factor.inference.conditioned.GridProblem
+import vultura.factor.generators.lcbp.GridProblem
 
 /**
  * Tests checking for correct simplification of problems
