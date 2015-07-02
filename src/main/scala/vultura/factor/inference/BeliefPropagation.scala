@@ -7,9 +7,8 @@ import scala.collection.mutable
 import scala.util.Random
 
 /**
- * Belief Propagation on loopy graphs using `FastFactor` operations.
- * User: Thomas Geier
- * Date: 6/10/13
+ * Belief Propagation on loopy graphs.
+ * Direct implementation not using a calibration framework, or precomputed [[vultura.factor.SumProductTask]].
  */
 class BeliefPropagation(val problem: Problem, random: Random = new Random, tol: Double = 1e-7, runInitially: Int = 0)
 extends MargParI with Iterator[MargParI] {

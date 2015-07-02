@@ -5,6 +5,14 @@ import vultura.factor.inference.MargParI
 import vultura.factor.inference.calibration.{LBP, BPResult}
 
 
+/** Condition on all assignments to a given set of variables, and approximate the result by runnning BeliefPropagation
+  * on each subproblem.
+  *
+  * @param problem
+  * @param conditionVariables
+  * @param maxIterations
+  * @param tol
+  */
 case class FullyConditionedBP(problem: Problem,
                               conditionVariables: Set[Int],
                               maxIterations: Int = 100000,

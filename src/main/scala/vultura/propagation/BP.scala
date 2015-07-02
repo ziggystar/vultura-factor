@@ -4,6 +4,13 @@ import vultura.factor.{Ring, SumProductTask, Factor, ProblemStructure}
 
 import scala.reflect.ClassTag
 
+/** Belief Propagation implementation using [[vultura.factor.SumProductTask]].
+  * Has to be calibrated using [[RoundRobinAD]].
+  * Supports incremental inference.
+  *
+  * If you don't use incremental inference, you should use [[vultura.factor.inference.calibration.LBP]] instead,
+  * which uses the newer calibration framework.
+  */
 case class BP(ps: ProblemStructure, ring: Ring[Double]){
 
   //  slightly generic code

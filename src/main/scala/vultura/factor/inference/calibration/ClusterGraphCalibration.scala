@@ -15,6 +15,7 @@ import scala.collection.mutable
 //                tol: Int = defaultTolerance,
 //                maxUpdates: Long = defaultMaxUpdates): Unit = ???
 //}
+/** This is possibly not finished yet. */
 case class ClusterGraphCalibration(problem: Problem) {
 
   sealed trait BPMessage extends MEdge {self: Product =>

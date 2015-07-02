@@ -9,7 +9,9 @@ import scala.collection.mutable
 import scala.ref.SoftReference
 import scala.util.Random
 
-/** Incremental CBP implementation using the cp2.LBP BP implementation.
+/** Very general CBP implementation that supports incremental approximate inference, and other inference algorithms than
+  * BP.
+  * For a simpler CBP implementation see [[CBP]]
   *
   * @param problem The initial problem.
   * @param hLeaf Leaf selection heuristic.

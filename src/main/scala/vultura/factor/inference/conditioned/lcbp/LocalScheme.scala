@@ -6,6 +6,7 @@ import vultura.util.graph.Tree
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
  */
+@deprecated("use FactoredScheme instead", "23")
 sealed trait LScheme {
   def usedVariables: Set[Int]
 
