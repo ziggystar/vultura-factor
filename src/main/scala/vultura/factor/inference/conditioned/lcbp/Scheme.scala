@@ -16,6 +16,10 @@ trait Scheme {
   /** This represents the empty condition that enforces no constraints on the assignments. */
   def nullCondition: GC = Map()
   def isSubCondition(c1: GC, c2: GC): Boolean = c1.forall{case (variable, value) => c2.get(variable).contains(value)}
+
+  /** Check whether the given conditions do not contradict each other. */
+  def conditionsCompatible(c1: Condition, c2: Condition): Boolean =
+    c1.keySet.intersect(c2.keySet).forall(v => c1(v) == c2(v))
   
   def problem: Problem
   def conditionsOf(variables: Set[Int]): Set[GC]
