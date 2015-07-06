@@ -1,5 +1,7 @@
 package vultura.factor.inference.conditioned.lcbp
 
+import java.io.{PrintStream, FileOutputStream}
+
 import vultura.factor.Problem
 import vultura.factor.inference.conditioned.Condition
 
@@ -18,6 +20,17 @@ object SchemeVisualization {
     s"""\\documentclass{standalone}
        |\\usepackage{tikz}
        |\\usetikzlibrary{3d,backgrounds}
+       |
+       |\\tikzset{iso graph/.style={
+       |  z={(-0.6,0.3)},
+       |  x={(0.6,0.3)},
+       |  y={(0,0.3)},
+       |  V/.style={circle,draw,fill=white,inner sep=1},
+       |  E/.style={},
+       |  conditioned node/.style={fill=black!15},
+       |  conditioned edge/.style={opacity=0.15},
+       |}}
+       |
        |\\begin{document}
        |$body
        |\\end{document}
@@ -61,15 +74,7 @@ object SchemeVisualization {
       edgeStyle = (Seq("E") ++ (if(c1.keys.exists(Set(v1,v2))) Seq("conditioned edge") else Seq())).mkString(",")
     } yield s"\\draw[$edgeStyle] (${vID(v1, c1)}) edge (${vID(v2, c2)});"
 
-    s"""\\begin{tikzpicture}[
-       |  z={(-0.6,0.3)},
-       |  x={(0.6,0.3)},
-       |  y={(0,0.3)},
-       |  V/.style={circle,draw,fill=white,inner sep=1},
-       |  E/.style={},
-       |  conditioned node/.style={fill=black!15},
-       |  conditioned edge/.style={opacity=0.15},
-       |]
+    s"""\\begin{tikzpicture}[iso graph]
        |${nodeStrings.mkString("\n")}
        |
        |\\begin{pgfonlayer}{background}
@@ -127,10 +132,21 @@ object ConditionedGridGraphs {
   }
 
   def main(args: Array[String]) {
-//    val (scheme,layout) = flGrid(4, 4, 1, Set((0,0)))
-    val (scheme,layout) = fullyConditionedGrid(4,4,Set(Map(0 -> 0, 15 ->0), Map(0 -> 0, 15 -> 1), Map(0 -> 1)))
+    val jobs = Seq(
+      "cbp_A.tex" -> fullyConditionedGrid(4,4,Set(Map())),
+      "cbp_B.tex" -> fullyConditionedGrid(4,4,Set(Map(0 -> 0), Map(0 -> 1))),
+      "cbp_C.tex" -> fullyConditionedGrid(4,4,Set(Map(0 -> 0, 15 ->0), Map(0 -> 0, 15 -> 1), Map(0 -> 1))),
+      "cbp_D.tex" -> fullyConditionedGrid(4,4,Set(Map(0 -> 0, 15 ->0), Map(0 -> 0, 15 -> 1), Map(0 -> 1, 15 -> 0),Map(0 -> 1, 15 -> 1))),
+      "lcbp_A.tex" -> flGrid(4, 4, 1, Set()),
+      "lcbp_B.tex" -> flGrid(4, 4, 1, Set((0,0))),
+      "lcbp_D.tex" -> flGrid(4, 4, 1, Set((0,0),(3,3)))
+    )
 
-    println(wrapWithlatexTemplate(tikz3DMarkovNetwork(scheme, layout)))
+    jobs foreach { case (fileName, (scheme,layout)) =>
+      val outstream = new PrintStream(new FileOutputStream(fileName))
+      outstream.println(wrapWithlatexTemplate(tikz3DMarkovNetwork(scheme, layout)))
+      outstream.close()
+    }
   }
 }
 
