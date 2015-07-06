@@ -50,8 +50,8 @@ object SchemeVisualization {
     }
 
     val nodeStrings: Seq[String] = for {
-      v <- scheme.problem.variables
-      condition <- scheme.conditionsOf(Set(v))
+      (v, condition) <- scheme.problem.variables.flatMap(v => scheme.conditionsOf(Set(v)).map(v -> _))
+        .sortBy{case (v,c) => indexOfCondition(v, c) -> v }
       vStyle = (Seq("V") ++ (if(condition.contains(v)) Some("conditioned node") else None)).mkString(",")
       (x, y, z) = nodePosition(v, condition)
       nodeId = vID(v, condition)
@@ -87,7 +87,6 @@ object SchemeVisualization {
 
 object ConditionedGridGraphs {
   import SchemeVisualization._
-
 
   def flGrid(width: Int, height: Int, dist: Int = 1, conditioners: Set[(Int, Int)] = Set()): (Scheme,Int => (Double,Double)) = {
 
@@ -143,7 +142,7 @@ object ConditionedGridGraphs {
     )
 
     jobs foreach { case (fileName, (scheme,layout)) =>
-      val outstream = new PrintStream(new FileOutputStream(fileName))
+      val outstream = new PrintStream(new FileOutputStream("/home/thomas/workspace/lcbp-uai/poster/images/" + fileName))
       outstream.println(wrapWithlatexTemplate(tikz3DMarkovNetwork(scheme, layout)))
       outstream.close()
     }
