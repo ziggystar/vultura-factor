@@ -3,6 +3,8 @@ package vultura.factor.generation
 import vultura.factor._
 import vultura.util.{Index, SIIndex}
 
+import scala.annotation.tailrec
+import scala.collection.TraversableOnce.MonadOps
 import scala.util.Random
 
 /** A Hypergraph without parallel edges. */
@@ -17,9 +19,30 @@ case class LabeledProblemStructure[N](structure: ProblemStructure, variableLabel
   require(variableLabels.size == structure.numVariables)
 }
 
-/** Basically a distribution over ovalues of type `A`. */
-trait Generator[A] {
+/** Basically a distribution over values of type `A`. */
+trait Generator[A] { outer =>
   def generate(r: Random): A
+  def map[B](f: A => B): Generator[B] = new Generator[B]{
+    override def generate(r: Random): B = f(outer.generate(r))
+  }
+  def flatMap[B](f: A => Generator[B]): Generator[B] = new Generator[B]{
+    override def generate(r: Random): B = f(outer.generate(r)).generate(r)
+  }
+  def withFilter(p: A => Boolean): Generator[A] = new Generator[A] {
+    def generate(r: Random): A = {
+      var res: A = null.asInstanceOf[A]
+      do {
+        res = outer.generate(r)
+      } while(!p(res))
+      res
+    }
+  }
+}
+
+object Generator {
+  def apply[A](f: Random => A): Generator[A] = new Generator[A]{
+    override def generate(r: Random): A = f(r)
+  }
 }
 
 case class Constant[A](a: A) extends Generator[A]{
@@ -47,12 +70,13 @@ object StructureGenerator {
     StructureGenerator(graphGen,_ => Constant(domainSize))
 }
 
+case class LabeledProblem[N](problem: Problem, variableLabels: Index[N])
 
 
-case class ProblemGenerator[N](structure: Generator[LabeledProblemStructure[N]],
-                               factorGenerator: FactorGenerator[N])
+case class JointProblemGenerator[N](structure: Generator[LabeledProblemStructure[N]],
+                                    factorGenerator: FactorGenerator[N])
   extends Generator[(Problem,Index[N])]{
-  override def generate(r: Random): (Problem, Index[N]) = {
+  override def generate(r: Random): LabeledProblem[N] = {
     val str = structure.generate(r)
     val p = Problem(
       str.structure.scopeOfFactor.map { scope =>
@@ -60,6 +84,6 @@ case class ProblemGenerator[N](structure: Generator[LabeledProblemStructure[N]],
       }(collection.breakOut),
       str.structure.domains,
       factorGenerator.ring)
-    (p,str.variableLabels)
+    LabeledProblem(p,str.variableLabels)
   }
 }

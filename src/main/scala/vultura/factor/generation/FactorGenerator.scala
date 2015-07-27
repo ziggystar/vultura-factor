@@ -14,8 +14,8 @@ trait FactorGenerator[-N]{
 
 /** The standard Potts model.
   * No energy contribution for non-equal states. Only pairwise potentials.
-  * @param weightGenerator How to choose the interaction weights. */
-case class StandardPottsInteraction[N](weightGenerator: Generator[Double], temperature: Double)
+  * @param weights How to choose the interaction weights. */
+case class StandardPottsInteraction[N](weights: Generator[Double], temperature: Double)
   extends FactorGenerator[Any]{
 
   require(temperature > 0d, "temperature must be larger than zero")
