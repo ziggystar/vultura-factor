@@ -29,6 +29,8 @@ object SchemeVisualization {
        |  E/.style={},
        |  conditioned node/.style={fill=black!15},
        |  conditioned edge/.style={opacity=0.15},
+       |  variable id/.unknown/.style={},
+       |  condition id/.unknown/.style={},
        |}}
        |
        |\\begin{document}
@@ -37,7 +39,10 @@ object SchemeVisualization {
       """.stripMargin
 
   /** Plot the Markov network with tikz, you need the 3d package. */
-  def tikz3DMarkovNetwork(scheme: Scheme, graphLayout: Int => (Double,Double), nodeLabels: Map[Int,String] = Map()): String = {
+  def tikz3DMarkovNetwork(scheme: Scheme,
+                          graphLayout: Int => (Double,Double),
+                          nodeLabels: Map[Int,String] = Map(),
+                          nodeStyles: Function[(Int,Condition),Seq[String]] = Function.const(Seq())): String = {
 
     def indexOfCondition(v: Int, c: Condition): Int = scheme.conditionsOf(Set(v)).toSeq.sorted.indexOf(c)
 
@@ -52,7 +57,11 @@ object SchemeVisualization {
     val nodeStrings: Seq[String] = for {
       (v, condition) <- scheme.problem.variables.flatMap(v => scheme.conditionsOf(Set(v)).map(v -> _))
         .sortBy{case (v,c) => indexOfCondition(v, c) -> v }
-      vStyle = (Seq("V") ++ (if(condition.contains(v)) Some("conditioned node") else None)).mkString(",")
+      vStyle = Seq(
+        Seq("V"),
+        if(condition.contains(v)) Seq("conditioned node") else Seq(),
+        nodeStyles(v,condition)
+      ).flatten.mkString(",")
       (x, y, z) = nodePosition(v, condition)
       nodeId = vID(v, condition)
       nodeLabel: String = nodeLabels.getOrElse(v, "")
@@ -143,7 +152,11 @@ object ConditionedGridGraphs {
 
     jobs foreach { case (fileName, (scheme,layout)) =>
       val outstream = new PrintStream(new FileOutputStream("/home/thomas/workspace/lcbp-uai/poster/images/" + fileName))
-      outstream.println(wrapWithlatexTemplate(tikz3DMarkovNetwork(scheme, layout)))
+      outstream.println(wrapWithlatexTemplate(tikz3DMarkovNetwork(scheme, layout,
+        nodeStyles = ((v: Int, c: Condition) =>
+          Seq(s"variable id/$v") ++
+            Seq(c.get(v)).flatten.map(c => s"condition id/$c")
+      ).tupled)))
       outstream.close()
     }
   }
