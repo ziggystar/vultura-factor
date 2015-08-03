@@ -8,7 +8,7 @@ import vultura.factor.inference.{JointMargI, JunctionTree, ParFunI}
 import vultura.util.stats._
 import vultura.util._
 
-import scala.collection.mutable
+import scala.collection.{immutable, mutable}
 import scala.language.reflectiveCalls
 
 trait UnconstraintDifferentiableFunction { outer =>
@@ -24,13 +24,13 @@ trait UnconstraintDifferentiableFunction { outer =>
       guess
     }
     override def gradient(theta: IndexedSeq[Double]): IndexedSeq[Double] = {
-      val gr = outer.gradient(theta)
-      logger.finer(s"gradient: ${pretty(gr)} @ ${pretty(theta)}")
+      val (gr,cpu) = Benchmark.benchmarkCPUTime(outer.gradient(theta))
+      logger.finer(s"gradient: ${pretty(gr)} @ ${pretty(theta)}; in ${cpu*1e-9}s CPU")
       gr
     }
     override def value(theta: IndexedSeq[Double]): Double = {
-      val v = outer.value(theta)
-      logger.fine(s"value: $v @ ${pretty(theta)}")
+      val (v,cpu) = Benchmark.benchmarkCPUTime(outer.value(theta))
+      logger.fine(s"value: $v @ ${pretty(theta)}; in ${cpu*1e-9}s CPU")
       v
     }
     override def dimension: Int = outer.dimension
@@ -121,23 +121,48 @@ case class MObsAvgLogLikelihood(problem: Problem,
                                 data: Seq[Map[Var,Val]], 
                                 target: IndexedSeq[Seq[Feature]],
                                 inferer: Problem => JointMargI with ParFunI = new JunctionTree(_)) extends UnconstraintDifferentiableFunction {
+  require(target.flatten.toSet.size == target.map(_.size).sum, "all features must be distinct")
+  require(target.flatten.forall(f => f.variables.deep == f.variables.sorted.deep), "feature variable must be sorted")
 
   def hashMemo[A,B](f: A => B): A => B = {
     val hash = new mutable.HashMap[A,B]()
     a: A => hash.getOrElseUpdate(a,f(a))
   }
 
-  val simplifiedLogProblem: Problem = problem.simplify.toRing(LogD)
-
   //note that the parameters are always kept in normal representation
   type Theta = IndexedSeq[Double]
 
+  /** the feature pointers are tuples for each feature. First is index into featureFactors array, second is index into
+    * data array of the factor. */
+  val (featureFactors: IndexedSeq[Factor], featurePointers: IndexedSeq[Seq[(Int, Int)]]) = {
+    val scopes: SIIndex[IndexedSeq[Var]] = new SIIndex(target.flatten.map(_.variables.toIndexedSeq))
+    val factors: IndexedSeq[Factor] = scopes.elements.map(vars => Factor.maxEntropy(vars.toArray,problem.domains,LogD))
+    val pointers = target.map(featureChunk =>
+      featureChunk.map{ feature =>
+        val fi = scopes.forward(feature.variables.toIndexedSeq)
+        val index = factors(fi).index(feature.point,problem.domains)
+        (fi,index)
+      }
+    )
+    (factors,pointers)
+  }
+
+  //to make quick copies, the feature factors are prefixed before the factors of the problem
+  val simplifiedLogProblem: Problem = problem.simplify.toRing(LogD)
+
+  val threadLocalProblem = new ThreadLocal[Problem]{
+    override def initialValue(): Problem = simplifiedLogProblem.copy(factors = featureFactors ++ simplifiedLogProblem.factors)
+  }
+
   def buildProblem(parameters: Theta): Problem = {
-    val weightedFeatures: IndexedSeq[(Feature, Double)] = for{
-      (features, theta) <- target zip parameters
-      f <- features
-    } yield (f, theta)
-    simplifiedLogProblem.copy(factors = simplifiedLogProblem.factors ++ Feature.buildProblem(simplifiedLogProblem.domains, LogD, weightedFeatures).factors).simplify
+    val myCopy = threadLocalProblem.get
+    for{
+      (featureChunk,param) <- featurePointers zip parameters
+      (fi,di) <- featureChunk
+    } {
+      myCopy.factors(fi).values(di) = param
+    }
+    myCopy
   }
 
   def gradient(theta: Theta): IndexedSeq[Double] = {
