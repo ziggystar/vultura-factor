@@ -70,8 +70,10 @@ class JunctionTree(val problem: Problem, val variableOrderer: VariableOrderer = 
 
     val edges: Seq[((Factor, Factor), Factor)] =
       calibratedTrees.flatMap(_.cobind[Seq[((Factor,Factor),Factor)]]{ case Node((cliqueFactor,_,_,_),children) =>
-        children.map{case Node((childFactor,_,up,down),_) => Seq((cliqueFactor -> childFactor,down),(childFactor -> cliqueFactor,up))
-        }.flatten
+        children.flatMap {
+          case Node((childFactor, _, up, down), _) =>
+            Seq((cliqueFactor -> childFactor, down), (childFactor -> cliqueFactor, up))
+        }
       }.flatten).flatten
     val edgeStrings = edges.map{case ((from,to),msg) => f"""${nodeName(from)} -> ${nodeName(to)} [label="${msg.toBriefString}"]"""}
 
