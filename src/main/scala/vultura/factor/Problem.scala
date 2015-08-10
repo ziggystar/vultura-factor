@@ -20,7 +20,7 @@ case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[
 
   def degreeOfVariable(v: Int): Int = degrees(v)
   def uaiString: String = {
-    require(variables == Seq.range(0,variables.size).toSet)
+    require(variables.sameElements(0 until variables.size))
     Seq[Any](
       "MARKOV",
       variables.size,
