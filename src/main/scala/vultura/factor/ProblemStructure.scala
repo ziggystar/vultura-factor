@@ -1,12 +1,14 @@
 package vultura.factor
 
+import vultura.util.graph.DotGraph
+
 import scala.annotation.tailrec
 
 /** Describes the structure of a markov network, without the factor values (parameters). */
 trait ProblemStructure {
-
   type VI = Int
   type FI = Int
+
   /** The domain size for each variable. Variable indices start at zero and are consecutive. */
   def domains: Array[Int]
   def scopeOfFactor: Array[Array[VI]]
@@ -72,6 +74,17 @@ trait ProblemStructure {
 
   def isCompatible(other: ProblemStructure): Boolean =
     domains.deep == other.domains.deep && scopeOfFactor.deep == other.scopeOfFactor.deep
+
+  def withParameters(parameters: FI => Array[Double], ring: Ring[Double]): Problem =
+    Problem(
+      scopeOfFactor.zip(factorIndices map parameters).map{case (scope, params) => Factor(scope,params)}(collection.breakOut),
+      domains,
+      ring)
+
+  def dotFactorGraph: DotGraph[Either[VI,FI]] =
+    DotGraph(for{f <- factorIndices; v <- scopeOfFactor(f)} yield (Left(v),Right(f)), variables.map(Left(_)))
+  def dotMarkovNetwork: DotGraph[VI] =
+    DotGraph(for{fs <- scopeOfFactor; v1 <- fs; v2 <- fs if v1 != v2} yield (v1,v2),variables)
 }
 
 /** Implementation of [[ProblemStructure]]. */
