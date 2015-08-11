@@ -19,9 +19,12 @@ organization := "de.uni-ulm"
 22.3.1: use a non-leaking result class for LBP.inferWithStats
 22.4.0: add support for condition-weight correction term to some LCBP implementations
 22.4.1: make GridProblem available outside test code
-23.0.0: add new problem generation code under `vultura.factor.generation`
+22.5.0:
+  - tikz output for FactoredScheme
+  - optimization for parameter learning
+  - vultura.factor.inference.BeliefPropagation now supports damping
 */
-version := "23.0.0-DEV"
+version := "22.5.0"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 

@@ -1,7 +1,7 @@
 package vultura.factor.inference
 
 import gnu.trove.map.hash.TLongObjectHashMap
-import vultura.factor.{Factor, LogD, Problem, Ring}
+import vultura.factor._
 
 import scala.collection.mutable
 import scala.util.Random
@@ -15,7 +15,7 @@ import scala.util.Random
  *                This value has to be within [0,1[.
  */
 class BeliefPropagation(val problem: Problem, random: Random = new Random, tol: Double = 1e-7, runInitially: Int = 0, damping: Double = 0d)
-extends MargParI with Iterator[MargParI] {
+extends MargParI with JointMargI with Iterator[MargParI] {
   require(damping >= 0 && damping < 1, "damping factor has to be in [0,1[")
 
   val Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[Double]) = problem
@@ -212,7 +212,18 @@ extends MargParI with Iterator[MargParI] {
     factors = cg.neighbours(ci).map(from => lookUpMessage(from,ci).factor) :+ cg.clusterFactors(ci),
     cg.clusterFactors(ci).variables).normalize(ring))
 
-  def variableBelief(vi: Int): Factor = clusterBelief(singleVariableClusters(vi))
+  override def variableBelief(vi: Int): Factor = clusterBelief(singleVariableClusters(vi))
+
+
+  /** Throws if no clique contains `vars`.
+    * @return Normalized belief over given variables in encoding specified by problem ring. */
+  override def cliqueBelief(vars: Array[Var]): Factor = {
+    require(vars.length > 0)
+    val f = vars.tail.foldLeft(problem.factorsOfVariable(vars(0))){case (remaining,v) =>
+        remaining.filter(_.variables.contains(v))
+    }.minBy(_.variables.size)
+    Factor.multiplyRetain(ring)(domains)(Seq(f),vars).normalize(ring)
+  }
 
   var logZCache: Option[Double] = None
 

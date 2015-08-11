@@ -24,9 +24,11 @@ with small operations.
 - Variable Elimination
 
 ### Approximate
-
 - Mean field
-- Belief Propagation
+
+#### Belief Propagation
+- `vultura.propagation.BP` fastest version for small factors
+- `vultura.factor.inference.BeliefPropagation` slowest implementation; supports damping
 - Conditioned Belief Propagation
 - Locally Conditioned Belief Propagation
 
