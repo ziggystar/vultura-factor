@@ -9,9 +9,14 @@ import scala.util.Random
 /**
  * Belief Propagation on loopy graphs.
  * Direct implementation not using a calibration framework, or precomputed [[vultura.factor.SumProductTask]].
+ *
+ * @param damping Damping/smoothing retains a portion of the old message value on update. This can sometimes lead to
+ *                convergence, where undamped BP fails. `damping` is the ratio of old message value to retain.
+ *                This value has to be within [0,1[.
  */
-class BeliefPropagation(val problem: Problem, random: Random = new Random, tol: Double = 1e-7, runInitially: Int = 0)
+class BeliefPropagation(val problem: Problem, random: Random = new Random, tol: Double = 1e-7, runInitially: Int = 0, damping: Double = 0d)
 extends MargParI with Iterator[MargParI] {
+  require(damping >= 0 && damping < 1, "damping factor has to be in [0,1[")
 
   val Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[Double]) = problem
 
@@ -147,8 +152,9 @@ extends MargParI with Iterator[MargParI] {
       //array copy
       var i = 0
       val target: Array[Double] = oldMessage.factor.values
+      val newMessageRatio = 1 - damping
       while(i < newValues.length){
-        target(i) = newValues(i)
+        target(i) = newMessageRatio * newValues(i) + damping * target(i)
         i += 1
       }
       oldMessage.lastUpdate = messageUpdates

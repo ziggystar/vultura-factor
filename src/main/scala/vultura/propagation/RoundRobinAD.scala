@@ -97,6 +97,7 @@ class RoundRobinAD(val cp: CP[ADImpl],
         i += 1
       }
     }
+
     new Calibrated[N] {
       override def totalUpdates: Long = loops
       override def isConverged: Boolean = converged
@@ -117,4 +118,3 @@ trait Calibrated[N <: Node]{
   def isConverged: Boolean
   def ival: IValuation[N]
 }
-

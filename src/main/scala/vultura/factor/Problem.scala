@@ -21,13 +21,17 @@ case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[
   def degreeOfVariable(v: Int): Int = degrees(v)
   def uaiString: String = {
     require(variables.sameElements(0 until variables.size))
+    def writeDouble(d: Double): String = d match {
+      case 0d => "0"
+      case x => x.toString
+    }
     Seq[Any](
       "MARKOV",
       variables.size,
       domains.mkString(" "),
       factors.size,
       factors.map(f => f.variables.size + " " + f.variables.mkString(" ")).mkString("\n"),
-      factors.map(f => f.values.size + " " + ring.decode(f.values).mkString(" ")).mkString("\n")
+      factors.map(f => f.values.size + " " + ring.decode(f.values).map(writeDouble).mkString(" ")).mkString("\n")
     ).mkString("\n")
   }
 
