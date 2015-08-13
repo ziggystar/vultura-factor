@@ -1,14 +1,13 @@
 package vultura.util
 
 import org.specs2._
-import org.specs2.specification.Fragments
 
 /**
  * Created by thomas on 24.06.14.
  */
 class MutableArrayQueueTest extends Specification {
   def queue(capacity: Int) = new MutableArrayQueue[Int](capacity)
-  override def is: Fragments =
+  override def is =
     "dequeue first element" ! {
       val q = queue(2)
       q.enqueue(1)

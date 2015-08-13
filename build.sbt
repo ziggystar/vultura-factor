@@ -16,8 +16,11 @@ organization := "de.uni-ulm"
 23.0.0: Index now takes Iterables thus one can provide a target ordre of the indices.
 23.1.0: - add simple tree test to TreeWidth
 23.1.1: - upgrade some dependencies; add Memo
+23.2.0:
+  - tiny optimization for construction of junction trees
+  - graph stuff
 */
-version := "23.1.1"
+version := "23.2.0-DEV"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 
@@ -27,7 +30,7 @@ description := "Tools for probabilistic inference in discrete-valued factor grap
 
 licenses += "MIT" -> url("http://opensource.org/licenses/MIT")
 
-scalaVersion := "2.11.2"
+scalaVersion := "2.11.7"
 
 //asserions are only used in tests
 scalacOptions in Compile += "-Xdisable-assertions"
@@ -37,6 +40,6 @@ libraryDependencies += "net.sf.trove4j" % "trove4j" % "3.0.+"
 // --------------- Publishing ----------------------------------
 
 //testing dependencies
-libraryDependencies += "org.specs2" %% "specs2" % "2.3.+" % "test"
+libraryDependencies += "org.specs2" %% "specs2-core" % "3.6.4" % "test"
 
-libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.11.+" % "test"
+libraryDependencies += "org.specs2" %% "specs2-scalacheck" % "3.6.4" % "test"

@@ -1,12 +1,11 @@
 package vultura.util.graph
 
 import org.specs2._
-import org.specs2.specification.Fragments
 
 class EdgeBiMapDiGraphTest extends Specification {
   val simpleGraph = EdgeMapDiGraph(Set(1,2,3,4,5,6),Map(1 -> Set(2,3),2 -> Set(3,4),6 -> Set(5)))
 
-  def is: Fragments =
+  def is =
   "EdgeMapDiGraph" ^
     "edges" ! (simpleGraph.edges == Set(1 -> 2, 1 -> 3, 2 -> 3, 2 -> 4, 6 -> 5)) ^
   "EdgeMapBiDiGraph" ^

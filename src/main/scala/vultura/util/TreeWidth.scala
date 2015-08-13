@@ -4,7 +4,7 @@ import java.util
 
 import FastBitSet._
 import graph.Tree
-import graph.Tree._
+import Tree._
 
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
@@ -101,7 +101,7 @@ object TreeWidth {
       fillInRec()
     }
 
-    override def initialState(neighbours: Array[BSType]): Array[Long] = (0 until neighbours.size).map(fillInCost(_,neighbours).toLong)(collection.breakOut)
+    override def initialState(neighbours: Array[BSType]): Array[Long] = neighbours.indices.map(fillInCost(_,neighbours).toLong)(collection.breakOut)
 
     override def update(s: Array[Long])(eliminated: Int, eliminationClique: BSType, neighbours: Array[BSType], remaining: BSType): Array[Long] = {
       eliminationClique.foreach(affected => s(affected) = fillInCost(affected, neighbours))
@@ -168,7 +168,7 @@ object TreeWidth {
       val elimResult = eliminateVertex(remCliques,elimVar)._1
       (elimResult,math.max(max,elimResult.head.size))
     }
-    assert(elimination.flatten.size == 0, "there was something left after eliminating everything")
+    assert(elimination.flatten.isEmpty, "there was something left after eliminating everything")
     maxCliqueSize
   }
 
@@ -196,7 +196,7 @@ object TreeWidth {
 
   def intSet2BS(is: Iterable[Int]): util.BitSet = {
     val result = new util.BitSet
-    is.foreach(result.set(_))
+    is.foreach(result.set)
     result
   }
   def bs2Iterator(bs: util.BitSet): Iterator[Int] = Iterator.iterate(0)(n => bs.nextSetBit(n) + 1).drop(1).map(_ - 1).takeWhile(_ >= 0)
@@ -243,13 +243,13 @@ object TreeWidth {
 
     val vertices: IndexedSeq[Int] = {
       val bs = new util.BitSet
-      cliques foreach (bs or _)
+      cliques foreach (bs or)
       bs2Iterator(bs).toIndexedSeq
     }
 
     val neighbours: IndexedSeq[util.BitSet] = vertices map {v =>
       val bs = new util.BitSet
-      cliques filter (_ get v) foreach (bs or _)
+      cliques filter (_ get v) foreach (bs or)
       bs
     }
 
@@ -310,19 +310,22 @@ object TreeWidth {
   def junctionTreesFromOrder[A](cliques: Seq[(Set[Int],A)], order: Seq[Int]): Seq[Tree[(Set[Int],Seq[A])]] = {
     //the first set contains variables to propagate upwards, the second set contains those in the local clique
     //the first set does not contain the eliminated vertex, the second one does; that's the reason for the two sets
-    def jtRec(leafs: Seq[Tree[(Set[Int], Set[Int], Seq[A])]], order: List[Int]): Seq[Tree[(Set[Int], Seq[A])]] = order match {
+    def jtRec(leafs: IndexedSeq[Tree[(Array[Int], Array[Int], List[A])]], order: List[Int]): IndexedSeq[Tree[(Set[Int], Seq[A])]] = order match {
       case Nil =>
         require(leafs.forall(_.rootLabel._1.isEmpty), "given order did not eliminate all variables")
-        leafs.map(tree => tree.map{case (_,c,a) => (c,a)})
+        leafs.map(tree => tree.map{case (_,c,a) => (c.toSet,a.toSeq:  Seq[A])})
 
       case next :: rest =>
         val (elim, remain) = leafs.partition(_.rootLabel._1.contains(next))
-        val elimClique: Set[Int] = elim.map(_.rootLabel._1).flatten.toSet
-        val newTree = node((elimClique - next, elimClique, Seq()), elim.toStream)
+        val elimClique: Set[Int] = elim.flatMap(_.rootLabel._1)(collection.breakOut)
+        val newTree = node(((elimClique - next).toArray, elimClique.toArray, List()), elim.toStream)
         jtRec(remain :+ newTree, rest)
     }
 
-    jtRec(cliques.map{case (vars, a) => leaf((vars, vars, Seq(a)))}, order.toList)
+    jtRec(cliques.map{case (vars, a) =>
+      val varsArray = vars.toArray
+      leaf((varsArray, varsArray, List(a)))
+    }(collection.breakOut), order.toList)
   }
 
   @deprecated("use heuristicDecomposition", "22.0.0")
@@ -434,7 +437,7 @@ object TreeWidth {
     val runningIntersectionViolation = trees.map(_.map(_._1)).map(checkTree(_)).find(_.values.exists(_ != 1)).map(_ => "running intersection violated")
 
     //check that no variable is contained in two trees
-    val allVars = cliques.map(_._1).flatten.distinct
+    val allVars = cliques.flatMap(_._1).distinct
     val containingTrees = allVars.map(v => v -> trees.filter(_.flatten.exists(_._1.contains(v))))
     val violatedVars = containingTrees.find(_._2.size != 1).map(t => "variable appears in more or less than one tree: " + (t._1,printJTs(t._2)))
 

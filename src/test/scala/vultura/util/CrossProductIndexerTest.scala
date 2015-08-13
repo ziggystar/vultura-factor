@@ -1,10 +1,9 @@
 package vultura.util
 
 import org.specs2._
-import specification.{Tags, Fragments}
 
-class CrossProductIndexerTest extends Specification with Tags {
-  def is: Fragments =
+class CrossProductIndexerTest extends Specification {
+  def is =
     "5 must be converted to 2,1 in CP(3,2)" ! (cp(3, 2).index2Seq(5).toSeq === Seq(2, 1)) ^
       "2,1 must be converted to 5 in CP(3,2)" ! (cp(3, 2).seq2Index(IndexedSeq(2, 1)) === 5) ^
       "base 4,6,2,7 must work for all indices" ! allEqTest(cp(4, 6, 2, 7)) ^
@@ -24,6 +23,6 @@ class CrossProductIndexerTest extends Specification with Tags {
   }
 
   def allEqTest(cpi: CrossProductIndexer) = {
-    ((i: Int) => eqTest(i, cpi)) forall (0 until cpi.size)
+    ((i: Int) => eqTest(i, cpi)) forall cpi.indices
   }
 }
