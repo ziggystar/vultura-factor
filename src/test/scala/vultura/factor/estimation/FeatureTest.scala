@@ -1,7 +1,6 @@
 package vultura.factor.estimation
 
-import org.specs2.Specification
-import org.specs2.specification.Fragments
+import org.specs2._
 import vultura.factor._
 import vultura.factor.generators._
 import scala.Some
@@ -18,7 +17,7 @@ class FeatureTest extends Specification with FactorMatchers {
 
   val domain4 = Array(2,2,2,2)
 
-  override def is: Fragments =
+  override def is = s2"" ^
     "condition feature" ^
       (Feature(Array(0,1),Array(0,0)).condition(Map(0->0)) === Some(Feature(Array(1), Array(0)))) ^
       (Feature(Array(0,1),Array(0,1)).condition(Map(0->0)) === Some(Feature(Array(1), Array(1)))) ^

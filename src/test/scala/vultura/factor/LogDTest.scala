@@ -1,7 +1,6 @@
 package vultura.factor
 
 import org.specs2._
-import org.specs2.specification.Fragments
 import org.scalacheck._
 import Utils._
 
@@ -18,7 +17,7 @@ class LogDTest extends Specification with ScalaCheck {
     .filter(_.sum > 0)
     .map(ps => ps.map(_ / ps.sum))
 
-  def is: Fragments =
+  def is =
     "simple sum" ! (LogD.sum(log(3),log(4)) must beCloseTo(log(7),0.01)) ^
     "sum with -Inf" ! (LogD.sum(Double.NegativeInfinity, 5) must beCloseTo(5,0.01)) ^
     "sum with -Inf (2)" ! (LogD.sum(-5, Double.NegativeInfinity) must beCloseTo(-5,0.01)) ^

@@ -1,7 +1,6 @@
 package vultura.factor.inference.conditioned.lcbp
 
 import org.specs2.Specification
-import org.specs2.specification.Fragments
 
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
@@ -20,7 +19,7 @@ class GSchemeTest extends Specification {
 //    3 -> split(3,domains)
 //  ))
 
-  override def is: Fragments =
+  override def is =
     (threeVars.jointConditions(Seq(2,3)).size === 4) ^
     (threeVars.subConditions(Map(2 -> 0),Seq(1)) === Seq(Map(2->0,3->0),Map(2->0,3->1))) ^
     (threeVars.superCondition(2,Map(2->0,3->1)) === Map(2->0)) /*^

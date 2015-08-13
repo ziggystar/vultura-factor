@@ -1,7 +1,6 @@
 package vultura.factor.inference.gbp
 
 import org.specs2.Specification
-import org.specs2.specification.Fragments
 import vultura.factor.inference.calibration.{LBP, BPResult}
 import vultura.factor._
 import vultura.factor.generators._
@@ -16,7 +15,7 @@ class ParentToChildTest extends Specification with FactorMatchers {
     override def rval(n: ptc1.FactorNode): n.TRep = Factor.maxEntropy(n.variables,ptc1.domains,ptc1.ring)
   }
 
-  override def is: Fragments =
+  override def is =
     "compare propagation.BP result with inference.propagation.LBP result" ! {
       val regularBPResult: BPResult = LBP.infer(p1)
       val cp = ptc1.calibrationProblem

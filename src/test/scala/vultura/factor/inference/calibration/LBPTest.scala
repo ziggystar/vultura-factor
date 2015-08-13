@@ -1,7 +1,6 @@
 package vultura.factor.inference.calibration
 
 import org.specs2._
-import org.specs2.specification.Fragments
 import vultura.factor.generators._
 import vultura.factor.inference.BeliefPropagation
 
@@ -16,7 +15,7 @@ class LBPTest extends Specification {
   def increment1_p1 = new MutableFIFOCalibrator[lbp.BPMessage](lbp.edges)(ConvergenceTest.MaxDiff(1e-10), initialize = c_p1)
   val tree = treeK(20,3,2,expGauss(1))
 
-  override def is: Fragments = {
+  override def is = {
     "bp converged on p1 after some steps" ! (c_p1.isConverged and (c_p1.iteration !== 0)) ^
     "reusing old messages needs no updates" ! (increment1_p1.iteration === 0) ^
     "reusing old messages needs no updates small problem" ! (increment_small.iteration === 0) ^

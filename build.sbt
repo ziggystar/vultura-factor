@@ -23,8 +23,9 @@ organization := "de.uni-ulm"
   - tikz output for FactoredScheme
   - optimization for parameter learning
   - vultura.factor.inference.BeliefPropagation now supports damping
+ 22.5.1: add tree calibration for BP optimization
 */
-version := "22.5.0"
+version := "22.5.1-DEV"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 
@@ -34,7 +35,7 @@ description := "Tools for probabilistic inference in discrete-valued factor grap
 
 licenses += "MIT" -> url("http://opensource.org/licenses/MIT")
 
-scalaVersion := "2.11.6"
+scalaVersion := "2.11.7"
 
 //assertions are only used in tests
 scalacOptions in Compile += "-Xdisable-assertions"
@@ -49,9 +50,12 @@ libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % 
 // --------------- Publishing ----------------------------------
 
 //testing dependencies
-libraryDependencies += "org.specs2" %% "specs2" % "2.3.13" % "test"
+libraryDependencies += "org.specs2" %% "specs2-core" % "3.6.4" % "test"
 
-libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.11.6" % "test"
+libraryDependencies += "org.specs2" % "specs2-scalacheck_2.11" % "3.6.4" % "test"
+
+
+scalacOptions in Test ++= Seq("-Yrangepos") //for specs2
 
 //for vultura-util
 resolvers += "mvn@mirkwood" at "http://mirkwood.informatik.uni-ulm.de/mvn"

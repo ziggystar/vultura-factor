@@ -1,13 +1,12 @@
 package vultura.factor
 
 import org.specs2.Specification
-import org.specs2.specification.Fragments
 import vultura.factor.generators._
 
 import scala.util.Random
 
 class SumProductPowTaskTest extends Specification with FactorMatchers {
-  override def is: Fragments =
+  override def is =
     "identity operation" ! {
       val domains: Array[Int] = Array(2, 2)
       val scope: Array[Var] = Array(0, 1)

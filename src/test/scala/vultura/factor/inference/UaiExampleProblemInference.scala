@@ -1,7 +1,7 @@
 package vultura.factor.inference
 
 import org.specs2._
-import org.specs2.specification.Fragments
+import org.specs2.specification.core.Fragments
 import vultura.factor.SampleProblems
 
 /**
@@ -9,11 +9,11 @@ import vultura.factor.SampleProblems
  * (libdai entry to competition). Note that external competition solvers return result in log-10.
  */
 class UaiExampleProblemInference extends Specification {
-  def is: Fragments =
+  def is =
     "compare ground truth of uai examples to results of calibrated JT" ^
       calibratedJTTest
 
-  def calibratedJTTest = Fragments.create(
+  def calibratedJTTest = Fragments(
     SampleProblems.examples.filter(_.logZ.isDefined).map( example =>
       example.filename ! (JunctionTree.logZ(example.problem) must beCloseTo(example.logZ.get,0.01))
       ):_*)

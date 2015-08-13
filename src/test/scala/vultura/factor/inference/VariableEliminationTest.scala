@@ -1,7 +1,6 @@
 package vultura.factor.inference
 
 import org.specs2.Specification
-import org.specs2.specification.Fragments
 import vultura.factor.generators._
 import vultura.factor.Problem
 
@@ -9,7 +8,7 @@ import vultura.factor.Problem
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
  */
 class VariableEliminationTest extends Specification {
-  override def is: Fragments =
+  override def is =
     veSameAsJT(grid(3,3,2,expGauss(1))) ^
     veSameAsJT(grid(1,3,2,expGauss(1))) ^
     veSameAsJT(randomK(10,8,3,2,expGauss(1))) ^

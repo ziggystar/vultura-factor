@@ -1,7 +1,6 @@
 package vultura.calibration
 
 import org.specs2._
-import org.specs2.specification.Fragments
 import vultura.factor.inference.calibration.{BPResult, LBP}
 import vultura.factor._
 import vultura.factor.generators._
@@ -16,7 +15,7 @@ class BPTest extends Specification with FactorMatchers {
     override def rval(n: BPTest.this.bp1.FactorNode): n.TRep = Factor.maxEntropy(n.variables,bp1.ps.domains,bp1.ring)
   }
 
-  override def is: Fragments =
+  override def is =
     "compare propagation.BP result with inference.propagation.LBP result" ! {
     val other: BPResult = LBP.infer(p1)
     val cp = bp1.calibrationProblem

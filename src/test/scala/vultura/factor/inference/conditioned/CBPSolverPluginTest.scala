@@ -1,7 +1,6 @@
 package vultura.factor.inference.conditioned
 
 import org.specs2._
-import org.specs2.specification.Fragments
 import vultura.factor.LogD
 import vultura.factor.generators._
 
@@ -10,7 +9,7 @@ class CBPSolverPluginTest extends Specification {
   def largeGrid = grid(24,24,2,expGauss(5)).toRing(LogD)
   def loop = grid(2,2,2,expGauss(1))
 
-  override def is: Fragments =
+  override def is =
     "CBP 0 has to yield close to exact logZ" ! (new ConditionedInference(p1)().logZ must beCloseTo(p1.logZ,1e-3)) ^
     "CBP 1 has to yield close to exact logZ" ! (new ConditionedInference(p1,runInitially = 1)().logZ must beCloseTo(p1.logZ,1e-3)) ^
     "CBP 2 has to have 2 iteration" ! (new ConditionedInference(p1,runInitially = 2)().iterations === 2) ^

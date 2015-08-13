@@ -1,14 +1,12 @@
 package vultura.factor
 
 import org.scalacheck.Prop
-import org.specs2.Specification
-import org.specs2.matcher.ScalaCheckMatchers
-import org.specs2.specification.Fragments
+import org.specs2._
 import vultura.factor.generators._
 
-class ProblemStructureTest extends Specification with SCProblemGen with ScalaCheckMatchers {
+class ProblemStructureTest extends Specification with SCProblemGen with ScalaCheck {
 
-  override def is: Fragments = {
+  override def is = {
     "neighbours on 2x2 grid" ^
       "exclusive" ! (grid(2,2).neighboursOfVariableEx(0).toSet === Set(1,2)) ^
       "inclusive" ! (grid(2,2).neighboursOfVariableInc(0).toSet === Set(0,1,2)) ^

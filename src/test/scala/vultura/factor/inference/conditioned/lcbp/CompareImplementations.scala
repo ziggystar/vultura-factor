@@ -3,7 +3,6 @@ package vultura.factor.inference.conditioned.lcbp
 import java.io.{PrintStream, FileOutputStream}
 
 import org.specs2._
-import org.specs2.specification.Fragments
 import vultura.factor.{LogD, Benchmarks, FactorMatchers}
 import vultura.factor.generators._
 
@@ -21,7 +20,7 @@ class CompareImplementations extends Specification with FactorMatchers {
 
   def asLog(fs: FactoredScheme): FactoredScheme = fs.copy(problem = fs.problem.toRing(LogD))
 
-  override def is: Fragments =
+  override def is =
     "normal ring" ^
       "all exact on singly split tree 0" ! allExactOn(treeSplit0) ^
       "all exact on singly split tree 1" ! allExactOn(treeSplit1) ^

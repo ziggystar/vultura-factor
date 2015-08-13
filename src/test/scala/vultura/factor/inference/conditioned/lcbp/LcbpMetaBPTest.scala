@@ -1,7 +1,6 @@
 package vultura.factor.inference.conditioned.lcbp
 
 import org.specs2.Specification
-import org.specs2.specification.Fragments
 import vultura.factor.LogD
 import vultura.factor.generators._
 
@@ -9,7 +8,7 @@ import vultura.factor.generators._
  * Created by thomas on 23.09.14.
  */
 class LcbpMetaBPTest extends Specification {
-  override def is: Fragments =
+  override def is =
   "meta structure must not have correct domain sizes" !
     (new LcbpMetaBP(FactoredScheme.fromInfluenceMap(grid(2,2),Map(0 -> Set(0,1,2,3)))).metaStructure.domains.deep === Seq(2)) ^
   "meta structure must not have correct factor structure" !

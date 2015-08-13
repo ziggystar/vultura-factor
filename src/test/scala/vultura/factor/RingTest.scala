@@ -1,7 +1,6 @@
 package vultura.factor
 
 import org.specs2._
-import org.specs2.specification.Fragments
 
 import scala.reflect.ClassTag
 
@@ -10,7 +9,7 @@ import scala.reflect.ClassTag
  */
 class RingTest extends Specification {
 
-  override def is: Fragments =
+  override def is =
     "NormalD tests" ^
       test(NormalD) ^
     p^
@@ -18,7 +17,7 @@ class RingTest extends Specification {
       test(LogD)
 
 
-  def test[T: ClassTag](ring: Ring[T]): Fragments =
+  def test[T: ClassTag](ring: Ring[T]) =
     "normalize inconsistent distribution does nothing" ! {
       val d = Array.fill(1)(ring.zero)
       ring.normalize(d).deep === d.deep

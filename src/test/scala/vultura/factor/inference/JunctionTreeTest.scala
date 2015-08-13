@@ -1,7 +1,6 @@
 package vultura.factor.inference
 
 import org.specs2.Specification
-import org.specs2.specification.Fragments
 import vultura.factor._
 import generators._
 import scala.util.Random
@@ -9,11 +8,11 @@ import scala.util.Random
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
  */
-class JunctionTreeTest extends Specification with FactorMatchers{
+class JunctionTreeTest extends Specification with FactorMatchers {
   val p1 = grid(2,2,2,expGauss(1))
   def shuffle[A](xs: Seq[A], seed: Long = 0) = new Random(seed).shuffle(xs)
 
-  override def is: Fragments =
+  override def is = s2"" ^
     "sample marginals need to converge to true marginals" ^
       testSampleMarginals(grid(2,2,2,expGauss(1)), numSamples = 10000) ^
       testSampleMarginals(grid(3,3,2,expGauss(2)), numSamples = 10000, tol = 5e-2) ^

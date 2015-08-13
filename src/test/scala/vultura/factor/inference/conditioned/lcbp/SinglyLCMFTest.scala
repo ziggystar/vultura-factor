@@ -2,7 +2,6 @@ package vultura.factor.inference.conditioned.lcbp
 
 import org.specs2.Specification
 import org.specs2.matcher.{Expectable, MatchResult, Matcher}
-import org.specs2.specification.Fragments
 import vultura.factor.{generators, _}
 import vultura.factor.inference.MeanField
 
@@ -47,7 +46,7 @@ class SinglyLCMFTest extends Specification with FactorMatchers {
   def beRelativelyCloseTo(expected: Double, tol: Double = 1e-9): Matcher[Double] = (x: Double) =>
     (math.abs(1- x/expected) < tol, f"is different from $expected by a factor of ${x/expected}")
 
-  def is: Fragments =
+  def is =
     "create initial marginal for unconditioned problem" ! {
       unconditionedMF(singleVarProblem).createInitialMarginal(0,Map()) === Factor(Array(0),Array(0.5,0.5))
     } ^

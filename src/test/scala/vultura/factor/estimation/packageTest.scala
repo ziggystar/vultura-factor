@@ -1,7 +1,6 @@
 package vultura.factor.estimation
 
 import org.specs2.Specification
-import org.specs2.specification.Fragments
 import vultura.factor._
 import generators._
 import scala.util.Random
@@ -13,7 +12,7 @@ import org.specs2.matcher.MatchResult
  */
 class packageTest extends Specification with FactorMatchers {
 
-  override def is: Fragments =
+  override def is =
     "learning on random problems, completely observed" ^
       "1x3 with two missing parameters" ! randomCompletelyObservedLearningTest(grid(1,2,2,expGauss(0.1)), 2, 2000).orSkip ^
       "4x4 with one missing parameter" ! randomCompletelyObservedLearningTest(grid(4,4,2,expGauss(0.1)), 1, 2000).orSkip ^

@@ -1,7 +1,6 @@
 package vultura.factor.inference
 
 import org.specs2.Specification
-import org.specs2.specification.Fragments
 import vultura.factor._
 import vultura.factor.Utils._
 import vultura.factor.Problem
@@ -36,14 +35,14 @@ class BeliefPropagationTest extends Specification with FactorMatchers {
   val bpTree2 = bpInfer(treeProblem2)
   val jtTree2 = jtInfer(treeProblem2)
 
-  def bpDeterminism(p: Problem): Fragments = {
+  def bpDeterminism(p: Problem) = {
     val seed = new Random().nextLong()
     "test on seed " + seed !
       ((new BeliefPropagation(p,new Random(seed),1e-10,10).toResult === new BeliefPropagation(p,new Random(seed),1e-10,10).toResult) and
       (new BeliefPropagation(p,new Random(seed),1e-10,10).toResult !== new BeliefPropagation(p,new Random(seed + 1),1e-10,10).toResult))
   }
 
-  def is: Fragments =
+  def is =
   "constructing bethe graph" ^
     "from one factor over single variable" ^
       "must have correct neighbours" !

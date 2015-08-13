@@ -2,7 +2,6 @@ package vultura.cnf.dsl
 
 import scala.language.reflectiveCalls
 import org.specs2._
-import specification.Fragments
 
 /**
  * <enter description>
@@ -12,7 +11,7 @@ import specification.Fragments
  */
 
 class CnfDSLTest extends Specification {
-  def is: Fragments =
+  def is =
   //check implicit conversions
     (('x: DslClause) must beAnInstanceOf[DslClause]) ^
       ((!'x: DslClause) must beAnInstanceOf[DslClause]) ^

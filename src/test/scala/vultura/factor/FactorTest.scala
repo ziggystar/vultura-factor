@@ -1,7 +1,6 @@
 package vultura.factor
 
 import org.specs2._
-import specification.Fragments
 import Factor._
 import Utils._
 
@@ -20,7 +19,7 @@ class FactorTest extends Specification with FactorMatchers {
     result
   }
 
-  def is: Fragments =
+  def is =
     "building lookup tables" ^
     "incrementLookup 1" ! (buildLookup(AI(0,1),AI(2,2),AI(0)) === AI(1,-1,-1)) ^
       "incrementLookup 2" ! (buildLookup(AI(0,1),AI(2,2),AI(1)) === AI(0,1,-1)) ^

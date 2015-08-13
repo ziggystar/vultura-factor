@@ -2,7 +2,6 @@ package vultura.factor.inference
 
 import org.specs2.Specification
 import vultura.factor._
-import org.specs2.specification.Fragments
 
 /**
  * Created by IntelliJ IDEA.
@@ -11,7 +10,7 @@ import org.specs2.specification.Fragments
  */
 class SimplestProblem extends Specification {
 
-  def is: Fragments =
+  def is =
   (inferJT(tiny1) must beCloseTo(logZTiny,1e-4)) ^
     (inferVE(tiny1) must beCloseTo(logZTiny,1e-4))
 
