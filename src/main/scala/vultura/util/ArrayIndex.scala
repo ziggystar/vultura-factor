@@ -29,7 +29,7 @@ class ArrayIndex[T: ClassTag](values: Iterable[T]) extends Index[T] {
   val forwardMap: TObjectIntHashMap[T] = {
     val m = new TObjectIntHashMap[T](values.size)
     var i = 0
-    while(i < backwardMap.size){
+    while(i < backwardMap.length){
       m.put(backwardMap(i), i)
       i = i + 1
     }
@@ -43,7 +43,7 @@ class ArrayIndex[T: ClassTag](values: Iterable[T]) extends Index[T] {
   def forward(v1: T): Int = forwardMap.get(v1)
 
   val elements: IndexedSeq[T] = backwardMap
-  override val size: Int = backwardMap.size
+  override val size: Int = backwardMap.length
   override val indices: Range = 0 until size
   override def contains(t: T): Boolean = forwardMap.containsKey(t)
 }

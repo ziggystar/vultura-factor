@@ -18,9 +18,9 @@ organization := "de.uni-ulm"
 23.1.1: - upgrade some dependencies; add Memo
 23.2.0:
   - tiny optimization for construction of junction trees
-  - graph stuff
+  - add functionality to compute a DAG-Cover to EdgeMapDiGraph
 */
-version := "23.2.0-DEV"
+version := "23.2.0"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 

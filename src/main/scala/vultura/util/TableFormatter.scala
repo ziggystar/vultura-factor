@@ -11,8 +11,8 @@ object TableFormatter {
   def table1[A](as: Seq[A],
                 f: A => String,
                 pa: A => String = (a: A) => a.toString): String = {
-    val sizeA = as.map(_.toString.size).max
-    val sizeF = as.map(f(_).size).max
+    val sizeA = as.map(_.toString.length).max
+    val sizeF = as.map(f(_).length).max
     val fString = "%%%ds %%%ds".format(sizeA, sizeF)
     val rows = for (a <- as; v = f(a)) yield fString.format(a.toString, v)
     rows.mkString("\n")
@@ -30,11 +30,11 @@ object TableFormatter {
     f: (A, B) => String,
     pa: A => String = (a: A) => a.toString,
     pb: B => String = (b: B) => b.toString): String = {
-    val sizeA = as.map(pa(_).size).max
+    val sizeA = as.map(pa(_).length).max
     val colSizes = for (
       b <- bs;
-      fMax = as.map(a => f(a, b).size).max;
-      max = math.max(pb(b).size, fMax)
+      fMax = as.map(a => f(a, b).length).max;
+      max = math.max(pb(b).length, fMax)
     ) yield max
 
     val fString = (sizeA +: colSizes).map("%%%ds".format(_)).mkString(" ")

@@ -74,6 +74,7 @@ import java.util.Arrays;
  </table>
  */
 
+@SuppressWarnings("ALL")
 public class OpenBitSet {
 
     protected long[] bits;

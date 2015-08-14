@@ -91,7 +91,7 @@ package object util {
   /** Convenience method. */
   def crossProduct[T: ClassTag](aa: AA[T]) = new DomainCPI(aa)
   /** Take a random element from each entry in aa. */
-  def randomAssignment[T: ClassTag](aa: AA[T], random: Random): Array[T] = aa.map(a => a(random.nextInt(a.size)))
+  def randomAssignment[T: ClassTag](aa: AA[T], random: Random): Array[T] = aa.map(a => a(random.nextInt(a.length)))
   implicit def iteratorLast[A](it: Iterator[A]) = new {
     def last: A = {
       var elem = it.next()
