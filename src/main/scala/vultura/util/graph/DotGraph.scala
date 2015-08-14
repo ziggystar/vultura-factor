@@ -4,6 +4,7 @@ import java.io.{File, FileOutputStream, PrintStream}
 
 import scala.sys.process._
 
+/** A directed graphviz graph. */
 case class DotGraph[N](edges: Iterable[(N,N)],
                        additionalNodes: Iterable[N] = Set(),
                        graphName: String = "Dotted",
@@ -22,7 +23,10 @@ case class DotGraph[N](edges: Iterable[(N,N)],
   }
   def nodeLabeled(l: N => String) = this.copy(nodeOptions=nodeOptions :+ ((n: N) => "label=\"" + l(n) + "\""))
 
-  def toPDF(file: String): Unit = {
+  @deprecated("use writePDF instead")
+  def toPDF(file: String): Unit = writePDF(file)
+
+  def writePDF(file: String): Unit = {
     val out = new PrintStream(new FileOutputStream(file + ".dot"))
     out.print(dotString)
     out.close()
