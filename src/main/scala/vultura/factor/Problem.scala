@@ -30,8 +30,8 @@ case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[
       variables.size,
       domains.mkString(" "),
       factors.size,
-      factors.map(f => f.variables.size + " " + f.variables.mkString(" ")).mkString("\n"),
-      factors.map(f => f.values.size + " " + ring.decode(f.values).map(writeDouble).mkString(" ")).mkString("\n")
+      factors.map(f => f.variables.length + " " + f.variables.reverse.mkString(" ")).mkString("\n"),
+      factors.map(f => f.values.length + " " + ring.decode(f.values).map(writeDouble).mkString(" ")).mkString("\n")
     ).mkString("\n")
   }
 
