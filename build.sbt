@@ -23,9 +23,10 @@ organization := "de.uni-ulm"
   - tikz output for FactoredScheme
   - optimization for parameter learning
   - vultura.factor.inference.BeliefPropagation now supports damping
- 22.5.1: add tree calibration for BP optimization
+22.5.1:
+  - fix to uai-string
 */
-version := "22.5.1-DEV"
+version := "22.5.1"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 
