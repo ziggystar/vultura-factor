@@ -16,9 +16,6 @@ class EdgeMapDiGraphTest extends Specification {
   def g1DAGCheck(n: Int, p: Double) = {
     val g = EdgeMapDiGraph.erdosRenyi(n, p, new Random(0))
     val cover: Set[Set[Int]] = g.computeDAGCover(new Random(0))
-    g.isDAGCover(cover) ensuring {
-      println(s"${cover.size} subgraphs for $n nodes and p=$p")
-      true
-    }
+    g.isDAGCover(cover)
   }
 }
