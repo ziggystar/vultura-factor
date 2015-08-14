@@ -7,14 +7,17 @@ import scala.util.Random
 
 class EdgeMapDiGraphTest extends Specification {
   override def is: SpecStructure =
-    s2"dagCover validity for e-r(10,0.5) ${g1DAGCheck(5,0.5)}"
+    s2"""dagCover validity for e-r(10,0.5) ${g1DAGCheck(10,0.5)}
+        |dagCover validity for e-r(20,0.5) ${g1DAGCheck(20,0.5)}
+        |dagCover validity for e-r(50,0.5) ${g1DAGCheck(50,0.5)}
+        |dagCover validity for e-r(100,0.8) ${g1DAGCheck(100,0.8)}
+      """.stripMargin
 
   def g1DAGCheck(n: Int, p: Double) = {
     val g = EdgeMapDiGraph.erdosRenyi(n, p, new Random(0))
     val cover: Set[Set[Int]] = g.computeDAGCover(new Random(0))
     g.isDAGCover(cover) ensuring {
-      println(s"graph: $g")
-      println(s"covers:\n ${cover.mkString("\n")}")
+      println(s"${cover.size} subgraphs for $n nodes and p=$p")
       true
     }
   }
