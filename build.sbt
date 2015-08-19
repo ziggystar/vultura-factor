@@ -43,7 +43,7 @@ scalacOptions in Compile += "-Xdisable-assertions"
 
 libraryDependencies += "org.apache.commons" % "commons-math3" % "3.2"
 
-libraryDependencies += "de.uni-ulm" %% "vultura-util" % "23.1.1"
+libraryDependencies += "de.uni-ulm" %% "vultura-util" % "23.2.0"
 
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.+"
 
