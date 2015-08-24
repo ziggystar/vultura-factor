@@ -136,7 +136,7 @@ case class MObsAvgLogLikelihood(problem: Problem,
     * data array of the factor. */
   val (featureFactors: IndexedSeq[Factor], featurePointers: IndexedSeq[Seq[(Int, Int)]]) = {
     val scopes: SIIndex[IndexedSeq[Var]] = new SIIndex(target.flatten.map(_.variables.toIndexedSeq))
-    val factors: IndexedSeq[Factor] = scopes.elements.map(vars => Factor.maxEntropy(vars.toArray,problem.domains,LogD))
+    val factors: IndexedSeq[Factor] = scopes.elements.map(vars => Factor.fromFunction(vars.toArray,problem.domains,_ => LogD.one))
     val pointers = target.map(featureChunk =>
       featureChunk.map{ feature =>
         val fi = scopes.forward(feature.variables.toIndexedSeq)
