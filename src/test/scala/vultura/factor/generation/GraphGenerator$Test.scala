@@ -1,7 +1,8 @@
 package vultura.factor.generation
 
 import org.specs2.Specification
-import GraphGenerator._
+import vultura.factor.generation.graph._
+
 /**
  * Created by thomas on 28.08.15.
  */

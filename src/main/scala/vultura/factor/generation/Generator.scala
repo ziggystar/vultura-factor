@@ -2,12 +2,6 @@ package vultura.factor.generation
 
 import scala.util.Random
 
-object Generator {
-  def apply[A](f: Random => A): Generator[A] = new Generator[A]{
-    override def generate(r: Random): A = f(r)
-  }
-}
-
 /** Basically a distribution over values of type `A`. */
 trait Generator[+A] { outer =>
   def generate(r: Random): A
@@ -28,6 +22,12 @@ trait Generator[+A] { outer =>
   }
 }
 
+object Generator {
+  def apply[A](f: Random => A): Generator[A] = new Generator[A]{
+    override def generate(r: Random): A = f(r)
+  }
+  def seq[X](xs: Seq[Generator[X]]): Generator[Seq[X]] = Generator(r => xs.map(_.generate(r)))
+}
 
 case class Constant[+A](a: A) extends Generator[A]{
   override def generate(r: Random): A = a

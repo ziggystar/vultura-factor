@@ -51,9 +51,9 @@ libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % 
 // --------------- Publishing ----------------------------------
 
 //testing dependencies
-libraryDependencies += "org.specs2" %% "specs2-core" % "3.6.4" % "test"
+libraryDependencies += "org.specs2" %% "specs2-core" % "3.6.4-20150901013911-1f41c5e" % "test"
 
-libraryDependencies += "org.specs2" % "specs2-scalacheck_2.11" % "3.6.4" % "test"
+libraryDependencies += "org.specs2" % "specs2-scalacheck_2.11" % "3.6.4-20150901013911-1f41c5e" % "test"
 
 
 scalacOptions in Test ++= Seq("-Yrangepos") //for specs2
