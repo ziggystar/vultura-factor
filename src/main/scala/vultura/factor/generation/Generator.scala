@@ -2,7 +2,8 @@ package vultura.factor.generation
 
 import scala.util.Random
 
-/** Basically a distribution over values of type `A`. */
+/** A probability monad.
+  * Basically a distribution over values of type `A`. */
 trait Generator[+A] { outer =>
   def generate(r: Random): A
   def map[B](f: A => B): Generator[B] = new Generator[B]{

@@ -35,3 +35,27 @@ with small operations.
 ## Parameter Learning
 
 - maximum likelihood for data with hidden variables
+
+### Problem Generation
+
+`vultura.factor.generation.Generator` implements a monadic type that enables the construction of random generators.
+
+#### Graph Structures
+
+In package object `vultura.factor.generation.graph`, there are implementations for different generators for undirected graphs.
+  
+  - n-dimensional lattice with optional wrapping boundaries
+  - complete graph
+  - single cycles 
+  - erdoes-renyi random graphs (constant edge appearance probability)
+
+#### Adding Potentials
+
+In package object `vultura.factor.generation`:
+
+ - use `addPottsFactors` to convert a hyper-graph to a problem with Potts factors; 
+   positive parameters yield attractive/fero-magnetic interactions, 
+   while negative values yield repulsive/anti-ferromagnetic interactions
+ - add magnetic field with `withMagneticField` for problems with only binary variables
+
+

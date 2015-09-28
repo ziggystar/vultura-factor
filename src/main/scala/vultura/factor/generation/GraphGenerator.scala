@@ -2,11 +2,9 @@ package vultura.factor.generation
 
 import vultura.factor._
 import vultura.factor.generation.graph.Graph
-import vultura.util.{IntDomainCPI, Index, SIIndex}
+import vultura.util.{Index, SIIndex}
 
 import scala.util.Random
-
-
 
 case class LabeledProblemStructure[N](structure: ProblemStructure, variableLabels: Index[N]){
   require(variableLabels.size == structure.numVariables)
