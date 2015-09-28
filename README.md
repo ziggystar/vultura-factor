@@ -36,11 +36,11 @@ with small operations.
 
 - maximum likelihood for data with hidden variables
 
-### Problem Generation
+## Problem Generation
 
 `vultura.factor.generation.Generator` implements a monadic type that enables the construction of random generators.
 
-#### Graph Structures
+### Graph Structures
 
 In package object `vultura.factor.generation.graph`, there are implementations for different generators for undirected graphs.
   
@@ -49,7 +49,7 @@ In package object `vultura.factor.generation.graph`, there are implementations f
   - single cycles 
   - erdoes-renyi random graphs (constant edge appearance probability)
 
-#### Adding Potentials
+### Adding Potentials
 
 In package object `vultura.factor.generation`:
 
