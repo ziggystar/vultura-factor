@@ -25,8 +25,9 @@ organization := "de.uni-ulm"
   - vultura.factor.inference.BeliefPropagation now supports damping
 22.5.1: fix to uai-string
 22.5.2: fix bug in parameter learning introduced in commit 6f8550e742114ab6aed9e07da0770d011d120b51
+23.0.0: add new problem generator library; see readme
 */
-version := "22.5.2"
+version := "23.0.0"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 
