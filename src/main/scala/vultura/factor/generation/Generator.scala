@@ -28,6 +28,16 @@ object Generator {
     override def generate(r: Random): A = f(r)
   }
   def seq[X](xs: Seq[Generator[X]]): Generator[Seq[X]] = Generator(r => xs.map(_.generate(r)))
+  def gaussian(mean: Double = 0d, sd: Double = 1d): Generator[Double] = Generator(_.nextGaussian() * sd + mean)
+
+  /** @param lower Lower, inclusive bound.
+    * @param upper Upper, exclusive bound.
+    * @return Uniformly distributed double within given array.
+    */
+  def uniform(lower: Double = 0d, upper: Double = 1d): Generator[Double] = Generator(_.nextDouble() * (upper - lower) + lower)
+
+  /** @param p Probability of one. */
+  def bernoulli(p: Double): Generator[Boolean] = Generator(_.nextDouble() < p)
 }
 
 case class Constant[+A](a: A) extends Generator[A]{
