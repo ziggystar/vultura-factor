@@ -126,6 +126,7 @@ object SimpleConditioner extends Conditioner {
       value <- 0 until p.domains(v) if marg.values(value) == p.ring.one
     } yield (v -> value, marg)
     //todo no check for inconsistency!!!
+    //condition all factors and add deterministic singleton factors for the conditioned variables
     val conditionedProblem = p.condition(conditions.map(_._1).toMap).simplify
     conditionedProblem.copy(factors = conditionedProblem.factors ++ conditions.map(_._2))
   }
@@ -138,7 +139,6 @@ object SimpleConditioner extends Conditioner {
     simplifyDeterminism(p.copy(factors = p.factors ++ factors), c.keySet)
   }
 }
-
 
 trait LeafHeuristic[-I] {
   def name: String

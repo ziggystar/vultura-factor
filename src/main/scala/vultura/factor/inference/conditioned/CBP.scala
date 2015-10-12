@@ -80,6 +80,7 @@ class CBP(val problem: Problem,
       }
     }
     val conditionedProblem: Problem = problem.copy(factors = clampFactor(problem.factors))
+    //TODO first branch will never happen
     if(conditionedProblem.variables.isEmpty)
       Right(new JunctionTree(conditionedProblem))
     else
