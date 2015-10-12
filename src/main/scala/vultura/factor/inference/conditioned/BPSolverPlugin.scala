@@ -12,13 +12,7 @@ case class BPSolverPlugin(tol: Double = 1e-10, maxSteps: Long = 10000) extends A
   //TODO make this incremental
   override def increment(oldState: ExtendedBPResult, newProblem: Problem): ExtendedBPResult = {
     val lbp: LBP = LBP(newProblem)
-    val cal = new MutableFIFOCalibrator(lbp.edges)(ConvergenceTest.MaxDiff(tol), maxSteps, new EdgeValues[lbp.BPMessage] {
-      override def hasEdge(e: lbp.BPMessage): Boolean = oldState.problem.scopeOfFactor(e.fi).contains(e.v)
-      override def edgeValue(e: lbp.BPMessage): e.type#TOut = e match {
-        case lbp.V2F(vi,fi) => oldState.rawMessageValue(oldState.V2FMsg(vi,fi))
-        case lbp.F2V(fi,vi) => oldState.rawMessageValue(oldState.F2VMsg(fi,vi))
-      }
-    } orElse lbp.maxEntInitializer)
+    val cal = new MutableFIFOCalibrator(lbp.edges)(ConvergenceTest.MaxDiff(tol), maxSteps, lbp.maxEntInitializer)
     createResult(lbp)(cal)
   }
   override def create(p: Problem): ExtendedBPResult = {
