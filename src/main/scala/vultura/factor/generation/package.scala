@@ -37,4 +37,13 @@ package object generation {
       p.copy(problem = p.problem.copy(factors = p.problem.factors ++ ss))
     )
   }
+  
+  def problemGenerator[N](graph: Generator[Graph[N]], 
+                          domains: Domainification[N], 
+                          param: Parameterization[N]): Generator[LabeledProblem[N]] = 
+    for{
+      g <- graph
+      ps <- domains.addDomains(g)
+      p <- param.generateFactors(ps)
+    } yield p
 }
