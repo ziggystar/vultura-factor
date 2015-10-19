@@ -57,5 +57,16 @@ In package object `vultura.factor.generation`:
    positive parameters yield attractive/fero-magnetic interactions, 
    while negative values yield repulsive/anti-ferromagnetic interactions
  - add magnetic field with `withMagneticField` for problems with only binary variables
+ 
+### New generator API
+Problem generation is now separated into three phases:
 
+ 1. (hyper)-graph generation, resulting in a `N`-labeled graph generator`Generator[Graph[N]]`
+ 2. domain size generation via `Domainification[N]`
+ 3. parameter generation via `Parameterization[N]`
+ 
+If you have decided upon each one, you can use
 
+    import vultura.factor.generation._
+    
+    problemGenerator(Constant(graph.lattice(2 -> true, 2 -> true)), FixedDomainsSize(2), IIDValuedParam(Generator.uniform(0, 1)))
