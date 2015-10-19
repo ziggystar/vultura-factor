@@ -30,7 +30,13 @@ class JunctionTree(val problem: Problem, val variableOrderer: VariableOrderer = 
     //2. multiply all factors of each clique into one
     compactJTrees(initialTrees)
         .map(_.map {
-        case (vars, factors) => Factor.multiplyRetain(problem.ring)(problem.domains)(factors.toIndexedSeq,vars.toArray.sorted)
+        case (vars, factors) =>
+          try {
+            Factor.multiplyRetain(problem.ring)(problem.domains)(factors.toIndexedSeq,vars.toArray.sorted)
+          } catch {
+            case e: NegativeArraySizeException =>
+              throw new RuntimeException("size overflow during junction tree construction: found tree decomposition is too large", e)
+          }
       })
     }
 
