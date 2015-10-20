@@ -57,7 +57,7 @@ trait MPEI { self: Inferer =>
 
 class Result(mpi: MargParI) extends MargParI {
   override val problem: Problem = mpi.problem
-  def lookupFromMPI(x: MargParI): Array[Array[Double]] = (0 until x.problem.variables.size).map(v => x.variableBelief(v).values)(collection.breakOut)
+  def lookupFromMPI(x: MargParI): Array[Array[Double]] = x.problem.variables.indices.map(v => x.variableBelief(v).values)(collection.breakOut)
   val marginals: Array[Array[Double]] = lookupFromMPI(mpi)
   override val logZ = mpi.logZ
   /** @return marginal distribution of variable in encoding specified by `ring`. */
@@ -71,4 +71,10 @@ class Result(mpi: MargParI) extends MargParI {
     case r: Result => r.logZ == this.logZ && r.problem == this.problem && this.marginals.deep == r.marginals.deep
     case _ => false
   }
+}
+
+trait IterativeResult {
+  def isConverged: Boolean
+  def iterations: Long
+  def maxDiff: Double
 }

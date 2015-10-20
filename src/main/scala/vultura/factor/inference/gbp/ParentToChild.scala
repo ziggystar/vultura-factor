@@ -1,14 +1,16 @@
 package vultura.factor.inference.gbp
 
 import vultura.factor._
-import vultura.factor.inference.MarginalI
+import vultura.factor.inference.{IterativeResult, JointMargI}
 import vultura.propagation._
 
 import scala.reflect.ClassTag
 
-case class ParentToChild(rg: RG, ring: Ring[Double]) {
+case class ParentToChild(rg: RegionGraph, ring: Ring[Double]) {
   type VI = rg.VI
   type FI = rg.FI
+
+  type Reg = rg.Region
 
   private val ps: ProblemStructure = rg.problemStructure
   val domains = ps.domains
@@ -21,6 +23,11 @@ case class ParentToChild(rg: RG, ring: Ring[Double]) {
     def construct: Array[Double] = new Array[Double](variables.map(domains).product)
     def store(r: TRep, i: TImpl): Unit = System.arraycopy(r.values,0,i,0,i.length)
     def load(i: TImpl): TRep = Factor(variables,i.clone())
+    def make(iv: IValuation[FactorNode]): Factor = {
+      val builder: Array[Double] = construct
+      iv.istore(this,builder)
+      load(builder)
+    }
   }
 
   trait ProductRule[T <: FactorNode,F <: FactorNode] extends TypedRule[ADImpl,T,F] {
@@ -39,11 +46,11 @@ case class ParentToChild(rg: RG, ring: Ring[Double]) {
     override def variables: Array[VI] = ps.scopeOfFactor(fi)
   }
   case class DownEdge(parent: Reg, child: Reg) extends FactorNode{
-    override def variables: Array[VI] = child.variables.toArray.sorted
+    override def variables: Array[VI] = rg.variablesOf(child).toArray.sorted
   }
   //region belief
   case class RBel(r: Reg) extends FactorNode{
-    override def variables: Array[VI] = r.variables.toArray.sorted
+    override def variables: Array[VI] = rg.variablesOf(r).toArray.sorted
   }
 
   val allEdges: IndexedSeq[DownEdge] = (for {
@@ -70,10 +77,10 @@ case class ParentToChild(rg: RG, ring: Ring[Double]) {
   }(collection.breakOut)
 
   def factorsForEdge(p: Reg, c: Reg): IndexedSeq[Parameter] =
-    (p.factors -- c.factors).map(Parameter)(collection.breakOut)
+    (rg.factorsOf(p) -- rg.factorsOf(c)).map(Parameter)(collection.breakOut)
 
   def factorsForRegion(r: Reg): IndexedSeq[Parameter] =
-    selfAndDescendants(r).flatMap(d => d.factors.map(Parameter))(collection.breakOut)
+    selfAndDescendants(r).flatMap(d => rg.factorsOf(d).map(Parameter))(collection.breakOut)
 
   def selfAndDescendants(r: Reg): Set[Reg] = rg.descendants(r) + r
 
@@ -100,19 +107,44 @@ case class ParentToChild(rg: RG, ring: Ring[Double]) {
       System.arraycopy(p.factors(n.fi).values,0,r,0,r.length)
   }.widen
 
-  def margParI(iValuation: IValuation[FactorNode], p: Problem): MarginalI = new MarginalI{
+  def constructResult(iValuation: IValuation[FactorNode], p: Problem): JointMargI = new JointMargI {
     require(rg.problemStructure.isCompatible(p))
     val regionForVariable: Map[Int,RBel] =
-      p.variables.map(v => v -> RBel(rg.regions.find(_.variables.contains(v)).get))(collection.breakOut)
+      p.variables.map(v => v -> RBel(rg.regions.find(r => rg.variablesOf(r).contains(v)).get))(collection.breakOut)
 
-    /** @return marginal distribution of variable in encoding specified by `ring`. */
-    override def variableBelief(vi: Val): Factor = {
-      val r = regionForVariable(vi)
-      val builder: Array[Double] = r.construct
-      val regResult = iValuation.istore(r,builder)
-      Factor.multiplyRetain(ring)(p.domains)(Seq(r.load(builder)),Array(vi))
+    /** @return Normalized belief over given variables in encoding specified by problem ring. */
+    override def cliqueBelief(vars: Array[Var]): Factor = {
+      val set: Set[VI] = vars.toSet
+      rg.regions.find(r => set.subsetOf(rg.variablesOf(r)))
+        .map(cb => Factor.multiplyRetain(p.ring)(p.domains)(Seq(RBel(cb).make(iValuation)),vars))
+        .getOrElse(throw new RuntimeException("joint marginals not available, as there is no containing region"))
     }
 
+    /** @return marginal distribution of variable in encoding specified by `ring`. */
+    override def variableBelief(vi: Val): Factor =
+      Factor.multiplyRetain(ring)(p.domains)(Seq(regionForVariable(vi).make(iValuation)),Array(vi))
+
     override def problem: Problem = p
+  }
+}
+
+object ParentToChild{
+  def infer(rg: RegionGraph, problem: Problem, tol: Double = 1e-12, maxIter: Long = 100000): (JointMargI,IterativeResult) = {
+    require(rg.problemStructure.isCompatible(problem), "problem doesn't fit region graph")
+    val ptc = ParentToChild(rg, problem.ring)
+
+    val neutralValuation: RValuation[ptc.FactorNode] = new RValuation[ptc.FactorNode]{
+      override def isDefinedAt(n: ptc.FactorNode): Boolean = true
+      override def rval(n: ptc.FactorNode): n.TRep = Factor.maxEntropy(n.variables,ptc.domains,ptc.ring)
+    }
+
+    val calibrator = new RoundRobinAD(ptc.calibrationProblem,MaxDiff,neutralValuation.widen.toIVal)
+
+    val result = calibrator.calibrate(ptc.parametersFromProblem(problem).widen, maxDiff = tol, maxLoops = maxIter)
+    (ptc.constructResult(result.ival.asInstanceOf[IValuation[ptc.FactorNode]],problem), new IterativeResult {
+      override def maxDiff: Double = result.maxDiff
+      override def iterations: Long = result.totalUpdates
+      override def isConverged: Boolean = result.isConverged
+    })
   }
 }

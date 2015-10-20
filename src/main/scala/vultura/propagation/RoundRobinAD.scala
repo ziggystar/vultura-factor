@@ -57,9 +57,11 @@ class RoundRobinAD(val cp: CP[ADImpl],
     //run the calibration loop
     var converged = false
     var loops = 0
+    var remainingDiff = 0d
     while(loops < maxLoops && !converged) {
       loops += 1
       converged = true
+      remainingDiff = 0d
 
       var i = 0
       while (i < nodes.size) {
@@ -82,6 +84,7 @@ class RoundRobinAD(val cp: CP[ADImpl],
 
           impl.apply(input, newResult)
           val diff = differ.diff(node, state(i), newResult)
+          remainingDiff = math.max(remainingDiff,diff)
           if(diff > maxDiff){
             converged = false
             //update value by swapping
@@ -99,6 +102,7 @@ class RoundRobinAD(val cp: CP[ADImpl],
     }
 
     new Calibrated[N] {
+      override def maxDiff: Double = remainingDiff
       override def totalUpdates: Long = loops
       override def isConverged: Boolean = converged
       override def ival: IValuation[N] = new IValuation[N] {
@@ -116,5 +120,6 @@ class RoundRobinAD(val cp: CP[ADImpl],
 trait Calibrated[N <: Node]{
   def totalUpdates: Long
   def isConverged: Boolean
+  def maxDiff: Double
   def ival: IValuation[N]
 }
