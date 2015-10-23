@@ -5,7 +5,7 @@ import scala.language.implicitConversions
 /**Provides implicit conversions to use the DSL to specify CNF objects. */
 package object dsl {
 
-  implicit def negatableAtom(s: Symbol) = new {
+  implicit class NegatableAtom(s: Symbol){
     def unary_! = DslClause(Nil, s :: Nil)
   }
 

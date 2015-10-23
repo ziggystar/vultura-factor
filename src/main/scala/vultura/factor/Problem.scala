@@ -21,8 +21,9 @@ case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[
   def logFactor(fi: Int): Factor = if(ring == LogD) factors(fi) else factors(fi).map(math.log)
 
   def degreeOfVariable(v: Int): Int = degrees(v)
+  //noinspection SameElementsToEquals
   def uaiString: String = {
-    require(variables.sameElements(0 until variables.size))
+    require(variables sameElements variables.indices)
     def writeDouble(d: Double): String = d match {
       case 0d => "0"
       case x => x.toString

@@ -4,9 +4,6 @@ import org.specs2.Specification
 import vultura.factor.LogD
 import vultura.factor.generators._
 
-/**
- * Created by thomas on 23.09.14.
- */
 class LcbpMetaBPTest extends Specification {
   override def is =
   "meta structure must not have correct domain sizes" !

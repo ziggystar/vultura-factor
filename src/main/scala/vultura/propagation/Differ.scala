@@ -1,8 +1,5 @@
 package vultura.propagation
 
-/**
- * Created by thomas on 30.01.15.
- */
 trait Differ[-N <: Node]{
   def diff(n: N, oldValue: N#TImpl, newValue: N#TImpl): Double
 }

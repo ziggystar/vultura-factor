@@ -197,7 +197,7 @@ class LCBP(val problem: Problem,
     }
 
     /** Compute the value of this node given the values of the independent nodes. */
-    override def compute(ins: IndexedSeq[Double]): Array[Double] = LogD.decode(LogD.normalize((0 until conditions.size).map{ idx =>
+    override def compute(ins: IndexedSeq[Double]): Array[Double] = LogD.decode(LogD.normalize(conditions.indices.map{ idx =>
       LogD.sumA(lookBack(idx).map(ins)(collection.breakOut))
     }(collection.breakOut)))
 

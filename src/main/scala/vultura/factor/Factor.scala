@@ -194,7 +194,7 @@ object Factor{
 
   def multiply(ring: Ring[Double])(domains: Array[Int])(factors: IndexedSeq[Factor]): Factor = {
     val variables = merge(factors.map(_.variables))
-    val numValues = variables.map(domains).foldLeft(1)(_ * _)
+    val numValues = variables.map(domains).product
     val values = new Array[Double](numValues)
     sumProduct(variables,domains,factors.map(_.variables)(collection.breakOut),factors.map(_.values)(collection.breakOut): Array[Array[Double]],ring,values)
     Factor(variables,values)
@@ -328,7 +328,7 @@ object Factor{
 
     //collect all variables
     val (cliqueOrdering,margVars) = {
-      val allVars: Array[Int] = factorVariables.flatten.toSet.toArray
+      val allVars: Array[Int] = factorVariables.flatten.distinct
       //reorder, so that all margVars are at beginning
       val mv: Array[Int] = allVars.filterNot(remainingVars.contains)
       (mv ++ remainingVars,mv)

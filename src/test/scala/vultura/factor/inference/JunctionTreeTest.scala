@@ -21,7 +21,7 @@ class JunctionTreeTest extends Specification with FactorMatchers {
     "all orders must produce same marginals" !
       (new JunctionTree(p1).logZ must beCloseTo(new JunctionTree(p1, RandomOrderer()).logZ, 1e-9)) ^
     "must throw when given order misses variables" !
-      (new JunctionTree(p1,VariableOrderer.fromOrder(p1.variables.toSeq.tail)) must throwA[Exception]) ^
+      (new JunctionTree(p1,VariableOrderer.fromOrder(p1.variables.tail)) must throwA[Exception]) ^
     "must throw when given intractable problem" ! {
       new JunctionTree(grid(20,20,20)) must throwA[RuntimeException]("size overflow during junction tree construction: found tree decomposition is too large")
     }

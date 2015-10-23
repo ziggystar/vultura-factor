@@ -35,7 +35,7 @@ extends MargParI with JointMargI with Iterator[MargParI] {
   @inline
   def lookUpMessage(fromClusterIdx: Int, toClusterIdx: Int): Message = messageMap.get(edgeKey(fromClusterIdx,toClusterIdx))
 
-  def allMessages: Iterable[Message] = cg.sepsets.map(_._1).map(e => lookUpMessage(e._1,e._2))
+  def allMessages: Iterable[Message] = cg.sepsets.keys.map(e => lookUpMessage(e._1,e._2))
   private var randomOrder: IndexedSeq[(Int, Int)] = null
   private var totalIterations = 0
   private var messageUpdates = 0L

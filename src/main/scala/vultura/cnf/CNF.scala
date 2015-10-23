@@ -21,7 +21,7 @@ case class CNF(clauses: IndexedSeq[CNF.Clause]){
       val conditionedClause = CNF.conditionClause(clause,trues,falses)
       if(conditionedClause.isEmpty)
         formulaFalse = true
-      else if(conditionedClause != CNF.TrueClause)
+      else if(!(conditionedClause sameElements CNF.TrueClause))
         builder += conditionedClause
       clauseIdx += 1
     }
@@ -46,13 +46,13 @@ object CNF {
   def plainAtoms(clause: Clause) = clause.filter(i => (CNF.NEG_MASK & i) != 0)
   def negatedAtoms(clause: Clause) = clause.filter(i => (CNF.NEG_MASK & i) == 0)
 
-  def variablesOfClause(cnf: Clause): Array[Int] = cnf.map(_ & ~CNF.NEG_MASK).distinct.toArray
+  def variablesOfClause(cnf: Clause): Array[Int] = cnf.map(_ & ~CNF.NEG_MASK).distinct
   def domainOfClause(clause: Clause): Array[Array[Int]] = variablesOfClause(clause).map(_ => Array(0,1))
   def evaluateClause(clause: Clause, trues: IndexedSeq[Int], falses: IndexedSeq[Int]): Option[Boolean] = {
     val conditioned = conditionClause(clause,trues,falses)
     if(conditioned.isEmpty)
       Some(false)
-    else if(conditioned == TrueClause)
+    else if(conditioned sameElements TrueClause)
       Some(true)
     else
       None
@@ -68,7 +68,7 @@ object CNF {
       evaluateClause(cnf.clauses(i),trues,falses) match {
         case Some(false) => becameFalse = true
         case None => stillTrue = false
-        case Some(true) => Unit
+        case Some(true) =>
       }
       i += 1
     }

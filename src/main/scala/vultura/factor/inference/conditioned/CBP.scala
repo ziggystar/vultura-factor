@@ -129,7 +129,7 @@ object CBP {
     val MAX_DEGREE, RANDOM, LAST_UPDATE, MIN_ENTROPY, LU_BIDI = Value
 
     def variableSelectionHighDegree(bp: BeliefPropagation, random: Random): Int =
-      vultura.util.maxByMultiple(bp.problem.variables.toSeq)(bp.problem.degreeOfVariable).pickRandom(random)
+      vultura.util.maxByMultiple(bp.problem.variables)(bp.problem.degreeOfVariable).pickRandom(random)
 
     def variableSelectionRandom(bp: BeliefPropagation, random: Random): Int = bp.problem.variables.pickRandom(random)
 
@@ -145,11 +145,11 @@ object CBP {
         }.max
       }
 
-      vultura.util.maxByMultiple(bp.problem.variables.toSeq)(lastBidirectionalUpdate).pickRandom(random)
+      vultura.util.maxByMultiple(bp.problem.variables)(lastBidirectionalUpdate).pickRandom(random)
     }
 
     def maxentropy(bp: BeliefPropagation, random: Random): Int = {
-      vultura.util.maxByMultiple(bp.problem.variables.toSeq)(
+      vultura.util.maxByMultiple(bp.problem.variables)(
         v => bp.problem.ring.entropy(bp.variableBelief(v).values)
       ).pickRandom(random)
     }

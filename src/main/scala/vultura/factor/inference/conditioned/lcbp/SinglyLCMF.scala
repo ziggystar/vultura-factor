@@ -38,7 +38,7 @@ class SinglyLCMF(val problem: Problem, val scheme: SimpleScheme, val tol: Double
   }
   val allWeightParams: Seq[Weight] = scheme.conditionVariables.map(Weight)(collection.breakOut)
   val allMarginalParams: Seq[Marginal] = for {
-    v <- problem.variables.toSeq.sorted if !scheme.conditionVariables(v)
+    v <- problem.variables.sorted if !scheme.conditionVariables(v)
     condVars = scheme.influencesOf(v)
     condition <- IntDomainCPI(condVars.toArray.map(problem.domains).map(Array.range(0,_)))
       .map(assign => condVars.zip(assign).toMap)
@@ -197,7 +197,7 @@ class SinglyLCMF(val problem: Problem, val scheme: SimpleScheme, val tol: Double
     while(iterations < cMaxIter && uncalibrated.nonEmpty){
       val nextParam = uncalibrated.dequeue()
       val touched = updateParameter(nextParam)
-      uncalibrated.enqueue(touched.filterNot(uncalibrated.contains).toSeq:_*)
+      uncalibrated.enqueue(touched.filterNot(uncalibrated.contains):_*)
       iterations += 1
     }
     uncalibrated.nonEmpty

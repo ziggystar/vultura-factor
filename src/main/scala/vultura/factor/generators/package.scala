@@ -12,7 +12,7 @@ import scala.util.parsing.combinator.JavaTokenParsers
 package object generators {
 
 
-  implicit def fun2SimpleGenerator(f: ( Int, Random) => Array[Double]) = new SimpleGenerator {
+  implicit def fun2SimpleGenerator(f: ( Int, Random) => Array[Double]): SimpleGenerator = new SimpleGenerator {
     def generateValues(numValues: Int, random: Random): Array[Double] = f(numValues,random)
   }
 

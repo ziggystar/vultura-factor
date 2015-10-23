@@ -63,7 +63,7 @@ case class GridH2(cellWidth: Int = 3, cellHeight: Int = 3, cellRows: Int = 3, ce
       random = random
     )
 
-  /** Generates a [[FactoredScheme]], where all variables on the second layer are conditioners, and their conditionees
+  /** Generates a [[vultura.factor.inference.conditioned.lcbp.FactoredScheme]], where all variables on the second layer are conditioners, and their conditionees
     * are the variables on the lower level that are connected with them.
     * @param maxDist
     */

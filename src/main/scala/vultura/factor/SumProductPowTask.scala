@@ -26,7 +26,7 @@ case class SumProductPowTask(domainSizes: Array[Int],
 
   //collect all variables
   val (cliqueOrdering: Array[Int], margVars: Array[Int]) = {
-    val allVars: Array[Int] = allFactors.flatten.toSet.toArray
+    val allVars: Array[Int] = allFactors.flatten.distinct
     //reorder, so that all margVars are at beginning
     val mv: Array[Int] = allVars.filterNot(remainingVars.contains)
     (mv ++ remainingVars,mv)

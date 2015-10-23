@@ -17,7 +17,7 @@ class MeanField(val problem: Problem, val tol: Double = 1e-9, val maxIter: Int =
   private val q: mutable.HashMap[Int,Factor] =
     problem.variables.map(v => v -> Factor.maxEntropy(Array(v),problem.domains,NormalD))(collection.breakOut)
 
-  private val uncalibrated: mutable.Queue[Int] = mutable.Queue[Int](problem.variables.toSeq.sorted:_*)
+  private val uncalibrated: mutable.Queue[Int] = mutable.Queue[Int](problem.variables.sorted:_*)
 
   private var iterations: Int = 0
 
@@ -85,7 +85,7 @@ class MeanField(val problem: Problem, val tol: Double = 1e-9, val maxIter: Int =
 
   def freeEnergyReport: String = {
     val vEntrops: Seq[(Int, Double)] =
-      problem.variables.toSeq.sorted.map(v => v -> NormalD.entropy(q(v).values))
+      problem.variables.sorted.map(v => v -> NormalD.entropy(q(v).values))
     val logExpects: IndexedSeq[(Factor, Double)] =
       problem.factors.map ( f => f -> NormalD.expectation(createQFactor(f.variables).values, f.values.map(math.log)))
 
