@@ -19,8 +19,10 @@ organization := "de.uni-ulm"
 23.2.0:
   - tiny optimization for construction of junction trees
   - add functionality to compute a DAG-Cover to EdgeMapDiGraph
+24.0.0:
+  - add Dist probability monad
 */
-version := "23.2.0"
+version := "24.0.0-DEV"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 
