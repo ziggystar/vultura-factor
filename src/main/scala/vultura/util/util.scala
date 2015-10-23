@@ -79,8 +79,8 @@ package object util {
     def pickRandomOpt(r: Random): Option[A] = if(s.isEmpty) None else Some(s(r.nextInt(s.size)))
   }
 
-  implicit def seq2randomSeq[A](s: Iterable[A]) = new RichRandomSeq(s.toIndexedSeq)
-  implicit def array2randomSeq[A](s: Array[A]) = new RichRandomSeq(s)
+  implicit def seq2randomSeq[A](s: Iterable[A]): RichRandomSeq[A] = new RichRandomSeq(s.toIndexedSeq)
+  implicit def array2randomSeq[A](s: Array[A]): RichRandomSeq[A] = new RichRandomSeq(s)
 
   //convert nested sequences to AArray which provides the crossProduct function
   type AA[A] = Array[Array[A]]
@@ -92,7 +92,7 @@ package object util {
   def crossProduct[T: ClassTag](aa: AA[T]) = new DomainCPI(aa)
   /** Take a random element from each entry in aa. */
   def randomAssignment[T: ClassTag](aa: AA[T], random: Random): Array[T] = aa.map(a => a(random.nextInt(a.length)))
-  implicit def iteratorLast[A](it: Iterator[A]) = new {
+  implicit class RichIterator[A](it: Iterator[A]){
     def last: A = {
       var elem = it.next()
       while(it.hasNext){elem = it.next()}
@@ -119,7 +119,7 @@ package object util {
   }
 
   /** Create several Random objects in a deterministic way from an initial one. */
-  implicit def random2RichRandom(r: Random) = new {
+  implicit class Random2RichRandom(r: Random){
     def split(i: Int): Seq[Random] = {
       val seed = r.nextInt()
       (1 to i).map(n => new Random(seed + n))

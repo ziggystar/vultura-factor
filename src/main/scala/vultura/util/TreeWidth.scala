@@ -243,13 +243,13 @@ object TreeWidth {
 
     val vertices: IndexedSeq[Int] = {
       val bs = new util.BitSet
-      cliques foreach (bs or)
+      cliques foreach bs.or
       bs2Iterator(bs).toIndexedSeq
     }
 
     val neighbours: IndexedSeq[util.BitSet] = vertices map {v =>
       val bs = new util.BitSet
-      cliques filter (_ get v) foreach (bs or)
+      cliques filter (_ get v) foreach bs.or
       bs
     }
 
@@ -263,7 +263,7 @@ object TreeWidth {
         val (collectedCliques, remainingCliques) = cliques partition (_ get elimV)
         val elimClique = {
           val bs = new util.BitSet
-          collectedCliques foreach (bs or _)
+          collectedCliques foreach bs.or
           bs.clear(elimV)
           bs
         }
@@ -340,13 +340,13 @@ object TreeWidth {
 
     val vertices: IndexedSeq[Int] = {
       val bs = new util.BitSet
-      cliques foreach (bs or _)
+      cliques foreach bs.or
       bs2Iterator(bs).toIndexedSeq
     }
 
     val neighbours: IndexedSeq[util.BitSet] = vertices map {v =>
       val bs = new util.BitSet
-      cliques filter (_ get v) foreach (bs or _)
+      cliques filter (_ get v) foreach bs.or
       bs
     }
 

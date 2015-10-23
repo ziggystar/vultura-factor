@@ -22,6 +22,7 @@ package vultura.util;
 
 /**  A variety of high efficiency bit twiddling routines.
  */
+@SuppressWarnings("ALL")
 final public class BitUtil {
 
     /** Returns the number of bits set in the long */
