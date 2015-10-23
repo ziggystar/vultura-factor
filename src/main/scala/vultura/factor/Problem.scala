@@ -18,6 +18,8 @@ case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[
   def filter(p: Factor => Boolean): Problem = this.copy(factors=factors.filter(p))
   def map(p: Factor => Factor): Problem = this.copy(factors=factors.map(p))
 
+  def logFactor(fi: Int): Factor = if(ring == LogD) factors(fi) else factors(fi).map(math.log)
+
   def degreeOfVariable(v: Int): Int = degrees(v)
   def uaiString: String = {
     require(variables.sameElements(0 until variables.size))

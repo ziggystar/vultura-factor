@@ -1,7 +1,7 @@
 package vultura.factor.inference.gbp
 
 import vultura.factor._
-import vultura.factor.inference.{IterativeResult, JointMargI}
+import vultura.factor.inference.{IterativeResult, JointMargI, MargParI}
 import vultura.propagation._
 
 import scala.reflect.ClassTag
@@ -107,8 +107,31 @@ case class ParentToChild(rg: RegionGraph, ring: Ring[Double]) {
       System.arraycopy(p.factors(n.fi).values,0,r,0,r.length)
   }.widen
 
-  def constructResult(iValuation: IValuation[FactorNode], p: Problem): JointMargI = new JointMargI {
+  def constructResult(iValuation: IValuation[FactorNode], p: Problem): MargParI with JointMargI = new MargParI with JointMargI {
     require(rg.problemStructure.isCompatible(p))
+
+    def regionBelief(r: Reg): Factor = RBel(r).make(iValuation)
+    def decodedRegionBelief(r: Reg): Factor = {
+      val f = regionBelief(r)
+      f.copy(values = ring.decode(f.values))
+    }
+
+    /** @return Partition function in encoding specified by `ring`. */
+    override def Z: Double = if(ring == NormalD) math.exp(logZ) else logZ
+    /** @return Natural logarithm of partition function. */
+    override lazy val logZ: Double = averageEnergy + entropy
+
+    def regionEnergy(r: Reg): Double = {
+      val logFactors = rg.factorsOf(r).toSeq.map(p.logFactor)
+      val belief = decodedRegionBelief(r)
+      val summedFactor = Factor.multiplyRetain(LogD)(p.domains)(logFactors,belief.variables)
+      NormalD.expectation(belief.values,summedFactor.values)
+    }
+    lazy val averageEnergy: Double = rg.regions.foldLeft(0d)(_ + regionEnergy(_))
+    lazy val entropy: Double = rg.regions.foldLeft(0d){case (sum,r) =>
+      sum + ring.entropy(regionBelief(r).values) * rg.weightOf(r)
+    }
+
     val regionForVariable: Map[Int,RBel] =
       p.variables.map(v => v -> RBel(rg.regions.find(r => rg.variablesOf(r).contains(v)).get))(collection.breakOut)
 
@@ -129,7 +152,7 @@ case class ParentToChild(rg: RegionGraph, ring: Ring[Double]) {
 }
 
 object ParentToChild{
-  def infer(rg: RegionGraph, problem: Problem, tol: Double = 1e-12, maxIter: Long = 100000): (JointMargI,IterativeResult) = {
+  def infer(rg: RegionGraph, problem: Problem, tol: Double = 1e-12, maxIter: Long = 100000): (MargParI with JointMargI,IterativeResult) = {
     require(rg.problemStructure.isCompatible(problem), "problem doesn't fit region graph")
     val ptc = ParentToChild(rg, problem.ring)
 

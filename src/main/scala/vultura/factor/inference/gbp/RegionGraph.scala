@@ -1,6 +1,11 @@
 package vultura.factor.inference.gbp
 
 import vultura.factor.{Factor, Ring, ProblemStructure}
+import vultura.util._
+import vultura.util.graph.DotGraph
+
+import scala.annotation.tailrec
+import scala.collection.immutable.HashMap
 
 trait RegionGraph {
   def problemStructure: ProblemStructure
@@ -14,7 +19,7 @@ trait RegionGraph {
   def factorsOf(r: Region): Set[FI]
   def weightOf(r: Region): Double
 
-
+  def regionOfFactor(fi: FI): Region = regions.find(r => factorsOf(r).contains(fi)).get
   def regions: Set[Region]
   def parents(r: Region): Set[Region]
   def children(r: Region): Set[Region]
@@ -28,39 +33,76 @@ trait RegionGraph {
   def boundary(r: Region): Set[Region] = interior(r).flatMap(parents) -- interior(r)
 
   def buildResult(regionBeliefs: Region => Factor, ring: Ring[Double]) = ???
+
+  def edges: Set[(Region,Region)] = for{
+    parent <- regions
+    child <- children(parent)
+  } yield parent -> child
+
+  def toDot: DotGraph[Region] = DotGraph.apply(edges)
+}
+
+/** Somewhat efficient implementation of region graph methods. */
+trait ChildMapRG { self: RegionGraph =>
+  protected def childrenInitializer(r: Region): Set[Region]
+  protected lazy val childMap: Map[Region, Set[Region]] =
+    (regions.map(r => r -> childrenInitializer(r))(collection.breakOut): HashMap[Region, Set[Region]]).withDefaultValue(Set())
+  protected lazy val descendantMap: Map[Region, Set[Region]] = transitiveClosure(childMap).withDefaultValue(Set())
+  protected lazy val parentMap =  reverseMultiMap(childMap).withDefaultValue(Set())
+  protected lazy val parentMapTrans = transitiveClosure(parentMap).withDefaultValue(Set())
+
+  final override def children(r: Region): Set[Region] = childMap(r)
+  final override def descendants(r: Region): Set[Region] = descendantMap(r)
+  final override def ancestors(r: Region): Set[Region] = parentMapTrans(r)
+  final override def parents(r: Region): Set[Region] = parentMap(r)
+}
+
+trait OverCountingNumbers {self: RegionGraph =>
+  protected lazy val overCountingNumbers: Map[Region,Int] = {
+    require(regions.nonEmpty, "cannot compute overcounting numbers for empty region graph")
+    val topo = {
+      def findSource(remaining: Set[Region]): Option[Region] = remaining.find(cand => ancestors(cand).intersect(remaining).isEmpty)
+      @tailrec def topoR(acc: List[Region], remaining: Set[Region]): Seq[Region] = if(remaining.isEmpty) acc.reverse else {
+        val next = findSource(remaining).getOrElse(throw new RuntimeException("region graph is cyclic"))
+        topoR(next::acc, remaining - next)
+      }
+      topoR(Nil,regions)
+    }
+    topo.foldLeft(Map[Region,Int]()){case (m,r) => m + (r -> (1 - ancestors(r).foldLeft(0)(_ + m(_))))}
+  }
+  final override def weightOf(r: Region): Double = overCountingNumbers(r).toDouble
 }
 
 case class TwoLayerRG(problemStructure: ProblemStructure,
                       lowerRegions: Set[Set[ProblemStructure#VI]],
                       upperRegions: Set[Set[ProblemStructure#VI]],
-                      factorAssignment: Map[ProblemStructure#FI,Set[ProblemStructure#VI]]) extends RegionGraph {
-  import vultura.util._
-
+                      factorAssignment: Map[ProblemStructure#FI,Set[ProblemStructure#VI]]) extends RegionGraph with ChildMapRG with OverCountingNumbers {
   type Region = Set[VI]
   val regions = lowerRegions ++ upperRegions
 
-  val childMap: Map[Region,Set[Region]] =
-    Map(lowerRegions.toSeq.map(_ -> Set[Region]()) ++ upperRegions.toSeq.map(ur => ur -> lowerRegions.filter(_.subsetOf(ur))):_*).withDefaultValue(Set())
-  val descendantMap: Map[Set[VI], Set[Set[VI]]] = transitiveClosure(childMap).withDefaultValue(Set())
+  override protected def childrenInitializer(r: Set[VI]): Set[Set[VI]] = if(lowerRegions(r)) Set() else lowerRegions.filter(_.subsetOf(r))
 
   val factorsOfRegion: Map[Region,Set[FI]] = regions.map(r => r -> factorAssignment.filter(_._2 == r).keySet).toMap.withDefaultValue(Set())
-  val parentMap =  reverseMultiMap(childMap).withDefaultValue(Set())
-  val parentMapTrans = transitiveClosure(parentMap).withDefaultValue(Set())
 
   override def variablesOf(r: Region): Set[VI] = r
-
-  override def children(r: Region): Set[Region] = childMap(r)
-
   override def factorsOf(r: Region): Set[FI] = factorsOfRegion(r)
+}
 
-  override def descendants(r: Region): Set[Region] = descendantMap(r)
+case class OvercountingRegionGraph(problemStructure: ProblemStructure, regions: Set[Set[ProblemStructure#VI]], factorAssignment: Map[ProblemStructure#FI,Set[ProblemStructure#VI]])
+  extends RegionGraph with ChildMapRG with OverCountingNumbers {
+  type Region = Set[problemStructure.VI]
+  import vultura.util._
 
-  override def ancestors(r: Region): Set[Region] = parentMapTrans(r)
+  val factorsOfRegion: Map[Region,Set[FI]] = regions.map(r => r -> factorAssignment.filter(_._2 == r).keySet).toMap.withDefaultValue(Set())
 
-  override def parents(r: Region): Set[Region] = parentMap(r)
 
-  override def weightOf(r: Region): Double = if(upperRegions(r)) 1d else 1d - parents(r).size
+  override protected def childrenInitializer(r: Set[problemStructure.VI]): Set[Set[problemStructure.VI]] = {
+    val ancs = regions.filter(_.subsetOf(r)) - r
+    ancs.filter(r => !ancs.exists(anc => r.subsetOf(anc) && anc != r))
+  }
 
+  override def factorsOf(r: Set[VI]): Set[FI] = factorsOfRegion(r)
+  override def variablesOf(r: Set[VI]): Set[VI] = r
 }
 
 object RegionGraph {
