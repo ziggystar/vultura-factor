@@ -1,5 +1,7 @@
 package vultura.factor.inference.gbp
 
+import java.util.logging.Logger
+
 import vultura.factor._
 import vultura.factor.inference.{IterativeResult, JointMargI, MargParI}
 import vultura.propagation._
@@ -11,6 +13,12 @@ case class ParentToChild(rg: RegionGraph, ring: Ring[Double]) {
   type FI = rg.FI
 
   type Reg = rg.Region
+
+  {
+    val issues = rg.issues
+    if(issues.nonEmpty)
+      Logger.getLogger("vultura.factor").warning("region graph issues:\t" + issues.mkString("\n\t"))
+  }
 
   private val ps: ProblemStructure = rg.problemStructure
   val domains = ps.domains

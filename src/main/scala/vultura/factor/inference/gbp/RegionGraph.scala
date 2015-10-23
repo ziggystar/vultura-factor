@@ -39,6 +39,15 @@ trait RegionGraph {
     child <- children(parent)
   } yield parent -> child
 
+  def issues: Seq[String] = {
+    //all factors are in top regions
+    val innerFactors = regions.filter(parents(_).nonEmpty) //exists child regions
+      .exists(factorsOf(_).nonEmpty)                        //that has factors assigned?
+    Seq(
+      Some("there exist inner factors").filter(_ => innerFactors)
+    ).flatten
+  }
+
   def toDot: DotGraph[Region] = DotGraph.apply(edges)
 }
 
@@ -91,7 +100,6 @@ case class TwoLayerRG(problemStructure: ProblemStructure,
 case class OvercountingRegionGraph(problemStructure: ProblemStructure, regions: Set[Set[ProblemStructure#VI]], factorAssignment: Map[ProblemStructure#FI,Set[ProblemStructure#VI]])
   extends RegionGraph with ChildMapRG with OverCountingNumbers {
   type Region = Set[problemStructure.VI]
-  import vultura.util._
 
   val factorsOfRegion: Map[Region,Set[FI]] = regions.map(r => r -> factorAssignment.filter(_._2 == r).keySet).toMap.withDefaultValue(Set())
 
@@ -106,9 +114,12 @@ case class OvercountingRegionGraph(problemStructure: ProblemStructure, regions: 
 }
 
 object RegionGraph {
-  def betheRG(ps: ProblemStructure): TwoLayerRG = TwoLayerRG(ps,
-    lowerRegions = ps.variables.map(Set(_))(collection.breakOut),
-    upperRegions = ps.scopeOfFactor.map(_.toSet)(collection.breakOut),
-    factorAssignment = ps.factorIndices.map(fi => fi -> ps.scopeOfFactor(fi).toSet)(collection.breakOut)
-  )
+  def betheRG(ps: ProblemStructure): TwoLayerRG = {
+    val upper: SSet[Int] = new SSet(ps.scopeOfFactor.map(_.toSet)(collection.breakOut))
+    TwoLayerRG(ps,
+      lowerRegions = ps.variables.map(Set(_))(collection.breakOut),
+      upperRegions = upper.maximalSets,
+      factorAssignment = ps.factorIndices.map(fi => fi -> upper.maximalSuperSetsOf(ps.scopeOfFactor(fi).toSet).head)(collection.breakOut)
+    )
+  }
 }
