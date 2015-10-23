@@ -2,7 +2,6 @@ package vultura.factor.generation
 
 
 import org.specs2.mutable.Specification
-import vultura.factor.generation.graph
 
 import scala.util.Random
 

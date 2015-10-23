@@ -1,7 +1,6 @@
 package vultura.factor
 
 import org.specs2._
-import org.scalacheck._
 import Utils._
 
 /**
@@ -9,13 +8,8 @@ import Utils._
  * User: Thomas Geier
  * Date: 4/9/13
  */
-class LogDTest extends Specification with ScalaCheck {
+class LogDTest extends Specification {
   import math.{log,exp}
-
-  val distribution = Gen.containerOf[Vector,Double](Gen.posNum[Double])
-    .filter(_.size > 0)
-    .filter(_.sum > 0)
-    .map(ps => ps.map(_ / ps.sum))
 
   def is =
     "simple sum" ! (LogD.sum(log(3),log(4)) must beCloseTo(log(7),0.01)) ^
@@ -30,8 +24,5 @@ class LogDTest extends Specification with ScalaCheck {
     "normalization" ! (LogD.normalize(AD(log(1),log(2),log(3))).map(exp).sum must be closeTo(1d,1e-5)) ^
     "expectation" ! (LogD.expectation(AD(log(0.2),log(0.8)),AD(10,20)) must be closeTo(18d,1e-5)) ^
     "entropy" ! (LogD.entropy(AD(log(0.2),log(0.8))) must be closeTo(0.5004d,1e-5)) ^
-    "entropy 2" ! Prop.forAll(distribution) { (dist: Seq[Double]) =>
-      LogD.entropy(LogD.encode(dist.toArray)) must be closeTo(NormalD.entropy(dist.toArray), 0.001)
-    } ^
     "log expectation with zeros" ! (LogD.logExpectation(Array(Double.NegativeInfinity,0), Array(Double.NegativeInfinity,0)) === 0d)
 }
