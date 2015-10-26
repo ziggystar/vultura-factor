@@ -14,28 +14,26 @@ trait HyperGraph[X,N] {
   *
   * @tparam X
   * @tparam N
-  * @tparam E
   */
-trait DirectedGraph[X,N,E] {
+trait DirectedGraph[X,N] {
   def nodes(x: X): Set[N]
-  def successors(x: X, node: N): Set[E]
+  def successors(x: X, node: N): Set[N]
 }
 
 /** Type-class for undirected graphs.
   *
   * @tparam X
   * @tparam N
-  * @tparam E
   */
-trait UndirectedGraph[X,N,E] {
+trait UndirectedGraph[X,N] {
   def nodes(x: X): Set[N]
-  def edges(x: X): Set[E]
-  def incident(x: X, e: E): BiSet[N]
+  def neighbours(x: X, n: N): Set[N]
 }
 
 object UndirectedGraph {
-  def fromDirectedGraph[X,N,E](implicit dg: DirectedGraph[X,N,E]): UndirectedGraph[X,N,E] = new UndirectedGraph[X,N,E] {
+  def fromDirectedGraph[X,N,E](implicit dg: DirectedGraph[X,N]): UndirectedGraph[X,N] = new UndirectedGraph[X,N] {
     override def nodes(x: X): Set[N] = dg.nodes(x)
-    override def neighbours(x: X, node: N): Set[N] =
+    override def neighbours(x: X, n: N): Set[N] =
+      dg.successors(x,n) ++ dg.nodes(x).filter(dg.successors(x,_).contains(n))
   }
 }

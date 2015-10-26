@@ -4,6 +4,7 @@ import java.io.{File, FileOutputStream, PrintStream}
 
 import scala.sys.process._
 
+@deprecated("use vultura.graph.graphviz._ instead","23.0.0")
 /** A directed graphviz graph. */
 case class DotGraph[N](edges: Iterable[(N,N)],
                        additionalNodes: Iterable[N] = Set(),
