@@ -1,7 +1,7 @@
 package vultura.factor.inference.calibration
 
 import vultura.factor.inference.{JointMargI, MargParI}
-import vultura.factor.{Var, Factor, Problem, SumProductTask}
+import vultura.factor.{Factor, Problem, SumProductTask, Var}
 
 import scala.collection.mutable
 
@@ -14,6 +14,7 @@ case class LBP(problem: Problem) {
     final type TOut = Array[Double]
     def create: TOut = new Array[Double](problem.domains(v))
     override def copy(t: TOut): TOut = t.clone()
+    override def prettyPrint(t: Array[Double]): String = t.map(_.formatted("%.3f")).mkString(",")
   }
 
   case class V2F(v: Int, fi: Int) extends BPMessage {

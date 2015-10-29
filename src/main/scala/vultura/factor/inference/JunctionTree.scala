@@ -47,7 +47,7 @@ class JunctionTree(val problem: Problem, val variableOrderer: VariableOrderer = 
   override def encodedVarBelief(vi: Int): Factor = marginalCache.getOrElseUpdate(vi, cliqueBelief(Array(vi)))
 
   /** @return Natural logarithm of partition function. */
-  override def logZ: Double = mlogZ
+  override def logZ: Double = if(problem.ring == LogD) mlogZ else math.log(mlogZ)
 
   /** Throws if no clique contains `vars`.
     * @return Normalized belief over given variables in encoding specified by problem ring. */

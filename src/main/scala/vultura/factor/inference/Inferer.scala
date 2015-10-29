@@ -91,7 +91,13 @@ trait IterativeResult {
   def maxDiff: Double
 }
 
-case class ConvergenceStats(iterations: Long, maxDiff: Double, isConverged: Boolean)
+case class ConvergenceStats(iterations: Long, maxDiff: Double, isConverged: Boolean) {
+  def max(other: ConvergenceStats) = ConvergenceStats(
+    iterations max other.iterations,
+    maxDiff max other.maxDiff,
+    isConverged && other.isConverged
+  )
+}
 
 trait VariationalResult extends MargParI {
   def averageEnergy: Double
