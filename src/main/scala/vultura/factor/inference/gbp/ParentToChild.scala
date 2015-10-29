@@ -124,8 +124,6 @@ case class ParentToChild(rg: RegionGraph, ring: Ring[Double]) {
       f.copy(values = ring.decode(f.values))
     }
 
-    /** @return Partition function in encoding specified by `ring`. */
-    override def Z: Double = if(ring == NormalD) math.exp(logZ) else logZ
     /** @return Natural logarithm of partition function. */
     override lazy val logZ: Double = averageEnergy + entropy
 
@@ -152,7 +150,7 @@ case class ParentToChild(rg: RegionGraph, ring: Ring[Double]) {
     }
 
     /** @return marginal distribution of variable in encoding specified by `ring`. */
-    override def variableBelief(vi: Val): Factor =
+    override def encodedVarBelief(vi: Val): Factor =
       Factor.multiplyRetain(ring)(p.domains)(Seq(regionForVariable(vi).make(iValuation)),Array(vi))
 
     override def problem: Problem = p

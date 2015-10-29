@@ -39,8 +39,8 @@ package object generation {
   }
   
   def problemGenerator[N](graph: Generator[Graph[N]], 
-                          domains: Domainification[N], 
-                          param: Parameterization[N]): Generator[LabeledProblem[N]] = 
+                          domains: Domainification[N] = FixedDomainsSize(2),
+                          param: Parameterization[N] = IIDValuedParam(Generator.uniform(-1,1))): Generator[LabeledProblem[N]] =
     for{
       g <- graph
       ps <- domains.addDomains(g)

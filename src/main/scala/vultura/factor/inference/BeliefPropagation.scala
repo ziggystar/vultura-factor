@@ -212,9 +212,6 @@ extends MargParI with JointMargI with Iterator[MargParI] {
     factors = cg.neighbours(ci).map(from => lookUpMessage(from,ci).factor) :+ cg.clusterFactors(ci),
     cg.clusterFactors(ci).variables).normalize(ring))
 
-  override def variableBelief(vi: Int): Factor = clusterBelief(singleVariableClusters(vi))
-
-
   /** Throws if no clique contains `vars`.
     * @return Normalized belief over given variables in encoding specified by problem ring. */
   override def cliqueBelief(vars: Array[Var]): Factor = {
@@ -272,8 +269,8 @@ extends MargParI with JointMargI with Iterator[MargParI] {
     }
   }
 
-  /** @return Partition function in encoding specified by `ring`. */
-  def Z: Double = if(ring == LogD) logZ else ring.encode(Array(math.exp(logZ)))(0)
+  /** @return marginal distribution of variable in encoding specified by `ring`. */
+  override def encodedVarBelief(variable: Var): Factor = clusterBelief(singleVariableClusters(variable))
 
   def iteration: Int = iterations
 

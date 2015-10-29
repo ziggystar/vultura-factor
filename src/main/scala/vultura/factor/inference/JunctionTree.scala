@@ -19,8 +19,6 @@ class JunctionTree(val problem: Problem, val variableOrderer: VariableOrderer = 
     (calibratedTreesWithZ.map(_._1),problem.ring.prodA(calibratedTreesWithZ.map(_._2)(collection.breakOut)))
   }
 
-  val Z = mlogZ
-
   lazy val calibratedCliques: Map[Set[Var],Factor] =
     calibratedTrees.flatMap(_.flatten).groupBy(_.variables.toSet).map{case (k,v) => k -> v.head}
   lazy val ssetCliques = new SSet(calibratedCliques.keySet)
@@ -46,7 +44,10 @@ class JunctionTree(val problem: Problem, val variableOrderer: VariableOrderer = 
   private val marginalCache = new mutable.HashMap[Int, Factor]()
 
   /** @return marginal distribution of variable in encoding specified by `ring`. */
-  override def variableBelief(vi: Int): Factor = marginalCache.getOrElseUpdate(vi, cliqueBelief(Array(vi)))
+  override def encodedVarBelief(vi: Int): Factor = marginalCache.getOrElseUpdate(vi, cliqueBelief(Array(vi)))
+
+  /** @return Natural logarithm of partition function. */
+  override def logZ: Double = mlogZ
 
   /** Throws if no clique contains `vars`.
     * @return Normalized belief over given variables in encoding specified by problem ring. */

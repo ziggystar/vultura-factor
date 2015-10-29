@@ -1,7 +1,7 @@
 package vultura.factor.inference.conditioned
 
 import vultura.factor.inference._
-import vultura.factor.{Factor, Problem}
+import vultura.factor.{LogD, Factor, Problem}
 import vultura.util.seq2randomSeq
 
 import scala.collection.mutable
@@ -92,8 +92,8 @@ class CBP(val problem: Problem,
     new BeliefPropagation(p, new Random(seed),bpTol,bpMaxiter)
   }
 
-  /** @return Partition function in encoding specified by `ring`. */
-  def Z: Double = ring.sumA(conditionedPRs)
+  /** @return Natural logarithm of partition function. */
+  override def logZ: Double = (if (problem.ring == LogD) identity[Double] _ else math.exp _)(ring.sumA(conditionedPRs))
 
   /** @return The entropy of the distribution over the condition. */
   def conditionEntropy: Double = ring.entropy(ring.normalize(conditionedPRs))
@@ -102,13 +102,13 @@ class CBP(val problem: Problem,
 
   private val beliefCache = new mutable.HashMap[Int,Factor]
 
-  def variableBelief(vi: Int): Factor = beliefCache.getOrElseUpdate(vi,(queue ++ exactlySolved).map{ case (assignment,bp) =>
+  def encodedVarBelief(vi: Int): Factor = beliefCache.getOrElseUpdate(vi,(queue ++ exactlySolved).map{ case (assignment,bp) =>
     //if the variable is conditioned, construct a factor f with f(v) = bp.Z for v == assigned value and 0 else
     val z = bp.Z
     val range: Range = 0 until domains(vi)
     assignment.get(vi)
       .map(xi => Factor(Array(vi), range.map(yi => if (yi == xi) z else ring.zero)(collection.breakOut)))
-      .getOrElse(bp.variableBelief(vi).map(ring.prod(_,z)))
+      .getOrElse(bp.encodedVarBelief(vi).map(ring.prod(_,z)))
   }.reduce[Factor]{ case (f1,f2) => Factor(f1.variables,f1.values.zip(f2.values).map(t => ring.sum(t._1,t._2)))}
     .normalize(problem.ring))
 

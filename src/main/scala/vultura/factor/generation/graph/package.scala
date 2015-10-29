@@ -47,4 +47,17 @@ package object graph {
 
   def unconnected(nodes: Int): Graph[Int] = Graph(Set(0 until nodes:_*), Set())
   def singleCycle(nodes: Int): Graph[Int] = lattice(nodes -> true).map(_.head)
+  def path(nodes: Int): Graph[Int] =
+    Graph[Int](Set(0 until nodes:_*), (0 until nodes).sliding(2).map(_.toSet).toSet)
+
+  /** Generate a random tree by attaching each new node to a random existing node.
+    * Can have very large degree. */
+  def randomTree(size: Int): Generator[Graph[Int]] = Generator{ r =>
+    val nodes = 0 until size
+    val edges = for{
+      child <- nodes.tail
+      parent = r.nextInt(child)
+    } yield Set(child,parent)
+    Graph(nodes.toSet, edges.toSet)
+  }
 }

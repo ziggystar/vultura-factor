@@ -136,16 +136,11 @@ class LcbpMetaBP(val scheme: FactoredScheme, val maxUpdates: Long = 1000000, val
     maxUpdates,
     initializer)
 
-  /** @return Partition function in encoding specified by `ring`. */
-  override def Z: Double = if(problem.ring == LogD) calibrator.edgeValue(cdLogZ).value
-  else math.exp(calibrator.edgeValue(cdLogZ).value)
-
   /** @return Natural logarithm of partition function. */
   override def logZ: Double = calibrator.edgeValue(cdLogZ).value
 
-
   /** @return marginal distribution of variable in encoding specified by `ring`. */
-  override def variableBelief(vi: Var): Factor = {
+  override def encodedVarBelief(vi: Var): Factor = {
     val conditions: Array[Condition] = scheme.conditionsOf(Set(vi)).toArray
     val metaScope_x: Set[MFI] = scheme.conditionersOf(Set(vi)).map(var2metaVar(_))
     //find the correct meta factor (it has to exist)

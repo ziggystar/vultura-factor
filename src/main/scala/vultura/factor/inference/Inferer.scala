@@ -9,21 +9,32 @@ trait Inferer {
 
 /** Trait that is implemented by inference algorithms that can compute variable marginals. */
 trait MarginalI extends Inferer {
-  def decodedVariableBelief(vi: Int): Factor =
-    if(problem.ring != NormalD) problem.ring.decode(variableBelief(vi)) else variableBelief(vi)
+  @deprecated("use varBelief")
+  def decodedVariableBelief(vi: Int): Factor = varBelief(vi)
+
   /** @return marginal distribution of variable in encoding specified by `ring`. */
-  def variableBelief(vi: Int): Factor
+  @deprecated("use encodedVariableBelief")
+  def variableBelief(vi: Int): Factor = encodedVarBelief(vi)
+  
+  /** @return marginal distribution of variable in encoding specified by `ring`. */
+  def encodedVarBelief(variable: Int): Factor
+  /** (Estimated) variable belief, in normal encoding. */
+  def varBelief(variable: Int): Factor =
+    if(problem.ring != NormalD) problem.ring.decode(encodedVarBelief(variable)) else encodedVarBelief(variable)
+
   /** @return marginal distribution of variable in log encoding. */
   def logVariableBelief(vi: Int): Factor  =
-    if(problem.ring == LogD) variableBelief(vi) else LogD.encode(decodedVariableBelief(vi))
+    if(problem.ring == LogD) encodedVarBelief(vi) else LogD.encode(varBelief(vi))
 }
 
 /** Trait that is implemented by inference algorithms that can compute the partition function. */
 trait ParFunI extends Inferer {
   /** @return Natural logarithm of partition function. */
-  def logZ: Double = problem.ring.log(Z)
+  def logZ: Double
   /** @return Partition function in encoding specified by `ring`. */
-  def Z: Double
+  @deprecated("use only logZ")
+  def Z: Double = math.exp(logZ)
+  @deprecated("use only logZ")
   def decodedZ: Double = problem.ring.decode(Array(Z))(0)
 }
 
@@ -57,11 +68,12 @@ trait MPEI { self: Inferer =>
 
 class Result(mpi: MargParI) extends MargParI {
   override val problem: Problem = mpi.problem
-  def lookupFromMPI(x: MargParI): Array[Array[Double]] = x.problem.variables.indices.map(v => x.variableBelief(v).values)(collection.breakOut)
+  def lookupFromMPI(x: MargParI): Array[Array[Double]] = x.problem.variables.indices.map(v => x.encodedVarBelief(v).values)(collection.breakOut)
   val marginals: Array[Array[Double]] = lookupFromMPI(mpi)
-  override val logZ = mpi.logZ
+
   /** @return marginal distribution of variable in encoding specified by `ring`. */
-  def variableBelief(vi: Int): Factor = Factor(Array(vi),marginals(vi))
+  override def encodedVarBelief(vi: Var): Factor =  Factor(Array(vi),marginals(vi))
+  override val logZ = mpi.logZ
   /** @return Partition function in encoding specified by `ring`. */
   override def Z: Double = math.exp(logZ)
 
@@ -77,4 +89,20 @@ trait IterativeResult {
   def isConverged: Boolean
   def iterations: Long
   def maxDiff: Double
+}
+
+case class ConvergenceStats(iterations: Long, maxDiff: Double, isConverged: Boolean)
+
+trait VariationalResult extends MargParI {
+  def averageEnergy: Double
+  def entropy: Double
+
+  /** @return Natural logarithm of partition function. */
+  override def logZ: Double = averageEnergy + entropy
+}
+
+trait RegionBeliefs[R] {
+  def regions: Set[R]
+  def regionBelief(region: R): Factor
+  def scopeOfRegion(region: R): Set[Int]
 }

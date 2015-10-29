@@ -148,14 +148,11 @@ case class LCBPGeneral(scheme: FactoredScheme,
     maxUpdates,
     initializer)
 
-  /** @return Partition function in encoding specified by `ring`. */
-  override def Z: Double = math.exp(calibrator.edgeValue(cdLogZ).value)
-
   /** @return Natural logarithm of partition function. */
   override def logZ: Double = calibrator.edgeValue(cdLogZ).value
 
   /** @return marginal distribution of variable in encoding specified by `ring`. */
-  override def variableBelief(vi: Var): Factor = {
+  override def encodedVarBelief(vi: Var): Factor = {
     val conditions: Seq[Condition] = scheme.conditionsOf(Set(vi)).toSeq
     val conditionClique = calibrator.edgeValue(MetaProblem).elem //get meta distribution
       .decodedCliqueBelief(scheme.conditionersOf(Set(vi)).map(mcVariablesIdx.forward).toArray.sorted)

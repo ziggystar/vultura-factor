@@ -206,15 +206,15 @@ class SinglyLCMF(val problem: Problem, val scheme: SimpleScheme, val tol: Double
   def iteration: Int = iterations
 
   /** @return marginal distribution of variable in encoding specified by `ring`. */
-  def variableBelief(vi: Int): Factor = estimatedDistribution(Array(vi))
+  def encodedVarBelief(vi: Int): Factor = estimatedDistribution(Array(vi))
 
   /** @return Partition function in encoding specified by `ring`. */
-  def Z: Double = {
+  lazy val logZ: Double = {
     val conditionEntropies = cWeights.map(x => NormalD.entropy(x._2.values))
     val logExp = problem.factors.map(logExpectation(_))
     val variableEntropy = problem.variables.map(expectedVariableEntropy(_))
 
-    math.exp(variableEntropy.sum + logExp.sum + conditionEntropies.sum)
+    variableEntropy.sum + logExp.sum + conditionEntropies.sum
   }
 
   def verboseDescription: String = {

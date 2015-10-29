@@ -1,6 +1,6 @@
 package vultura.factor.inference
 
-import vultura.factor.{Factor, Problem}
+import vultura.factor.{NormalD, Factor, Problem}
 
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
@@ -18,4 +18,7 @@ case class VariableElimination(problem: Problem, orderer: VariableOrderer = MinD
     require(resultFactors.forall(_.variables.isEmpty), "order did not cover all variables")
     problem.ring.prodA(resultFactors.map(_.values(0))(collection.breakOut))
   }
+
+  /** @return Natural logarithm of partition function. */
+  override def logZ: Double = if(problem.ring == NormalD) math.log(Z) else Z
 }

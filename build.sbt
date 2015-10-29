@@ -27,6 +27,8 @@ organization := "de.uni-ulm"
 22.5.2: fix bug in parameter learning introduced in commit 6f8550e742114ab6aed9e07da0770d011d120b51
 23.0.0: add new problem generator library; see readme
 23.0.2-DEV: add nicer generator code
+  - deprecate some methods in inference result traits (e.g. only logZ remains for partition function)
+  - remove buggy mean-field
 */
 version := "23.0.2-DEV"
 

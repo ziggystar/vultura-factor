@@ -250,7 +250,7 @@ class LCBP(val problem: Problem,
   }
 
   /** @return marginal distribution of variable in encoding specified by `ring`. */
-  override def variableBelief(vi: Int): Factor = {
+  override def encodedVarBelief(vi: Int): Factor = {
     val conditions = scheme.variableConditions(vi).toArray
     val conditionedBeliefs: IndexedSeq[Factor] = conditions.map(c => calibrator.edgeValue(VariableBelief(vi,c)))
     val logWeights: Array[Double] = conditions.map{c =>

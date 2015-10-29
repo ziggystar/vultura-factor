@@ -106,8 +106,9 @@ trait BPResult extends MargParI with JointMargI {
   def messageValue(m: Message): Factor = Factor(m.variables,rawMessageValue(m))
 
   def problem: Problem
-  /** @return marginal distribution of variable in encoding specified by `ring`. */
-  override def variableBelief(vi: Int): Factor =
+
+    /** @return marginal distribution of variable in encoding specified by `ring`. */
+  override def encodedVarBelief(vi: Int): Factor =
     Factor.multiply(problem.ring)(problem.domains)(problem.factorIdxOfVariable(vi).map(fi => messageValue(F2VMsg(fi,vi)))).normalize(problem.ring)
 
   def factorBelief(fi: Int): Factor = {
@@ -158,9 +159,6 @@ trait BPResult extends MargParI with JointMargI {
     val result = logExp + factorEntropy + variableEntropy
     result
   }
-
-  /** @return Partition function in encoding specified by `ring`. */
-  override def Z: Double = math.exp(logZ)
 }
 
 /** Stores just the raw message values of a BP run.

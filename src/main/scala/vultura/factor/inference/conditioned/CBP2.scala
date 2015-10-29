@@ -103,7 +103,7 @@ class ConditionedInference[State <: AnyRef,LSI,VSI](val problem: Problem,
 
 
   /** @return marginal distribution of variable in encoding specified by `ring`. */
-  override def variableBelief(vi: Int): Factor = problem.ring.encode(decodedVariableBelief(vi))
+  override def encodedVarBelief(vi: Int): Factor = problem.ring.encode(decodedVariableBelief(vi))
 
   /** @return Partition function in encoding specified by `ring`. */
   override def Z: Double = math.exp(this.logZ)
