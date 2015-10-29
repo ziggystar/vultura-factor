@@ -66,8 +66,9 @@ trait MutableRng {
 }
 
 object MutableRng {
-  import scala.util.{Random => SRandom}
   import java.util.{Random => JRandom}
+
+  import scala.util.{Random => SRandom}
 
   implicit class ScalaRandomMutableRng(random: SRandom) extends MutableRng {
     /** @return Uniform int in range [0,max[. */

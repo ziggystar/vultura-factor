@@ -9,8 +9,8 @@ import scala.sys.process._
 
 case class DotGraph[N,E](nodes: Iterable[N],
                          edges: Iterable[E],
-                         nodeAttributes: Map[N,Seq[NAttr]] = Map(),
-                         edgeAttributes: Map[E,Seq[EAttr]] = Map()) {
+                         nodeAttributes: Map[N,Seq[NAttr]] = Map[N,Seq[NAttr]](),
+                         edgeAttributes: Map[E,Seq[EAttr]] = Map[E,Seq[EAttr]]()) {
   lazy val nodeIndex = new SIIndex[N](nodes)
   lazy val edgeIndex = new SIIndex[E](edges)
 
@@ -18,15 +18,16 @@ case class DotGraph[N,E](nodes: Iterable[N],
   def edgeID(e: E) = s"e${edgeIndex.forward(e)}"
 
   def addNodeAttribute(attr: PartialFunction[N,NAttr]): DotGraph[N,E] = this.copy(
-    nodeAttributes = nodeIndex.elements.collect{case n if attr.isDefinedAt(n) => n -> attr(n)}.foldLeft(nodeAttributes){
-      case (attrs,(n,addition)) => attrs.updated(n,attrs.get(n).map(_ :+ addition).getOrElse(Seq()))
-    }
+    nodeAttributes = nodeIndex.elements.map{ n =>
+        n -> (nodeAttributes.getOrElse(n,Seq()) ++ attr.lift(n).map(Seq(_)).getOrElse(Seq()))
+    }(collection.breakOut)
   )
+
   def addEdgeAttribute(attr: PartialFunction[E,EAttr]): DotGraph[N,E] = this.copy(
-    edgeAttributes = edgeIndex.elements.collect{case e if attr.isDefinedAt(e) => e -> attr(e)}.foldLeft(edgeAttributes){
-      case (attrs,(e,addition)) => attrs.updated(e,attrs.get(e).map(_ :+ addition).getOrElse(Seq()))
-    }
-  )
+    edgeAttributes = edgeIndex.elements.map{ n =>
+        n -> (edgeAttributes.getOrElse(n,Seq()) ++ attr.lift(n).map(Seq(_)).getOrElse(Seq()))
+      }(collection.breakOut)
+    )
 
   def labelNodes(labels: PartialFunction[N,String]): DotGraph[N,E] = addNodeAttribute(labels andThen (Label(_)))
   def labelEdges(labels: PartialFunction[E,String]): DotGraph[N,E] = addEdgeAttribute(labels andThen (Label(_)))
@@ -37,14 +38,15 @@ case class DotGraph[N,E](nodes: Iterable[N],
   def renderDot(implicit dir: Dir[N,E]): String = Seq(
     s"${dir.header} automated {",
     nodeIndex.elements.map(nodeString).mkString("\n"),
-    edgeIndex.elements.map(e => e -> dir.incidentNodes(e))
-      .map{case (e,(n1,n2)) => dir.edgeString(nodeID(n1), nodeID(n2), edgeAttributes(e))}
+    edgeIndex.elements
+      .map(e => e -> dir.incidentNodes(e))
+      .map{case (e,(n1,n2)) => dir.edgeString(nodeID(n1), nodeID(n2), edgeAttributes.getOrElse(e,Seq()))}
       .mkString("\n"),
     "}"
   ).mkString("\n")
 
   /** Render the graph dot->pdf. Producing `baseName.dot` and `baseName.pdf`*/
-  def renderPDF(baseName: File)(implicit dir: Dir[N,E]): Unit = {
+  def renderPDF(baseName: String)(implicit dir: Dir[N,E]): Unit = {
     val out = new PrintStream(new FileOutputStream(baseName + ".dot"))
     out.print(renderDot)
     out.close()

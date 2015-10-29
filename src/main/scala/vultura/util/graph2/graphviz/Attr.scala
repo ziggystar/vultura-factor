@@ -7,7 +7,7 @@ sealed trait NAttr extends Attr
 sealed trait EAttr extends Attr
 
 case class Label(text: String) extends NAttr with EAttr {
-  override def dotString: String = s"label=$text"
+  override def dotString: String = s"""label="$text""""
 }
 
 case class Color(colorName: String) extends NAttr with EAttr {

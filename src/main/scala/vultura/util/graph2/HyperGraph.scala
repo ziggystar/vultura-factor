@@ -1,7 +1,5 @@
 package vultura.util.graph2
 
-import scala.collection.mutable
-
 /** Type-class for hyper graphs. Edges are represented as sets of nodes.
   * @tparam X This class represents the hyper-graph.
   * @tparam N The node type. */

@@ -2,9 +2,9 @@ package vultura.util
 
 import java.util
 
-import FastBitSet._
-import graph.Tree
-import Tree._
+import vultura.util.FastBitSet._
+import vultura.util.graph.Tree
+import vultura.util.graph.Tree._
 
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
