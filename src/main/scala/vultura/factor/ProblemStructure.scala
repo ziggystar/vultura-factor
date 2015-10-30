@@ -51,7 +51,8 @@ trait ProblemStructure {
     }
     result
   }
-  /** The index with variable index `vi`, yields the neighbours of the variable, without `vi`. */
+  /** The index with variable index `vi`, yields the variable nodes that are neighbours of the
+    * variable `vi` in the Markov network, excluding `vi` itself. */
   lazy val neighboursOfVariableEx: Array[Array[VI]] =
     factorIdxOfVariable.zipWithIndex.map{ case (fs,v) => fs.flatMap(fi => scopeOfFactor(fi)).filterNot(_ == v) }
   lazy val neighboursOfVariableInc: Array[Array[VI]] =

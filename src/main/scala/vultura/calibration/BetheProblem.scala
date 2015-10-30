@@ -3,17 +3,19 @@ package vultura.calibration
 import vultura.factor._
 import vultura.factor.inference._
 import vultura.util.SSet
-import vultura.util.graph2.graphviz.Directed
 
 /** Belief propagation on the factor graph representation. */
-case class BetheProblem(ps: Problem) extends CalProblem {
+case class BetheProblem(ps: Problem)
+  extends CalProblem
+  with ResultBuilder[RegionBeliefs[Either[Problem#VI, Problem#FI]] with VariationalResult] {
   require(
     new SSet[Int](ps.scopeOfFactor.map(_.toSet).toSet).maximalSets.size == ps.factors.size,
     "no factor scope may be subset of another one, simplify problem first")
 
   type VI = ps.VI
-
   type FI = ps.FI
+
+  type E = FactorEdge
 
   val aggregateFactors = new SSet[Int](ps.scopeOfFactor.map(_.toSet).toSet)
 
@@ -50,53 +52,33 @@ case class BetheProblem(ps: Problem) extends CalProblem {
     }
   }
 
-  override def edges: Set[Edge] =
+  override def edges: Set[E] =
     (for (vi <- ps.variables; fi <- ps.factorIdxOfVariable(vi); e <- Seq(F2V(fi, vi), V2F(vi, fi))) yield e)(collection.breakOut)
 
   /** Constructs a new initial value for each edge. */
-  override def initializer: Edge => LRep = e => Array.fill[Double](e.arraySize)(ps.ring.one)
+  override def initializer: E => LRep = e => Array.fill[Double](e.arraySize)(ps.ring.one)
 
-  def buildResult(valuation: Edge => LRep): MargParI = ???
-}
-
-object BetheProblem {
-  type ResultType = RegionBeliefs[Either[Problem#VI, Problem#FI]] with VariationalResult
-  /**
-   * @param p Inference problem.
-   * @param tol Maximum difference in element-wise message values that is considered converged.
-   * @param maxIterations Maximum number of outer loops (all edges may be updated in one iteration).
-   * @param damping 0 is no damping, 1 is no frozen (illegal).
-   */
-  def infer(p: Problem, tol: Double = 1e-12, maxIterations: Long = 100000, damping: Double = 0): (ResultType,ConvergenceStats) = {
-
-    val calProb = BetheProblem(p)
-    val calibrator = new Calibrator[calProb.type](calProb)
-
-    val stats = calibrator.calibrate(maxIterations,tol,damping)
-
-    val labeled = calibrator.computationGraph.labelNodes { case x =>
-      s"$x\n${calibrator.edgeState(x).map(_.formatted("%.3f")).mkString(",")}"
-    }
+  override def buildResult(valuation: FactorEdge => LRep)
+  : RegionBeliefs[Either[Problem#VI, Problem#FI]] with VariationalResult = {
 
     def encodedVariableBelief(v: Int): Factor = {
-      val incoming = p.factorIdxOfVariable(v).map{ fi =>
-        Factor(Array(v), calibrator.edgeState(calibrator.cp.F2V(fi,v)))
+      val incoming = ps.factorIdxOfVariable(v).map{ fi =>
+        Factor(Array(v), valuation(F2V(fi,v)))
       }
-      Factor.multiply(p.ring)(p.domains)(incoming).normalize(p.ring)
+      Factor.multiply(ps.ring)(ps.domains)(incoming).normalize(ps.ring)
     }
 
     def encodedFactorBelief(fi: Int): Factor = {
-      val incoming = p.scopeOfFactor(fi).map{ vi =>
-        Factor(Array(vi), calibrator.edgeState(calibrator.cp.V2F(vi,fi)))
+      val incoming = ps.scopeOfFactor(fi).map{ vi =>
+        Factor(Array(vi), valuation(V2F(vi,fi)))
       }
-      Factor.multiply(p.ring)(p.domains)(incoming :+ p.factors(fi)).normalize(p.ring)
+      Factor.multiply(ps.ring)(ps.domains)(incoming :+ ps.factors(fi)).normalize(ps.ring)
     }
 
-
-    val result = new RegionBeliefs[Either[Problem#VI, Problem#FI]] with VariationalResult {
+    new RegionBeliefs[Either[Problem#VI, Problem#FI]] with VariationalResult {
       type R = Either[Problem#VI, Problem#FI]
 
-      override def regions: Set[R] = (p.variables.map(Left(_)) ++ p.factorIndices.map(Right(_))).toSet
+      override def regions: Set[R] = (ps.variables.map(Left(_)) ++ ps.factorIndices.map(Right(_))).toSet
 
       override def scopeOfRegion(region: Either[Problem#VI, Problem#FI]): Set[Int] = region match {
         case Left(vi) => Set(vi)
@@ -110,16 +92,16 @@ object BetheProblem {
 
       override def regionBelief(region: Either[Problem#VI, Problem#FI]): Factor = {
         val encoded = region.fold(encodedVariableBelief,encodedFactorBelief)
-        encoded.copy(values = p.ring.decode(encoded.values))
+        encoded.copy(values = ps.ring.decode(encoded.values))
       }
 
       /** @return marginal distribution of variable in encoding specified by `ring`. */
       override def encodedVarBelief(variable: Int): Factor = {
         val decoded = regionBelief(Left(variable))
-        decoded.copy(values = p.ring.encode(decoded.values))
+        decoded.copy(values = ps.ring.encode(decoded.values))
       }
 
-      override def problem: Problem = p
+      override def problem: Problem = ps
 
       override def averageEnergy: Double = regions.toSeq.collect{
         case r@Right(fi) =>
@@ -128,11 +110,16 @@ object BetheProblem {
       }.sum
 
       override def entropy: Double = regions.toSeq.map{
-        case r@Left(vi) => (1-p.degreeOfVariable(vi)) * NormalD.entropy(regionBelief(r).values)
+        case r@Left(vi) => (1 - ps.degreeOfVariable(vi)) * NormalD.entropy(regionBelief(r).values)
         case r@Right(fi) => NormalD.entropy(regionBelief(r).values)
       }.sum
     }
+  }
+}
 
-    (result,stats)
+object BetheProblem {
+  def infer(p: Problem, maxIterations: Long = 100000, tol: Double = 1e-12, damping: Double = 0d)
+  : (RegionBeliefs[Either[Problem#VI, Problem#FI]] with VariationalResult, ConvergenceStats) = {
+    Calibrator.calibrate(new BetheProblem(p))
   }
 }

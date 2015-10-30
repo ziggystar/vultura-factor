@@ -19,9 +19,11 @@ trait CalProblem {
   /** Low level representation of values. Only arrays of doubles. */
   type LRep = Array[Double]
 
+  type E <: Edge
+
   /** Edge type. */
   trait Edge {
-    type D <: Edge
+    type D <: E
     /** Size of the array required to store the state of this edge. */
     def arraySize: Int
     def dependencies: IndexedSeq[D]
@@ -33,15 +35,19 @@ trait CalProblem {
   }
 
   /** Constructs a new initial value for each edge. */
-  def initializer: Edge => LRep
+  def initializer: E => LRep
 
-  def edges: Set[Edge]
+  def edges: Set[E]
+}
+
+trait ResultBuilder[R] {outer: CalProblem =>
+  def buildResult(valuation: outer.E => LRep): R
 }
 
 /** Mutable class that holds a calibration state. */
 class Calibrator[CP <: CalProblem](val cp: CP) {
   type LRep = Array[Double]
-  type Edge = cp.Edge
+  type Edge = cp.E
 
   /** An edge index. */
   type EI = Int
@@ -74,7 +80,7 @@ class Calibrator[CP <: CalProblem](val cp: CP) {
       //just update the edge
       val ei = component.head
       state(ei) = newEdgeValue(ei)
-      ConvergenceStats(1,0,true)
+      ConvergenceStats(iterations = 1, maxDiff = 0, isConverged = true)
     } else {
       val componentEdges: IndexedSeq[EI] = component.toIndexedSeq
       var iteration = 0L
@@ -134,5 +140,19 @@ class Calibrator[CP <: CalProblem](val cp: CP) {
       edges.elements,
       graphEdges
     )
+  }
+
+  def buildResult[R](implicit ev: CP <:< ResultBuilder[R]): R =
+    cp.asInstanceOf[cp.type with ResultBuilder[R]].buildResult(edgeState)
+}
+
+object Calibrator {
+  def calibrate[R](cp: CalProblem with ResultBuilder[R],
+                    maxIterations: Long = 100000,
+                    tol: Double = 1e-12,
+                    damping: Double = 0d): (R,ConvergenceStats) = {
+    val cal = new Calibrator[cp.type](cp)
+    val calState = cal.calibrate(maxIterations,tol,damping)
+    (cal.buildResult,calState)
   }
 }
