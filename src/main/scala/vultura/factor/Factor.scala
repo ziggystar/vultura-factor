@@ -169,6 +169,8 @@ object Factor{
   def fromFunction(variables: Array[Int], domains: Array[Int], f: Array[Int] => Double): Factor =
     orderIfNecessary(variables, new IntDomainCPI(variables.map(v => Array.range(0,domains(v)))).map(f)(collection.breakOut), domains)
 
+  def constant(variables: Array[Int], domains: Array[Int], value: Double): Factor = fromFunction(variables,domains,_ => value)
+
 
   def orderIfNecessary(variables: Array[Int], values: Array[Double], domains: Array[Int]): Factor = {
     val ordered = variables.sorted

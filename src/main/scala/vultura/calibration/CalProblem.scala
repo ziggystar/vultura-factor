@@ -38,6 +38,9 @@ trait CalProblem {
   def initializer: E => LRep
 
   def edges: Set[E]
+
+  def computationGraph: DotGraph[E,(E,E)] =
+    DotGraph[E,(E,E)](edges, for (e <- edges; d <- e.dependencies) yield (d, e)).labelNodes{case e => e.toString}
 }
 
 trait ResultBuilder[R] {outer: CalProblem =>
@@ -58,12 +61,11 @@ class Calibrator[CP <: CalProblem](val cp: CP) {
 
   val stronglyConnectedComponents: IndexedSeq[Set[EI]] = {
     import vultura.util.graph2._
-    import TupleSeqsAreGraphs._
-    val graphEdges = for{
-           (deps, ei) <- dependencies.zipWithIndex
-           dep <- deps
-    } yield ei -> dep
-    tarjanSCC(graphEdges).toIndexedSeq
+    val graph = ChildList(
+      edges.indices.toSet,
+      edges.indices.map(ei => ei -> dependencies(ei).toSet)(collection.breakOut): Map[EI, Set[EI]]
+    )
+    tarjanSCC(graph).toIndexedSeq
   }
 
   protected def calibrateComponent(componentIndex: Int, maxIterations: Long, maxDiff: Double, damping: Double = 0d): ConvergenceStats = {
@@ -91,11 +93,10 @@ class Calibrator[CP <: CalProblem](val cp: CP) {
         var cei = 0
         while(cei < componentEdges.size){
           val ei = componentEdges(cei)
+
           //update edge
-          val edge = edges.backward(ei)
           val oldValue = state(ei)
-          val newValue = new Array[Double](edge.arraySize)
-          edge.compute(dependencies(ei).map(state)(collection.breakOut), newValue)
+          val newValue = newEdgeValue(ei)
 
           var newDiff = 0d
           var point = 0
@@ -130,17 +131,7 @@ class Calibrator[CP <: CalProblem](val cp: CP) {
     require(newValue.length == edge.arraySize)
     state(edges(edge)) = newValue
   }
-  
-  def computationGraph: DotGraph[Edge,(Edge,Edge)] = {
-    val graphEdges: Iterable[(Edge,Edge)] = for{
-      (parentIs,childI) <- dependencies.zipWithIndex
-      pI <- parentIs
-    } yield (edges.backward(pI),edges.backward(childI))
-    DotGraph[Edge,(Edge,Edge)](
-      edges.elements,
-      graphEdges
-    )
-  }
+
 
   def buildResult[R](implicit ev: CP <:< ResultBuilder[R]): R =
     cp.asInstanceOf[cp.type with ResultBuilder[R]].buildResult(edgeState)

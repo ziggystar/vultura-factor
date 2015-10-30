@@ -6,6 +6,7 @@ import scala.util.Random
   * Basically a distribution over values of type `A`. */
 trait Generator[+A] { outer =>
   def generate(r: Random): A
+  def withSeed(s: Long = 0L): A = generate(new Random(s))
   def map[B](f: A => B): Generator[B] = new Generator[B]{
     override def generate(r: Random): B = f(outer.generate(r))
   }

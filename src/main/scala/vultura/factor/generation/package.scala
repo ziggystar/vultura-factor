@@ -40,10 +40,12 @@ package object generation {
   
   def problemGenerator[N](graph: Generator[Graph[N]], 
                           domains: Domainification[N] = FixedDomainsSize(2),
-                          param: Parameterization[N] = IIDValuedParam(Generator.uniform(-1,1))): Generator[LabeledProblem[N]] =
+                          param: Parameterization[N] = IIDValuedParam(Generator.uniform(-1,1)),
+                          magnetization: Option[Magnetization[N]] = None): Generator[LabeledProblem[N]] =
     for{
       g <- graph
       ps <- domains.addDomains(g)
-      p <- param.generateFactors(ps)
-    } yield p
+      p <- param.parameterize(ps)
+      magnetized <- magnetization.map(mag => mag.magnetize[N] _).getOrElse(Generator.only[LabeledProblem[N]] _)(p)
+    } yield magnetized
 }

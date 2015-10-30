@@ -104,7 +104,7 @@ trait VariationalResult extends MargParI {
   def entropy: Double
 
   /** @return Natural logarithm of partition function. */
-  override def logZ: Double = averageEnergy + entropy
+  final lazy val logZ: Double = averageEnergy + entropy
 }
 
 trait RegionBeliefs[R] {
