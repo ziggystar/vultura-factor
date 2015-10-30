@@ -77,7 +77,6 @@ object BetheProblem {
     val labeled = calibrator.computationGraph.labelNodes { case x =>
       s"$x\n${calibrator.edgeState(x).map(_.formatted("%.3f")).mkString(",")}"
     }
-    labeled.renderPDF("bethe-computation")(Directed(identity))
 
     def encodedVariableBelief(v: Int): Factor = {
       val incoming = p.factorIdxOfVariable(v).map{ fi =>
