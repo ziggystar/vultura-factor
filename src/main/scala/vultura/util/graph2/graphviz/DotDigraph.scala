@@ -61,6 +61,10 @@ sealed trait Dir[N,E] {
   def header: String
   def incidentNodes(e: E): (N,N)
 }
+
+object Dir {
+  implicit def tupleDirectedInstance[N] = Directed[N,(N,N)](identity)
+}
 case class Undirected[N,E](f: E => BiSet[N], layout: String = "neato") extends Dir[N,E]{
   def header = "graph"
   override def incidentNodes(e: E): (N, N) = (f(e).e1,f(e).e2)
