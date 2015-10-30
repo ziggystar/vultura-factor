@@ -80,5 +80,11 @@ class package$Test extends Specification {
         'a -> 'c
       )).toSet === Set(Set('a,'b),Set('c,'d))
     }
+
+    "on unconnected graph size 1" >> { tarjanSCC(ChildList(Set(0), Map())) === List(Set(0))}
+    "on unconnected graph size 2" >> {
+      val scc = tarjanSCC(ChildList(Set(0,1), Map()))
+       (scc === List(Set(0), Set(1))) or (scc === List(Set(1),Set(0)))
+    }
   }
 }

@@ -58,52 +58,9 @@ package object graph2 {
   def isSameGraph[G1,G2,N](g: G1, g2: G2)(implicit dg1: DirectedGraph[G1,N], dg2: DirectedGraph[G2,N]): Boolean =
     dg1.nodes(g) == dg2.nodes(g2) && dg1.edges(g) == dg2.edges(g2)
 
+  /** Returns the strongly connected components in topological order of the resulting DAG. */
   def tarjanSCC[G,N](_g: G)(implicit dg: DirectedGraph[G,N]): Seq[Set[N]] = {
     val (g,nodeMap) = DirectedGraph.fastGraph(_g)
-
-    val index = Array.fill[Int](g.nodes.size)(-1)
-    val lowLink = new Array[Int](g.nodes.size)
-    val stack = new mutable.Stack[Int]()
-    val onStack = new mutable.HashSet[Int]()
-
-    var sccs: List[Set[Int]] = Nil
-
-    var nextIndex = 0
-
-    def strongConnect(v: Int): Unit = {
-      index(v) = nextIndex
-      lowLink(v) = nextIndex
-      nextIndex += 1
-      stack.push(v)
-      onStack += v
-
-      //Consider successors of v
-      for(w <- g.children(v)){
-        if(index(w) == -1) {
-          strongConnect(w)
-          lowLink(v) = math.min(lowLink(v),lowLink(w))
-        } else if (onStack(w)) {
-          lowLink(v) = math.min(lowLink(v),index(w))
-        }
-      }
-
-      if(lowLink(v) == index(v)) {
-        //start new scc
-        var newComponent: List[Int] = Nil
-        var w = 0
-        do{
-          w = stack.pop()
-          onStack -= w
-          newComponent = w :: newComponent
-        } while(w != v)
-        sccs = newComponent.toSet :: sccs
-      }
-    }
-
-    for(v <- g.nodes){
-      if(index(v) == -1) strongConnect(v)
-    }
-
-    sccs.reverse.map(_.map(nodeMap.backward))
+    g.tarjanSCC.map(_.map(nodeMap.backward))
   }
 }
