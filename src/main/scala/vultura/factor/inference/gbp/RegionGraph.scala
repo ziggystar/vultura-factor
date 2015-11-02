@@ -1,6 +1,6 @@
 package vultura.factor.inference.gbp
 
-import vultura.factor.{Factor, Ring, ProblemStructure}
+import vultura.factor.ProblemStructure
 import vultura.util._
 import vultura.util.graph.DotGraph
 
@@ -31,8 +31,6 @@ trait RegionGraph {
   def interior(r: Region): Set[Region] = ancestors(r) + r
   /** All regions that are parent to an interior region of `r`, but are not interior themselves. */
   def boundary(r: Region): Set[Region] = interior(r).flatMap(parents) -- interior(r)
-
-  def buildResult(regionBeliefs: Region => Factor, ring: Ring[Double]) = ???
 
   def edges: Set[(Region,Region)] = for{
     parent <- regions
