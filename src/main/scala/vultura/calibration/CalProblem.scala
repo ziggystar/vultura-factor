@@ -16,14 +16,16 @@ trait Edge
   *  - define a set of edges
   */
 trait CalProblem {
-  /** Low level representation of values. Only arrays of doubles. */
-  type LRep = Array[Double]
+  /** Internal representation of values. Only arrays of doubles. */
+  type IR = Array[Double]
 
-  type E <: Edge
+  /** Node type exposed by a problem. This defined the signature methods `initializer` and `nodes`. */
+  type N <: Node
 
-  /** Edge type. */
-  trait Edge {
-    type D <: E
+  /** Node type. A node is a representation of a node within the computation graph, but also carries the
+    * computation rule and the set of dependencies. */
+  trait Node {
+    type D <: N
     /** Size of the array required to store the state of this edge. */
     def arraySize: Int
     def dependencies: IndexedSeq[D]
@@ -31,72 +33,74 @@ trait CalProblem {
      * - first parameter: `zip`s with `dependencies`.
      * - second parameter: Result of computation shall be stored here. Content of result is garbage.
       */
-    def compute(ins: Array[LRep], result: LRep): Unit
+    def compute(ins: Array[IR], result: IR): Unit
   }
 
   /** Constructs a new initial value for each edge. */
-  def initializer: E => LRep
+  def initializer: N => IR
 
-  def edges: Set[E]
+  /** The set of nodes defined by this problem. */
+  def nodes: Set[N]
 
-  def computationGraph: DotGraph[E,(E,E)] =
-    DotGraph[E,(E,E)](edges, for (e <- edges; d <- e.dependencies) yield (d, e)).labelNodes{case e => e.toString}
+  def computationGraph: DotGraph[N,(N,N)] =
+    DotGraph[N,(N,N)](nodes, for (e <- nodes; d <- e.dependencies) yield (d, e)).labelNodes{case e => e.toString}
 }
 
 trait ResultBuilder[R] {outer: CalProblem =>
-  def buildResult(valuation: outer.E => LRep): R
+  def buildResult(valuation: outer.N => IR): R
 }
 
 /** Mutable class that holds a calibration state. */
 class Calibrator[CP <: CalProblem](val cp: CP) {
-  type LRep = Array[Double]
-  type Edge = cp.E
+  /** Internal representation of edge state. */
+  type IR = Array[Double]
+  type N = cp.N
 
-  /** An edge index. */
-  type EI = Int
+  /** An node index. */
+  type NI = Int
 
-  protected val edges: SIIndex[Edge] = new SIIndex(cp.edges)
-  protected var state: Array[LRep] = edges.elements.map(cp.initializer)(collection.breakOut)
-  protected val dependencies: IndexedSeq[IndexedSeq[EI]] = edges.elements.map(_.dependencies.map(edges(_)))
+  protected val nodes: SIIndex[N] = new SIIndex(cp.nodes)
+  protected var state: Array[IR] = nodes.elements.map(cp.initializer)(collection.breakOut)
+  protected val dependencies: IndexedSeq[IndexedSeq[NI]] = nodes.elements.map(_.dependencies.map(nodes(_)))
 
-  val stronglyConnectedComponents: IndexedSeq[Set[EI]] = {
+  val stronglyConnectedComponents: IndexedSeq[Set[NI]] = {
     import vultura.util.graph2._
     val graph = ChildList(
-      edges.indices.toSet,
-      edges.indices.map(ei => ei -> dependencies(ei).toSet)(collection.breakOut): Map[EI, Set[EI]]
+      nodes.indices.toSet,
+      nodes.indices.map(ei => ei -> dependencies(ei).toSet)(collection.breakOut): Map[NI, Set[NI]]
     )
     tarjanSCC(graph).toIndexedSeq
   }
 
   protected def calibrateComponent(componentIndex: Int, maxIterations: Long, maxDiff: Double, damping: Double = 0d): ConvergenceStats = {
-    def newEdgeValue(ei: EI): Array[Double] = {
+    def newNodeValue(ei: NI): Array[Double] = {
       //update edge
-      val edge = edges.backward(ei)
-      val newValue = new Array[Double](edge.arraySize)
-      edge.compute(dependencies(ei).map(state)(collection.breakOut), newValue)
+      val node = nodes.backward(ei)
+      val newValue = new Array[Double](node.arraySize)
+      node.compute(dependencies(ei).map(state)(collection.breakOut), newValue)
       newValue
     }
 
     val component = stronglyConnectedComponents(componentIndex)
     if(component.size == 1) {
       //just update the edge
-      val ei = component.head
-      state(ei) = newEdgeValue(ei)
+      val ni = component.head
+      state(ni) = newNodeValue(ni)
       ConvergenceStats(iterations = 1, maxDiff = 0, isConverged = true)
     } else {
-      val componentEdges: IndexedSeq[EI] = component.toIndexedSeq
+      val componentNodes: IndexedSeq[NI] = component.toIndexedSeq
       var iteration = 0L
       var iterationDiff: Double = 0d
       do {
         iterationDiff = 0d
 
-        var cei = 0
-        while(cei < componentEdges.size){
-          val ei = componentEdges(cei)
+        var cni = 0
+        while(cni < componentNodes.size){
+          val ei = componentNodes(cni)
 
           //update edge
           val oldValue = state(ei)
-          val newValue = newEdgeValue(ei)
+          val newValue = newNodeValue(ei)
 
           var newDiff = 0d
           var point = 0
@@ -107,7 +111,7 @@ class Calibrator[CP <: CalProblem](val cp: CP) {
           }
           iterationDiff = math.max(iterationDiff,newDiff)
           state(ei) = newValue
-          cei += 1
+          cni += 1
         }
 
         iteration += 1
@@ -123,18 +127,17 @@ class Calibrator[CP <: CalProblem](val cp: CP) {
   }
 
   def reset(): Unit = {
-    state = edges.elements.map(cp.initializer)(collection.breakOut)
+    state = nodes.elements.map(cp.initializer)(collection.breakOut)
   }
 
-  def edgeState(edge: Edge): LRep = state(edges(edge))
-  def updateState(edge: Edge, newValue: LRep): Unit = {
-    require(newValue.length == edge.arraySize)
-    state(edges(edge)) = newValue
+  def nodeState(node: N): IR = state(nodes(node))
+  def updateState(node: N, newValue: IR): Unit = {
+    require(newValue.length == node.arraySize)
+    state(nodes(node)) = newValue
   }
-
 
   def buildResult[R](implicit ev: CP <:< ResultBuilder[R]): R =
-    cp.asInstanceOf[cp.type with ResultBuilder[R]].buildResult(edgeState)
+    cp.asInstanceOf[cp.type with ResultBuilder[R]].buildResult(nodeState)
 }
 
 object Calibrator {
@@ -142,7 +145,7 @@ object Calibrator {
                     maxIterations: Long = 100000,
                     tol: Double = 1e-12,
                     damping: Double = 0d): (R,ConvergenceStats) = {
-    val cal = new Calibrator[cp.type](cp)
+    val cal = new Calibrator(cp)
     val calState = cal.calibrate(maxIterations,tol,damping)
     (cal.buildResult,calState)
   }

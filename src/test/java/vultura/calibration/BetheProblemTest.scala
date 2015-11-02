@@ -13,7 +13,7 @@ class BetheProblemTest extends Specification with FactorMatchers {
   val grid6x6 = problemGenerator(Generator.only(generation.graph.lattice(6 -> false, 6 -> false))).generate(new Random(0)).problem
 
   "bethe approximation yields exact result on tree" >> {
-    val (result,stats) = BetheProblem.infer(tree,damping = 0)
+    val (result,stats) = BeliefPropagation.infer(tree,damping = 0)
     (stats.isConverged must beTrue) and
       (result must haveExactZ()) and
       (result must haveExactMarginals(1e-12))
@@ -25,7 +25,7 @@ class BetheProblemTest extends Specification with FactorMatchers {
   }
 
   def newBPisSameAsOld(p: Problem, maxIt: Int = 100000, convergenceTol: Double = 1e-15, compareTol: Double = 1e-9) = {
-    val (newResult,stats) = BetheProblem.infer(p,tol = convergenceTol, maxIterations = maxIt)
+    val (newResult,stats) = BeliefPropagation.infer(p,tol = convergenceTol, maxIterations = maxIt)
     val oldBPResult = LBP.infer(p, maxIterations = maxIt, tol=convergenceTol)
 
     stats.isConverged.aka("new BP is converged") must beTrue

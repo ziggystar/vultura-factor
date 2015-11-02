@@ -7,14 +7,14 @@ import vultura.factor.{Factor, NormalD, Problem}
 case class MeanField(p: Problem) extends CalProblem with ResultBuilder[VariationalResult] {
   require(p.ring == NormalD, "mean field only implemented for normal encoding")
 
-  type E = VBel
+  type N = VBel
   /* Parameters of fully factored mean field are the marginal distributions over the variables. */
-  case class VBel(vi: p.VI) extends Edge {
+  case class VBel(vi: p.VI) extends Node {
     type D = VBel
     /** Size of the array required to store the state of this edge. */
     override def arraySize: Int = p.domains(vi)
     override def dependencies: IndexedSeq[D] = p.neighboursOfVariableEx(vi).map(VBel)
-    override def compute(ins: Array[LRep], result: LRep): Unit = {
+    override def compute(ins: Array[IR], result: IR): Unit = {
       val incidentVariableBeliefs: IndexedSeq[Factor] =
         dependencies.zip(ins).map { case (VBel(vn), values) => Factor(Array(vn), values) }
 
@@ -38,11 +38,11 @@ case class MeanField(p: Problem) extends CalProblem with ResultBuilder[Variation
   }
 
   /** Constructs a new initial value for each edge. */
-  override def initializer: E => LRep = e => e.init
+  override def initializer: N => IR = e => e.init
 
-  override def edges: Set[E] = p.variables.map(VBel)(collection.breakOut)
+  override def nodes: Set[N] = p.variables.map(VBel)(collection.breakOut)
 
-  override def buildResult(valuation: (VBel) => LRep): VariationalResult = new VariationalResult {
+  override def buildResult(valuation: (VBel) => IR): VariationalResult = new VariationalResult {
     lazy val averageEnergy: Double = p.factors.foldLeft(0d) { case (e, f) =>
       val factorBelief = Factor.multiply(NormalD)(p.domains)(f.variables.map(encodedVarBelief))
       val factorEnergy = NormalD.logExpectation(factorBelief.values,f.values)

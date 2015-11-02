@@ -6,8 +6,6 @@ import vultura.factor.{FactorMatchers, NormalD, Problem}
 import vultura.factor.generation._
 import vultura.util.graph2.graphviz.Directed
 
-import scala.util.Random
-
 class MeanFieldTest extends Specification with FactorMatchers {
 
   def unconnected(size: Int): Problem =

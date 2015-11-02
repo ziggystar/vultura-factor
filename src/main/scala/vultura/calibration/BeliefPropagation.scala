@@ -4,9 +4,9 @@ import vultura.factor._
 import vultura.factor.inference._
 import vultura.util.SSet
 
-/** Belief propagation on the factor graph representation. */
-case class BetheProblem(ps: Problem)
-  extends CalProblem
+/** Belief propagation on the factor graph representation. Parameters are factor-to-variable messages (F2V), and
+  * variable-to-factor messages (V2F). */
+case class BeliefPropagation(ps: Problem) extends CalProblem
   with ResultBuilder[RegionBeliefs[Either[Problem#VI, Problem#FI]] with VariationalResult] {
   require(
     new SSet[Int](ps.scopeOfFactor.map(_.toSet).toSet).maximalSets.size == ps.factors.size,
@@ -15,24 +15,24 @@ case class BetheProblem(ps: Problem)
   type VI = ps.VI
   type FI = ps.FI
 
-  type E = FactorEdge
+  type N = FactorNode
 
   val aggregateFactors = new SSet[Int](ps.scopeOfFactor.map(_.toSet).toSet)
 
-  trait FactorEdge extends Edge {
+  trait FactorNode extends Node {
     def variable: Int
     val arraySize = ps.domains(variable)
   }
 
-  case class V2F(variable: VI, factor: FI) extends FactorEdge{
+  case class V2F(variable: VI, factor: FI) extends FactorNode{
     type D = F2V
     lazy val dependencies: IndexedSeq[F2V] = ps.factorIdxOfVariable(variable).filterNot(_ == factor).map(F2V(_,variable))
-    lazy val task: (Array[LRep], LRep) => Unit =
+    lazy val task: (Array[IR], IR) => Unit =
       SumProductTask(Array(variable),ps.domains,Array.fill(dependencies.size)(Array(variable)), ps.ring).sumProductNormalize(_,_)
-    override def compute(ins: Array[LRep], result: LRep): Unit = task(ins,result)
+    override def compute(ins: Array[IR], result: IR): Unit = task(ins,result)
   }
 
-  case class F2V(factor: FI, variable: VI) extends FactorEdge{
+  case class F2V(factor: FI, variable: VI) extends FactorNode{
     override type D = V2F
     lazy val dependencies: IndexedSeq[V2F] = ps.scopeOfFactor(factor).filterNot(_ == variable).map(V2F(_,factor))
     lazy val task = SumProductTask(
@@ -41,24 +41,24 @@ case class BetheProblem(ps: Problem)
       dependencies.map(d => Array(d.variable)).toArray :+ ps.scopeOfFactor(factor),
       ps.ring
     )
-    private lazy val resultHolder: Array[LRep] = {
-      val r = new Array[LRep](dependencies.size + 1)
+    private lazy val resultHolder: Array[IR] = {
+      val r = new Array[IR](dependencies.size + 1)
       r(dependencies.size) = ps.factors(factor).values
       r
     }
-    override def compute(ins: Array[LRep], result: LRep): Unit = {
+    override def compute(ins: Array[IR], result: IR): Unit = {
       System.arraycopy(ins,0,resultHolder,0,ins.length)
       task.sumProductNormalize(resultHolder,result)
     }
   }
 
-  override def edges: Set[E] =
+  override def nodes: Set[N] =
     (for (vi <- ps.variables; fi <- ps.factorIdxOfVariable(vi); e <- Seq(F2V(fi, vi), V2F(vi, fi))) yield e)(collection.breakOut)
 
   /** Constructs a new initial value for each edge. */
-  override def initializer: E => LRep = e => Array.fill[Double](e.arraySize)(ps.ring.one)
+  override def initializer: N => IR = e => Array.fill[Double](e.arraySize)(ps.ring.one)
 
-  override def buildResult(valuation: FactorEdge => LRep)
+  override def buildResult(valuation: FactorNode => IR)
   : RegionBeliefs[Either[Problem#VI, Problem#FI]] with VariationalResult = {
 
     def encodedVariableBelief(v: Int): Factor = {
@@ -117,9 +117,9 @@ case class BetheProblem(ps: Problem)
   }
 }
 
-object BetheProblem {
+object BeliefPropagation {
   def infer(p: Problem, maxIterations: Long = 100000, tol: Double = 1e-12, damping: Double = 0d)
   : (RegionBeliefs[Either[Problem#VI, Problem#FI]] with VariationalResult, ConvergenceStats) = {
-    Calibrator.calibrate(new BetheProblem(p))
+    Calibrator.calibrate(new BeliefPropagation(p))
   }
 }
