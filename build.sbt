@@ -45,5 +45,3 @@ libraryDependencies += "net.sf.trove4j" % "trove4j" % "3.0.+"
 
 //testing dependencies
 libraryDependencies += "org.specs2" %% "specs2-core" % "3.6.4" % "test"
-
-libraryDependencies += "org.specs2" %% "specs2-scalacheck" % "3.6.4" % "test"
