@@ -5,6 +5,7 @@ import scala.collection.immutable.Queue
 import scala.collection.mutable
 import scala.util.Random
 
+@deprecated("use DirectedGraph")
 case class EdgeMapDiGraph[N](nodes: Set[N], successorsMap: Map[N,Set[N]]){
   val successors = successorsMap.withDefaultValue(Set())
   def edges: Set[(N,N)] = (for((src, dests) <- successors; dest <- dests) yield src -> dest)(collection.breakOut)
@@ -120,6 +121,7 @@ case class EdgeMapDiGraph[N](nodes: Set[N], successorsMap: Map[N,Set[N]]){
   }
 }
 
+@deprecated("use DirectedGraph")
 object EdgeMapDiGraph{
   def calculateForwardMap[N](edges: Set[(N,N)]): Map[N,Set[N]] = edges.groupBy(_._1).map{case (x,ys) => x -> ys.map(_._2)}
   def calculateBackwardMap[N](edges: Set[(N,N)]): Map[N,Set[N]] = edges.groupBy(_._2).map{case (x,ys) => x -> ys.map(_._1)}
@@ -135,6 +137,7 @@ object EdgeMapDiGraph{
   }
 }
 
+@deprecated("use DirectedGraph")
 case class EdgeBiMapDiGraph[N](nodes: Set[N], successors: Map[N,Set[N]], predecessors: Map[N,Set[N]]){
   val succDef = successors.withDefaultValue(Set())
   val predDef = predecessors.withDefaultValue(Set())

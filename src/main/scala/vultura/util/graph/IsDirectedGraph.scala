@@ -1,18 +1,18 @@
-package vultura.util.graph2
+package vultura.util.graph
 
 import vultura.util.{Index, SIIndex}
+
 import scala.collection.mutable
 
 /** Type-class for directed graphs.
   *
-  * @tparam X
-  * @tparam N
+  * @tparam X This type represents the directed graph.
+  * @tparam N Type of the nodes.
   */
 trait IsDirectedGraph[-X,N] {
   def nodes(x: X): Set[N]
   def edges(x: X): Set[(N,N)]
   def children(x: X, node: N): Set[N] = (for((p,c) <- edges(x) if p == node) yield c)(collection.breakOut)
-  def parents(x: X, node: N): Set[N] = (for((p,c) <- edges(x) if c == node) yield p)(collection.breakOut)
 }
 
 /** Implementing this minimal directed graph interface provides a IsDirectedGraph type-class automatically. */
@@ -48,23 +48,31 @@ trait DiGraphOps[N] extends DiGraph[N] {
 
 object IsDirectedGraph {
   /** This class provides operations for types that have a IsDirectedGraph instance.
-    * Many operations are very inefficient. */
-  case class DiGraphWrapper[X,N](x: X)(implicit dg: IsDirectedGraph[X,N]) extends DiGraphOps[N] {
+    * Many operations are **very** inefficient. */
+  case class DiGraphWrapper[X,N](x: X)(implicit dg: IsDirectedGraph[X,N]) extends DiGraphOps[N] { outer =>
     override def nodes: Set[N] = dg.nodes(x)
-    override def children(node: N): Set[N] = dg.children(x, node)
     override def edges: Set[(N, N)] = dg.edges(x)
-    override def tarjanSCC: List[Set[N]] = x.diGraph.tarjanSCC
-    override def descendants(node: N): Set[N] = ???
-    override def ancestors(node: N): Set[N] = ???
-    override def parents(node: N): Set[N] = ???
+    override def children(node: N): Set[N] = dg.children(x, node)
+    override def parents(node: N): Set[N] = for((p,n) <- edges if n == node) yield p
+    override def descendants(node: N): Set[N] = Iterator.iterate(children(node)){ fringe =>
+      fringe.flatMap(children) ++ fringe
+    }.sliding(2).dropWhile(ss => ss(0) != ss(1)).next().head
+    override def ancestors(node: N): Set[N] = transpose.descendants(node)
     override def filter(nodes: (N) => Boolean, edges: ((N, N)) => Boolean): DiGraphOps[N] =
       Filtered(nodes,edges).diGraphView
-    /** Reverse the edges of the graph. */
-    override def transpose: DiGraphOps[N] = ???
 
-    case class Filtered(nodeFilter: N => Boolean, edgeFilter: ((N,N)) => Boolean = _ => true) extends DiGraph[N] {
+    /** Reverse the edges of the graph. */
+    override def transpose: DiGraphOps[N] = new DiGraph[N]{
+      override def nodes: Set[N] = outer.nodes
+      override def edges: Set[(N, N)] = outer.edges.map(_.swap)
+    }.diGraphView
+
+    override def tarjanSCC: List[Set[N]] = x.diGraph.tarjanSCC
+
+    case class Filtered(nodeFilter: N => Boolean,
+                        edgeFilter: ((N,N)) => Boolean) extends DiGraph[N] {
       override def nodes: Set[N] = dg.nodes(x).filter(nodeFilter)
-      override def edges: Set[(N, N)] = dg.edges(x).filter(edgeFilter)
+      override def edges: Set[(N, N)] = dg.edges(x).filter(e => nodeFilter(e._1) && nodeFilter(e._2) && edgeFilter(e))
     }
   }
 
@@ -76,23 +84,37 @@ object IsDirectedGraph {
 
 /** An efficient directed graph implementation that uses one array per node for representing its children. */
 class LabeledGraph[N] protected[LabeledGraph](val index: Index[N], protected val childs: Array[Array[Int]]) extends DiGraphOps[N] {
-  object intGraph extends DiGraphOps[Int] {
+
+  object intGraph {
     val numNodes: Int = childs.length
     val nodeRange: Range = 0 until numNodes
 
-    override def nodes: Set[Int] = nodeRange.toSet
-    override def filter(nodes: (Int) => Boolean, edges: ((Int, Int)) => Boolean): DiGraphOps[Int] = ???
-    override def children(node: Int): Set[Int] = ???
-    /** Find topologically ordered strongly connected components of the graph. */
-    override def tarjanSCC: List[Set[Int]] = ???
-    override def edges: Set[(Int, Int)] = ???
-    /** Reverse the edges of the graph. */
-    override def transpose: DiGraphOps[Int] = ???
-    override def descendants(node: Int): Set[Int] = ???
-    override def ancestors(node: Int): Set[Int] = ???
-    override def parents(node: Int): Set[Int] = ???
+    lazy val pars: Array[Array[Int]] = {
+      val resultHolder = IndexedSeq.fill(numNodes)(mutable.Set.newBuilder[Int])
+      for(pi <- nodeRange; ci <- childs(pi)) {
+        resultHolder(ci) += pi
+      }
+      resultHolder.map(_.result().toArray)(collection.breakOut)
+    }
 
-    lazy val tarjanSccs = {
+    def nodes: Set[Int] = nodeRange.toSet
+    def children(node: Int): Set[Int] = childs(node).toSet
+    def parents(node: Int): Set[Int] = pars(node).toSet
+    /** Find topologically ordered strongly connected components of the graph. */
+    def edges: Set[(Int, Int)] = for(p <- nodes; c <- children(p)) yield p -> c
+    /** Reverse the edges of the graph. */
+    def descendants(node: Int): Set[Int] = searchAll(children(node),Set(),childs)
+    def ancestors(node: Int): Set[Int] = searchAll(children(node),Set(),pars)
+
+    def searchAll(fringe: Set[Int], closed: Set[Int], succ: Array[Array[Int]]): Set[Int] = {
+      val newNodes = fringe.flatMap(succ(_)) -- closed
+      if(newNodes.isEmpty)
+        closed ++ fringe
+      else
+        searchAll(newNodes, closed ++ fringe, succ)
+    }
+
+    lazy val tarjanSCC = {
       val tj_index = Array.fill[Int](numNodes)(-1)
       val lowLink = new Array[Int](numNodes)
       val stack = new mutable.Stack[Int]()
@@ -145,10 +167,15 @@ class LabeledGraph[N] protected[LabeledGraph](val index: Index[N], protected val
   override def descendants(node: N): Set[N] = intGraph.descendants(index.forward(node)).map(index.backward)
   override def ancestors(node: N): Set[N] = intGraph.ancestors(index.forward(node)).map(index.backward)
   override def parents(node: N): Set[N] = intGraph.parents(index.forward(node)).map(index.backward)
-  override def tarjanSCC: List[Set[N]] = intGraph.tarjanSccs.map(_.map(index.backward))
+  override def tarjanSCC: List[Set[N]] = intGraph.tarjanSCC.map(_.map(index.backward))
   /** Reverse the edges of the graph. */
-  override def transpose: DiGraphOps[N] = ???
-  override def filter(nodes: (N) => Boolean, edges: ((N, N)) => Boolean): DiGraphOps[N] = ???
+  override def transpose: LabeledGraph[N] = LabeledGraph.fromChildList(nodes, parents)
+  override def filter(nodeP: (N) => Boolean, edgeP: ((N, N)) => Boolean): LabeledGraph[N] = {
+    val newNodes: Set[N] = nodes.filter(nodeP)
+    LabeledGraph.fromChildList(
+      newNodes,
+      newNodes.map(n => n -> children(n).filter(c => edgeP((n,c))))(collection.breakOut): Map[N,Iterable[N]])
+  }
 }
 
 object LabeledGraph {
@@ -165,7 +192,6 @@ object LabeledGraph {
       index.elements.map(n => children(n).map(index.forward)(collection.breakOut):Array[Int])(collection.breakOut))
   }
 }
-
 
 /** Import for type-class instances for maps. */
 object TupleSeqsAreGraphs {

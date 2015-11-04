@@ -1,4 +1,4 @@
-package vultura.util.graph2
+package vultura.util.graph
 
 /**
  * Created by thomas on 26.10.15.

@@ -1,4 +1,4 @@
-package vultura.util.graph2.graphviz
+package vultura.util.graph.graphviz
 
 sealed trait Attr {
   def dotString: String

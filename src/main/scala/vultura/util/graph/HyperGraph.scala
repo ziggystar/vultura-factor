@@ -1,4 +1,4 @@
-package vultura.util.graph2
+package vultura.util.graph
 
 /** Type-class for hyper graphs. Edges are represented as sets of nodes.
   * @tparam X This class represents the hyper-graph.

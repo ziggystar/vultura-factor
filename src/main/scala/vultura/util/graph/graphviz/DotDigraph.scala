@@ -1,9 +1,9 @@
-package vultura.util.graph2.graphviz
+package vultura.util.graph.graphviz
 
 import java.io.{File, FileOutputStream, PrintStream}
 
 import vultura.util.SIIndex
-import vultura.util.graph2.BiSet
+import vultura.util.graph.BiSet
 
 import scala.sys.process._
 
