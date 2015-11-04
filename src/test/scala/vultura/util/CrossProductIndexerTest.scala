@@ -12,7 +12,12 @@ class CrossProductIndexerTest extends Specification {
   "2 must be 0,1 in CP(2,2) with lsbf" ! (cp(2, 2).index2Seq(2).toSeq === Seq(0, 1)) ^
     "2 must be 0,1 in CP(2,2) with msbf" ! (cp(false, 2, 2).index2Seq(2).toSeq === Seq(1, 0)) ^ tag("expensive")
   "5 must be 0,1 in CP(2,3,3) with msbf" ! (cp(false, 2, 3, 3).index2Seq(5).toSeq === Seq(0, 1, 2)) ^
-    "5 must be 0,1 in CP(2,3,3) with msbf" ! (cp(false, 2, 3, 3).seq2Index(IndexedSeq(0, 1, 2)) === 5)
+    "5 must be 0,1 in CP(2,3,3) with msbf" ! (cp(false, 2, 3, 3).seq2Index(IndexedSeq(0, 1, 2)) === 5) ^
+  p^
+  "mutable iterators" ^
+    "2, 3, 4 " ! (cp(false, 2, 3, 4).mutableIterator.toSeq === cp(false, 2, 3, 4))
+
+
 
   def cp(bases: Int*) = new CrossProductIndexer(bases)
 

@@ -38,6 +38,8 @@ class DirectedGraph$Test extends Specification {
         "chain 1 -> 2 -> 3" >> {
           "parents of 3" >> (chain3.parents(3) === Set(2))
           "descendants of 1" >> (chain3.descendants(1) === Set(2, 3))
+          "descendants of 2" >> (chain3.descendants(2) === Set(3))
+          "descendants of 3" >> (chain3.descendants(3) === Set())
           "children of 1" >> (chain3.children(1) === Set(2))
           "children of 2" >> (chain3.children(2) === Set(3))
           "ancestors of 3" >> (chain3.ancestors(3) === Set(1, 2))
@@ -97,5 +99,5 @@ class DirectedGraph$Test extends Specification {
   }
 
   def beEqualToGraph[Y,X,N](x: X)(implicit dgy: IsDirectedGraph[Y,N], dgx: IsDirectedGraph[X,N]): Matcher[Y] =
-    beTrue.^^((_: Y).diGraphView.graphEqual(x))
+    (be_==(dgx.nodes(x)).^^((y: Y) => dgy.nodes(y))) and (be_==(dgx.edges(x)).^^(dgy.edges(_)))
 }
