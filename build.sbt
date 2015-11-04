@@ -22,6 +22,7 @@ organization := "de.uni-ulm"
 24.0.0:
   - add Dist probability monad
   - add new graphviz framework that supports directed and undirected graphs (previously only directed graphs were supported)
+  - add new graph API
 */
 version := "24.0.0-DEV"
 
