@@ -51,6 +51,7 @@ libraryDependencies += "de.uni-ulm" %% "vultura-util" % "23.2.0"
 
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.+"
 
+libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0"
 
 // --------------- Publishing ----------------------------------
 

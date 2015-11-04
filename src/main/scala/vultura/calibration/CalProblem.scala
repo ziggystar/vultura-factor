@@ -65,11 +65,11 @@ class Calibrator[CP <: CalProblem](val cp: CP) {
 
   val stronglyConnectedComponents: IndexedSeq[Set[NI]] = {
     import vultura.util.graph2._
-    val graph = ChildList(
+    val graph = LabeledGraph.fromChildList(
       nodes.indices.toSet,
       nodes.indices.map(ei => ei -> dependencies(ei).toSet)(collection.breakOut): Map[NI, Set[NI]]
     )
-    tarjanSCC(graph).toIndexedSeq
+    graph.tarjanSCC.toIndexedSeq
   }
 
   protected def calibrateComponent(componentIndex: Int, maxIterations: Long, maxDiff: Double, damping: Double = 0d): ConvergenceStats = {

@@ -12,7 +12,7 @@ class PTCTest extends Specification with FactorMatchers {
   "compare PTC on bethe RG with ordinary LBP result" >> {
     val regularBPResult: BPResult = LBP.infer(p1,tol=1e-15)
 
-    val (ptcResult, status) = Calibrator.calibrate(ParentToChild(RegionGraph.betheRG(p1),p1),tol=1e-15)
+    val (ptcResult, status) = Calibrator.calibrate(RGBeliefPropagation(RegionGraph.betheRG(p1),p1),tol=1e-15)
 
     status.isConverged and (ptcResult must haveSameMarginals(LBP.infer(_,tol=1e-15),1e-12))
   }

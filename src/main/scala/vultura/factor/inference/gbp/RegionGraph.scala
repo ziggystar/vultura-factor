@@ -3,6 +3,7 @@ package vultura.factor.inference.gbp
 import vultura.factor.ProblemStructure
 import vultura.util._
 import vultura.util.graph.DotGraph
+import vultura.util.graph2._
 
 import scala.annotation.tailrec
 import scala.collection.immutable.HashMap
@@ -21,10 +22,15 @@ trait RegionGraph {
 
   def regionOfFactor(fi: FI): Region = regions.find(r => factorsOf(r).contains(fi)).get
   def regions: Set[Region]
+  /** Direct predecessors of `r`. */
   def parents(r: Region): Set[Region]
+  /** Direct successors of `r`. */
   def children(r: Region): Set[Region]
+  /** Transitive closure of `parents` for `r`. */
   def ancestors(r: Region): Set[Region]
+  /** Transitive closure of `children` for `r`. */
   def descendants(r: Region): Set[Region]
+
   def outerRegions: Set[Region] = regions.filter(r => parents(r).isEmpty)
   def innerRegions: Set[Region] = regions -- outerRegions
   /** All descendants and the region itself. */
@@ -37,16 +43,62 @@ trait RegionGraph {
     child <- children(parent)
   } yield parent -> child
 
-  def issues: Seq[String] = {
-    //all factors are in top regions
-    val innerFactors = regions.filter(parents(_).nonEmpty) //exists child regions
-      .exists(factorsOf(_).nonEmpty)                        //that has factors assigned?
-    Seq(
-      Some("there exist inner factors").filter(_ => innerFactors)
-    ).flatten
-  }
+  def issues: Seq[String] = for{
+    (issueDesc,details) <- Seq(
+      "region graph is non-redundant" -> isNonRedundant,
+      "variables counting numbers don't sum to one" -> variablesAreCountedOnce,
+      "factors counting numbers don't sum to one" -> factorsAreCountedOnce,
+      "some factors are in inner regions" -> factorsAreInOuterRegions,
+      "not all variables induce a connected subgraph" -> variablesAreConnected
+    )
+    if details.nonEmpty
+  } yield issueDesc + "\n * " + details.mkString("\n * ")
+
+  def isNonRedundant: Seq[String] = ???
+  def variablesAreCountedOnce: Seq[String] = ???
+  def factorsAreCountedOnce: Seq[String] = ???
+  def variablesAreConnected: Seq[String] = ???
+  def factorsAreInOuterRegions: Seq[String] =
+    regions.toSeq.filter(parents(_).nonEmpty)               //exists child regions
+      .filter(factorsOf(_).nonEmpty).map(r => s"region $r") //that has factors assigned?
 
   def toDot: DotGraph[Region] = DotGraph.apply(edges)
+}
+
+object RegionGraph {
+  def betheRG(ps: ProblemStructure): JunctionGraph = {
+    val upper: SSet[Int] = new SSet(ps.scopeOfFactor.map(_.toSet)(collection.breakOut))
+    JunctionGraph(ps,
+      lowerRegions = ps.variables.map(Set(_))(collection.breakOut),
+      upperRegions = upper.maximalSets,
+      factorAssignment = ps.factorIndices.map(fi => fi -> upper.maximalSuperSetsOf(ps.scopeOfFactor(fi).toSet).head)(collection.breakOut)
+    )
+  }
+
+  /** Declares that a RegionGraph is a directed graph with regions as nodes. */
+  implicit def regionGraphIsDirectedGraphInstance[R,RG <: RegionGraph{type Region = R}]: IsDirectedGraph[RG, R] =
+    new IsDirectedGraph[RG,R]{
+      override def nodes(x: RG): Set[R] = x.regions
+      override def edges(x: RG): Set[(R, R)] = x.edges
+    }
+}
+
+/** Notation from Wang et Zhou: "Simplifying Generalized Belief Propagation...". */
+object WangZhouNotation {
+  implicit class WZRegionGraph(val rg: RegionGraph) extends AnyVal {
+    type R = rg.Region
+    def <(r1: R, r2: R): Boolean = rg.descendants(r2).contains(r1)
+    def >(r1: R, r2: R): Boolean = rg.descendants(r1).contains(r2)
+    def <=(r1: R, r2: R): Boolean = <(r1,r2) || r1 == r2
+    def >=(r1: R, r2: R): Boolean = >(r1,r2) || r1 == r2
+    def all_<(r: R): Set[R] = rg.descendants(r)
+    def all_>(r: R): Set[R] = rg.ancestors(r)
+    def all_<=(r: R): Set[R] = rg.descendants(r) + r
+    def all_>=(r: R): Set[R] = rg.ancestors(r) + r
+    def I(r: R): Set[R] = all_<=(r)
+    def A(r: R): Set[R] = all_>(r)
+    def B(r: R): Set[R] = rg.boundary(r)
+  }
 }
 
 /** Somewhat efficient implementation of region graph methods. */
@@ -78,46 +130,4 @@ trait OverCountingNumbers {self: RegionGraph =>
     topo.foldLeft(Map[Region,Int]()){case (m,r) => m + (r -> (1 - ancestors(r).foldLeft(0)(_ + m(_))))}
   }
   final override def weightOf(r: Region): Double = overCountingNumbers(r).toDouble
-}
-
-case class TwoLayerRG(problemStructure: ProblemStructure,
-                      lowerRegions: Set[Set[ProblemStructure#VI]],
-                      upperRegions: Set[Set[ProblemStructure#VI]],
-                      factorAssignment: Map[ProblemStructure#FI,Set[ProblemStructure#VI]]) extends RegionGraph with ChildMapRG with OverCountingNumbers {
-  type Region = Set[VI]
-  val regions = lowerRegions ++ upperRegions
-
-  override protected def childrenInitializer(r: Set[VI]): Set[Set[VI]] = if(lowerRegions(r)) Set() else lowerRegions.filter(_.subsetOf(r))
-
-  val factorsOfRegion: Map[Region,Set[FI]] = regions.map(r => r -> factorAssignment.filter(_._2 == r).keySet).toMap.withDefaultValue(Set())
-
-  override def variablesOf(r: Region): Set[VI] = r
-  override def factorsOf(r: Region): Set[FI] = factorsOfRegion(r)
-}
-
-case class OvercountingRegionGraph(problemStructure: ProblemStructure, regions: Set[Set[ProblemStructure#VI]], factorAssignment: Map[ProblemStructure#FI,Set[ProblemStructure#VI]])
-  extends RegionGraph with ChildMapRG with OverCountingNumbers {
-  type Region = Set[problemStructure.VI]
-
-  val factorsOfRegion: Map[Region,Set[FI]] = regions.map(r => r -> factorAssignment.filter(_._2 == r).keySet).toMap.withDefaultValue(Set())
-
-
-  override protected def childrenInitializer(r: Set[problemStructure.VI]): Set[Set[problemStructure.VI]] = {
-    val ancs = regions.filter(_.subsetOf(r)) - r
-    ancs.filter(r => !ancs.exists(anc => r.subsetOf(anc) && anc != r))
-  }
-
-  override def factorsOf(r: Set[VI]): Set[FI] = factorsOfRegion(r)
-  override def variablesOf(r: Set[VI]): Set[VI] = r
-}
-
-object RegionGraph {
-  def betheRG(ps: ProblemStructure): TwoLayerRG = {
-    val upper: SSet[Int] = new SSet(ps.scopeOfFactor.map(_.toSet)(collection.breakOut))
-    TwoLayerRG(ps,
-      lowerRegions = ps.variables.map(Set(_))(collection.breakOut),
-      upperRegions = upper.maximalSets,
-      factorAssignment = ps.factorIndices.map(fi => fi -> upper.maximalSuperSetsOf(ps.scopeOfFactor(fi).toSet).head)(collection.breakOut)
-    )
-  }
 }

@@ -8,8 +8,9 @@ import vultura.factor.inference.gbp.RegionGraph
   * What about
   *  - redundancy?
   */
-case class ParentToChild(rg: RegionGraph, parameters: Problem) extends CalProblem
+case class RGBeliefPropagation(rg: RegionGraph, parameters: Problem) extends CalProblem
 with ResultBuilder[RegionBeliefs[RegionGraph#Region] with VariationalResult]{
+  if(rg.isNonRedundant.nonEmpty) vultura.factor.inference.logger.warn( "running rgBP on redundant region graph")
   override type N = P2C
 
   val ps: ProblemStructure = rg.problemStructure
