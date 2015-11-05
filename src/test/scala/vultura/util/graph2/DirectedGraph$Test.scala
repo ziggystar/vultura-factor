@@ -63,6 +63,12 @@ class DirectedGraph$Test extends Specification {
         }
       }
 
+      "connected components" >> {
+        "1 -> 2 -> 3" >> {chain3.connectedComponents === Set(Set(1,2,3))}
+        "1 -> 2, 3 -> 4" >> {gr(Seq(1 -> 2, 3 -> 4)).connectedComponents === Set(Set(1,2),Set(3,4))}
+        "1" >> {gr(LabeledGraph.fromChildList(Set(1),(_:Int) => Set())).connectedComponents === Set(Set(1))}
+      }
+
       "strongly connected components" >> {
         "1 -> 2" >> (chain2.tarjanSCC.toSet === Set(Set(1), Set(2)))
 

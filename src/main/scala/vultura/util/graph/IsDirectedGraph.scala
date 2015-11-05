@@ -1,5 +1,7 @@
 package vultura.util.graph
 
+import scala.annotation.tailrec
+
 /** Type-class for directed graphs.
   *
   * @tparam X This type represents the directed graph.
@@ -28,17 +30,36 @@ trait DiGraphOps[N] extends DiGraph[N] {
   def nodes: Set[N]
   def edges: Set[(N,N)]
   def children(node: N): Set[N]
-  def parents(node: N): Set[N]
-  def ancestors(node: N): Set[N]
-  def descendants(node: N): Set[N]
+  def filter(nodes: N => Boolean, edges: ((N,N)) => Boolean): DiGraphOps[N]
   /** Find topologically ordered strongly connected components of the graph. */
   def tarjanSCC: List[Set[N]]
   /** Reverse the edges of the graph. */
   def transpose: DiGraphOps[N]
+  def ancestors(node: N): Set[N] = transpose.descendants(node)
+
+  def parents(node: N): Set[N] = for((p,n) <- edges if n == node) yield p
+  def descendants(node: N): Set[N] = Iterator.iterate(children(node)){ fringe =>
+    fringe.flatMap(children) ++ fringe
+  }.sliding(2).dropWhile(ss => ss(0) != ss(1)).next().head
   def isAcyclic: Boolean = tarjanSCC.forall(_.size == 1)
-  def filter(nodes: N => Boolean, edges: ((N,N)) => Boolean): DiGraphOps[N]
   def filterNodes(p: N => Boolean): DiGraphOps[N] = filter(p,_ => true)
   def filterEdges(p: ((N,N)) => Boolean): DiGraphOps[N] = filter(_ => true, p)
+  /** Partition the graph into a set of (weakly) connected components, this means that arrow direction is ignored. */
+  def connectedComponents: Set[Set[N]] = {
+    @tailrec def findOneCC(found: Set[N], remainingNodes: Set[N]): Set[N] = {
+      val newCC = found ++ (found.flatMap(n => parents(n) ++ children(n)) intersect remainingNodes)
+      if(newCC == found) found
+      else findOneCC(newCC, remainingNodes)
+    }
+    @tailrec def cc(remainingNodes: Set[N], foundCCs: Set[Set[N]]): Set[Set[N]] =
+      if(remainingNodes.isEmpty)
+        foundCCs
+      else {
+        val nextCC = findOneCC(Set(remainingNodes.head), remainingNodes)
+        cc(remainingNodes -- nextCC, foundCCs + nextCC)
+      }
+    cc(nodes,Set())
+  }
   def graphEqual[X](other: X)(implicit dg: IsDirectedGraph[X,N]) = nodes == dg.nodes(other) && edges == dg.edges(other)
 }
 
@@ -49,22 +70,14 @@ object IsDirectedGraph {
     override def nodes: Set[N] = dg.nodes(x)
     override def edges: Set[(N, N)] = dg.edges(x)
     override def children(node: N): Set[N] = dg.children(x, node)
-    override def parents(node: N): Set[N] = for((p,n) <- edges if n == node) yield p
-    override def descendants(node: N): Set[N] = Iterator.iterate(children(node)){ fringe =>
-      fringe.flatMap(children) ++ fringe
-    }.sliding(2).dropWhile(ss => ss(0) != ss(1)).next().head
-    override def ancestors(node: N): Set[N] = transpose.descendants(node)
     override def filter(nodes: (N) => Boolean, edges: ((N, N)) => Boolean): DiGraphOps[N] =
       Filtered(nodes,edges).diGraphView
-
     /** Reverse the edges of the graph. */
     override def transpose: DiGraphOps[N] = new DiGraph[N]{
       override def nodes: Set[N] = outer.nodes
       override def edges: Set[(N, N)] = outer.edges.map(_.swap)
     }.diGraphView
-
     override def tarjanSCC: List[Set[N]] = x.diGraph.tarjanSCC
-
     case class Filtered(nodeFilter: N => Boolean,
                         edgeFilter: ((N,N)) => Boolean) extends DiGraph[N] {
       override def nodes: Set[N] = dg.nodes(x).filter(nodeFilter)
