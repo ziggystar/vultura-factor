@@ -25,6 +25,9 @@ class DirectedGraph$Test extends Specification {
   def doChecksFor(gr: GraphRep): Fragment = {
     val chain2: DiGraphOps[Int] = gr(Seq(1 -> 2))
     val chain3: DiGraphOps[Int] = gr(Seq(1 -> 2, 2 -> 3))
+    val diamond: DiGraphOps[Int] = gr(Seq(1 -> 2, 1 -> 3, 2 -> 4, 3 -> 4))
+    val cycle2: DiGraphOps[Int] = gr(Seq(1 -> 2, 2 -> 1))
+    val cycle3: DiGraphOps[Int] = gr(Seq(1 -> 2, 2 -> 3, 3 -> 1))
 
     s"graph checks for $gr" >> {
       "constructing a graph from a map" >> {
@@ -63,9 +66,19 @@ class DirectedGraph$Test extends Specification {
         }
       }
 
+      "isTree" >> {
+        "1 -> 2 -> 3" >> (chain3.isTree must beTrue)
+        "diamond" >> (diamond.isTree must beFalse)
+        "cycle 2" >> (cycle2.isTree must beFalse)
+        "cycle 3" >> (cycle3.isTree must beFalse)
+        "1 -> 2, 3 -> 4" >> (gr(Seq(1 -> 2, 3 -> 4)).isTree must beTrue)
+        "1 -> 2, 3 -> 4, 4 -> 3" >> (gr(Seq(1 -> 2, 3 -> 4, 4 -> 3)).isTree must beFalse)
+      }
+
       "connected components" >> {
         "1 -> 2 -> 3" >> {chain3.connectedComponents === Set(Set(1,2,3))}
         "1 -> 2, 3 -> 4" >> {gr(Seq(1 -> 2, 3 -> 4)).connectedComponents === Set(Set(1,2),Set(3,4))}
+        "1 -> 2, 3 -> 4, 4 -> 3" >> {gr(Seq(1 -> 2, 3 -> 4, 4 -> 3)).connectedComponents === Set(Set(1,2),Set(3,4))}
         "1" >> {gr(LabeledGraph.fromChildList(Set(1),(_:Int) => Set())).connectedComponents === Set(Set(1))}
       }
 
@@ -100,6 +113,7 @@ class DirectedGraph$Test extends Specification {
       "cyclicity" >> {
         "chain 3" >> (chain3.isAcyclic must beTrue)
         "loop 3" >> (gr(Seq(1 -> 2, 2 -> 3, 3 -> 1)).isAcyclic must beFalse)
+        "directed diamond (a DAG) must be acyclic" >> (diamond.isAcyclic must beTrue)
       }
     }
   }

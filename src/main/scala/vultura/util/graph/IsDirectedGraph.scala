@@ -42,9 +42,14 @@ trait DiGraphOps[N] extends DiGraph[N] {
     fringe.flatMap(children) ++ fringe
   }.sliding(2).dropWhile(ss => ss(0) != ss(1)).next().head
   def isAcyclic: Boolean = tarjanSCC.forall(_.size == 1)
+  def isTree: Boolean = connectedComponents.forall{c =>
+    //number of edges must be n-1
+    edges.count{case (n1,n2) => c(n1) && c(n2)} == c.size - 1
+  }
   def filterNodes(p: N => Boolean): DiGraphOps[N] = filter(p,_ => true)
   def filterEdges(p: ((N,N)) => Boolean): DiGraphOps[N] = filter(_ => true, p)
-  /** Partition the graph into a set of (weakly) connected components, this means that arrow direction is ignored. */
+  /** Partition the graph into a set of (weakly) connected components, this means that arrow direction is ignored.
+    * @return A set of components (each a set of vertices). Each component is guaranteed to be non-empty. */
   def connectedComponents: Set[Set[N]] = {
     @tailrec def findOneCC(found: Set[N], remainingNodes: Set[N]): Set[N] = {
       val newCC = found ++ (found.flatMap(n => parents(n) ++ children(n)) intersect remainingNodes)
@@ -90,7 +95,6 @@ object IsDirectedGraph {
     def diGraph: LabeledGraph[N] = LabeledGraph(x)
   }
 }
-
 
 /** Import for type-class instances for maps. */
 object TupleSeqsAreGraphs {
