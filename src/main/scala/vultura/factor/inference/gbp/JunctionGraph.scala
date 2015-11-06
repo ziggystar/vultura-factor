@@ -5,14 +5,11 @@ import vultura.factor.ProblemStructure
 /** A two-layer region graph, as described in Yedidia,Freeman,Weiss (Constructing Free...), which is a
   * generalization of the jg described in Aji-McEliece. */
 case class JunctionGraph(problemStructure: ProblemStructure,
-                      lowerRegions: Set[Set[ProblemStructure#VI]],
-                      upperRegions: Set[Set[ProblemStructure#VI]],
-                      factorAssignment: Map[ProblemStructure#FI,Set[ProblemStructure#VI]]) extends RegionGraph with ChildMapRG with OverCountingNumbers {
+                         lowerRegions: Set[Set[ProblemStructure#VI]],
+                         upperRegions: Set[Set[ProblemStructure#VI]],
+                         factorAssignment: Map[ProblemStructure#FI,Set[ProblemStructure#VI]]) extends RegionGraph with ChildMapRG with OverCountingNumbers {
   type Region = Set[VI]
   val regions = lowerRegions ++ upperRegions
-
-  Some(issues).filterNot(_.isEmpty).map(" * " + _.mkString("\n * "))
-    .foreach(vultura.factor.inference.logger.warn(_))
 
   override protected def childrenInitializer(r: Set[VI]): Set[Set[VI]] = if(lowerRegions(r)) Set() else lowerRegions.filter(_.subsetOf(r))
 
@@ -20,7 +17,4 @@ case class JunctionGraph(problemStructure: ProblemStructure,
 
   override def variablesOf(r: Region): Set[VI] = r
   override def factorsOf(r: Region): Set[FI] = factorsOfRegion(r)
-  override def issues: Seq[String] = super.issues ++ jgIssues
-  /** Issues specific junction graphs. */
-  def jgIssues: Seq[String] =  ???
 }

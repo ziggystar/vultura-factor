@@ -2,7 +2,7 @@ package vultura.calibration
 
 import vultura.factor.inference.ConvergenceStats
 import vultura.util.SIIndex
-import vultura.util.graph2.graphviz.DotGraph
+import vultura.util.graph.graphviz.DotGraph
 
 trait Edge
 
@@ -64,7 +64,7 @@ class Calibrator[CP <: CalProblem](val cp: CP) {
   protected val dependencies: IndexedSeq[IndexedSeq[NI]] = nodes.elements.map(_.dependencies.map(nodes(_)))
 
   val stronglyConnectedComponents: IndexedSeq[Set[NI]] = {
-    import vultura.util.graph2._
+    import vultura.util.graph._
     val graph = LabeledGraph.fromChildList(
       nodes.indices.toSet,
       nodes.indices.map(ei => ei -> dependencies(ei).toSet)(collection.breakOut): Map[NI, Set[NI]]

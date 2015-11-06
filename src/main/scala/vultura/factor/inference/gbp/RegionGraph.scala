@@ -2,8 +2,8 @@ package vultura.factor.inference.gbp
 
 import vultura.factor.ProblemStructure
 import vultura.util._
-import vultura.util.graph.DotGraph
-import vultura.util.graph2._
+import vultura.util.graph.LabeledGraph
+import vultura.util.graph.graphviz.DotGraph
 
 import scala.annotation.tailrec
 import scala.collection.immutable.HashMap
@@ -20,6 +20,7 @@ trait RegionGraph {
   def factorsOf(r: Region): Set[FI]
   def weightOf(r: Region): Double
 
+  def regionsContaining(scope: Set[VI]): Set[Region] = regions.filter(scope subsetOf variablesOf(_))
   def regionOfFactor(fi: FI): Region = regions.find(r => factorsOf(r).contains(fi)).get
   def regions: Set[Region]
   /** Direct predecessors of `r`. */
@@ -43,26 +44,41 @@ trait RegionGraph {
     child <- children(parent)
   } yield parent -> child
 
-  def issues: Seq[String] = for{
-    (issueDesc,details) <- Seq(
-      "region graph is non-redundant" -> isNonRedundant,
-      "variables counting numbers don't sum to one" -> variablesAreCountedOnce,
-      "factors counting numbers don't sum to one" -> factorsAreCountedOnce,
-      "some factors are in inner regions" -> factorsAreInOuterRegions,
-      "not all variables induce a connected subgraph" -> variablesAreConnected
+
+  def directedGraph: LabeledGraph[Region] = LabeledGraph.fromChildList(regions,r => children(r))
+
+  def toDot: DotGraph[Region, (Region,Region)] = DotGraph.apply(regions,edges).labelNodes{case r => weightOf(r).toString}
+
+  object Diagnosis {
+    lazy val validityChecks: Seq[(String,() => Boolean)] = Seq(
+      "variables are connected" -> (() => variablesAreConnected),
+      "factors are connected" -> (() => factorsAreConnected),
+      "weights of regions containing a variable don't sum to 1" -> (() => variablesAreCountedOnce),
+      "weights of regions containing a factor don't sum to 1" -> (() => factorsAreCountedOnce)
     )
-    if details.nonEmpty
-  } yield issueDesc + "\n * " + details.mkString("\n * ")
 
-  def isNonRedundant: Seq[String] = ???
-  def variablesAreCountedOnce: Seq[String] = ???
-  def factorsAreCountedOnce: Seq[String] = ???
-  def variablesAreConnected: Seq[String] = ???
-  def factorsAreInOuterRegions: Seq[String] =
-    regions.toSeq.filter(parents(_).nonEmpty)               //exists child regions
-      .filter(factorsOf(_).nonEmpty).map(r => s"region $r") //that has factors assigned?
+    lazy val validityIssues: Seq[String] = validityChecks.collect{case (msg,v) if !v() => msg}
 
-  def toDot: DotGraph[Region] = DotGraph.apply(edges)
+    lazy val isValidRegionGraph = validityIssues.isEmpty
+
+    /** Redundancy means that each variable-induced sub-graph is a tree. */
+    def nonRedundantVariables: IndexedSeq[VI] = problemStructure.variables
+      .filterNot(v => directedGraph.filterNodes(regionsContaining(Set(v))).isTree)
+    def isNonRedundant: Boolean = nonRedundantVariables.nonEmpty
+
+    def variablesAreCountedOnce: Boolean = problemStructure.variables
+      .exists(vi => math.abs(regionsContaining(Set(vi)).map(weightOf).sum - 1d) > 1e-7)
+
+    def factorsAreCountedOnce: Boolean = problemStructure.factorIndices
+      .forall(fi => math.abs(weightOf(regionOfFactor(fi)) - 1d) < 1e-7)
+
+    def factorsAreInOuterRegions: Boolean = regions.exists(r => parents(r).nonEmpty && factorsOf(r).nonEmpty)
+
+    def variablesAreConnected: Boolean = problemStructure.variables
+      .forall(v => directedGraph.filterNodes(regionsContaining(Set(v))).connectedComponents.size == 1)
+    def factorsAreConnected: Boolean = problemStructure.factorIndices
+      .forall{fi => directedGraph.filterNodes(regionsContaining(problemStructure.scopeOfFactor(fi).toSet)).connectedComponents.size == 1 }
+  }
 }
 
 object RegionGraph {
@@ -74,13 +90,6 @@ object RegionGraph {
       factorAssignment = ps.factorIndices.map(fi => fi -> upper.maximalSuperSetsOf(ps.scopeOfFactor(fi).toSet).head)(collection.breakOut)
     )
   }
-
-  /** Declares that a RegionGraph is a directed graph with regions as nodes. */
-  implicit def regionGraphIsDirectedGraphInstance[R,RG <: RegionGraph{type Region = R}]: IsDirectedGraph[RG, R] =
-    new IsDirectedGraph[RG,R]{
-      override def nodes(x: RG): Set[R] = x.regions
-      override def edges(x: RG): Set[(R, R)] = x.edges
-    }
 }
 
 /** Notation from Wang et Zhou: "Simplifying Generalized Belief Propagation...". */

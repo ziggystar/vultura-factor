@@ -4,7 +4,7 @@ import org.specs2.matcher.MatchResult
 import org.specs2.mutable.Specification
 import vultura.factor.{FactorMatchers, NormalD, Problem}
 import vultura.factor.generation._
-import vultura.util.graph2.graphviz.Directed
+import vultura.util.graph.graphviz.Directed
 
 class MeanFieldTest extends Specification with FactorMatchers {
 
