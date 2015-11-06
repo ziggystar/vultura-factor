@@ -5,7 +5,8 @@ import vultura.util.{SIIndex, Index}
 import scala.collection.mutable
 
 /** An efficient directed graph implementation that uses one array per node for representing its children. */
-class LabeledGraph[N] protected[LabeledGraph](val index: Index[N], protected val childs: Array[Array[Int]]) extends DiGraphOps[N] {
+class LabeledGraph[N] protected[LabeledGraph](val index: Index[N], protected val childs: Array[Array[Int]])
+  extends DiGraphOps[N] { outer =>
 
   object intGraph {
     val numNodes: Int = childs.length
@@ -83,8 +84,8 @@ class LabeledGraph[N] protected[LabeledGraph](val index: Index[N], protected val
       sccs.reverse
     }
   }
-  lazy val nodes: Set[N] = index.elements.toSet
-  lazy val edges: Set[(N, N)] = intGraph.edges.map{case (i1,i2) => index.backward(i1) -> index.backward(i2)}
+  override lazy val nodes: Set[N] = index.elements.toSet
+  override lazy val edges: Set[(N, N)] = intGraph.edges.map{case (i1,i2) => index.backward(i1) -> index.backward(i2)}
   override def children(node: N): Set[N] = intGraph.children(index.forward(node)).map(index.backward)
   override def descendants(node: N): Set[N] = intGraph.descendants(index.forward(node)).map(index.backward)
   override def ancestors(node: N): Set[N] = intGraph.ancestors(index.forward(node)).map(index.backward)
@@ -98,6 +99,22 @@ class LabeledGraph[N] protected[LabeledGraph](val index: Index[N], protected val
       newNodes,
       newNodes.map(n => n -> children(n).filter(c => nodeP(n) && nodeP(c) && edgeP((n,c))))(collection.breakOut): Map[N,Iterable[N]])
   }
+
+  val instGraph = new DiGraphInstOps[N] {
+    override type G = outer.type
+    override def typeClass: IsDirectedGraph[G, N] = new IsDirectedGraph[G,N] {
+      override def nodes(x: outer.type): Set[N] = outer.nodes
+      override def edges(x: outer.type): Set[(N, N)] = outer.edges
+    }
+    override def instance: G = outer
+  }
+  override def isAcyclic: Boolean = instGraph.isAcyclic
+  override def graphEqual[X](other: X)(implicit dg: IsDirectedGraph[X, N]): Unit = instGraph.graphEqual(other)
+  override def isTree: Boolean = instGraph.isTree
+
+  /** Partition the graph into a set of (weakly) connected components, this means that arrow direction is ignored.
+    * @return A set of components (each a set of vertices). Each component is guaranteed to be non-empty. */
+  override def connectedComponents: Set[Set[N]] = instGraph.connectedComponents
 }
 
 
