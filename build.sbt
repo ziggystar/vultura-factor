@@ -30,7 +30,7 @@ organization := "de.uni-ulm"
   - deprecate some methods in inference result traits (e.g. only logZ remains for partition function)
   - remove buggy mean-field
 */
-version := "23.0.2-DEV"
+version := "24.0.0-DEV"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 

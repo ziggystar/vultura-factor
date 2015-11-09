@@ -14,11 +14,9 @@ case class SumProductPowTask(domainSizes: Array[Int],
                              remainingVars: Array[Int],
                              factorGroups: Seq[(Double,Array[Array[Int]])]
                              ){
-  val numFactors: Int = factorGroups.foldLeft(0)(_ + _._2.size)
   val numFactorGroups: Int = factorGroups.size
   val groupSize: Array[Int] = factorGroups.map(_._2.length)(collection.breakOut)
   val remainSize: Int = Factor.mapMultiply(remainingVars,domainSizes)
-  val allFactors: Array[Array[Var]] = factorGroups.flatMap(_._2)(collection.breakOut)
   val groupPow: Array[Double] = factorGroups.map(_._1)(collection.breakOut)
   //index into a flattened argument array
   val factorIndex: Array[Array[Int]] =
@@ -26,6 +24,7 @@ case class SumProductPowTask(domainSizes: Array[Int],
 
   //collect all variables
   val (cliqueOrdering: Array[Int], margVars: Array[Int]) = {
+    val allFactors: Array[Array[Var]] = factorGroups.flatMap(_._2)(collection.breakOut)
     val allVars: Array[Int] = allFactors.flatten.distinct
     //reorder, so that all margVars are at beginning
     val mv: Array[Int] = allVars.filterNot(remainingVars.contains)

@@ -35,7 +35,7 @@ trait RegionGraph {
   def outerRegions: Set[Region] = regions.filter(r => parents(r).isEmpty)
   def innerRegions: Set[Region] = regions -- outerRegions
   /** All descendants and the region itself. */
-  def interior(r: Region): Set[Region] = ancestors(r) + r
+  def interior(r: Region): Set[Region] = descendants(r) + r
   /** All regions that are parent to an interior region of `r`, but are not interior themselves. */
   def boundary(r: Region): Set[Region] = interior(r).flatMap(parents) -- interior(r)
 
