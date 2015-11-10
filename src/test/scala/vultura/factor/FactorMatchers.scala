@@ -70,9 +70,17 @@ trait FactorMatchers {
     }
   }
 
+  def haveValidMarginals: Matcher[MarginalI] = {
+    import org.specs2.matcher.Matchers._
+    val sumsToOne: Matcher[Iterable[Double]] = beCloseTo(1d,delta=1e-9).^^((_:Iterable[Double]).sum).updateMessage("does not sum to one: " + _)
+    val nonNegative: Matcher[Iterable[Double]] = foreach(beGreaterThanOrEqualTo(0d).updateMessage("is negative: " + _))
+    val allAreDistributions: Matcher[Iterable[Iterable[Double]]] = foreach(sumsToOne and nonNegative).updateMessage("is not a valid distribution: " + _)
+    allAreDistributions ^^ ((margs: MarginalI) => margs.problem.variables.map(margs.varBelief(_).values.toIterable))
+  }
+
   def haveSameMarginals(other: MarginalI, tol: Double): Matcher[MarginalI] = haveSameMarginals(_ => other, tol)
 
-  def beCloseTo(ref: Seq[Double], tol: Double = 1e-12): Matcher[Seq[Double]] = new Matcher[Seq[Double]]{
+  def beCloseToSeq(ref: Seq[Double], tol: Double = 1e-12): Matcher[Seq[Double]] = new Matcher[Seq[Double]]{
     override def apply[S <: Seq[Double]](t: Expectable[S]): MatchResult[S] = result(
       t.value.zip(ref).map{case (x,y) => math.abs(x - y)}.max < tol,
       "has close values to " + ref,

@@ -47,7 +47,7 @@ scalacOptions in Compile += "-Xdisable-assertions"
 
 libraryDependencies += "org.apache.commons" % "commons-math3" % "3.2"
 
-libraryDependencies += "de.uni-ulm" %% "vultura-util" % "23.2.0"
+libraryDependencies += "de.uni-ulm" %% "vultura-util" % "24.0.0-DEV"
 
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.+"
 
@@ -57,6 +57,8 @@ libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0"
 
 //testing dependencies
 libraryDependencies += "org.specs2" %% "specs2-core" % "3.6.5" % "test"
+
+libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.12" % "test"
 
 scalacOptions in Test ++= Seq("-Yrangepos") //for specs2
 

@@ -76,7 +76,8 @@ case class SumProductPowTask(domainSizes: Array[Int],
             factorPointers(fg)(fi) += lookups(fg)(fi)(overflow)
             fi += 1
           }
-          prodProdTemp(fg) = ring.pow(ring.prodA(pTemp),groupPow(fg))
+          val factor: Double = ring.pow(ring.prodA(pTemp), groupPow(fg))
+          prodProdTemp(fg) = factor
 
           fg += 1
         }

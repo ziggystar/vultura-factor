@@ -1,5 +1,6 @@
 package vultura.calibration
 
+import com.typesafe.scalalogging.StrictLogging
 import vultura.factor.inference.ConvergenceStats
 import vultura.util.SIIndex
 import vultura.util.graph.graphviz.DotGraph
@@ -51,7 +52,7 @@ trait ResultBuilder[R] {outer: CalProblem =>
 }
 
 /** Mutable class that holds a calibration state. */
-class Calibrator[CP <: CalProblem](val cp: CP) {
+class Calibrator[CP <: CalProblem](val cp: CP) extends StrictLogging {
   /** Internal representation of edge state. */
   type IR = Array[Double]
   type N = cp.N

@@ -1,5 +1,7 @@
 package vultura.factor
 
+import com.typesafe.scalalogging.LazyLogging
+
 import scala.annotation.tailrec
 
 /**
@@ -48,9 +50,9 @@ object SafeD extends Ring[Double]{
   def sum(s1: Double, s2: Double): Double = sys.error("safe ring has no binary ops")
   def prod(f1: Double, f2: Double): Double = sys.error("safe ring has no binary ops")
   override def sumA(ss: Array[Double]): Double =
-    if(ss.size == 1) ss(0) else sys.error("safe ring accepts only unit arrays")
+    if(ss.length == 1) ss(0) else sys.error("safe ring accepts only unit arrays")
   override def prodA(fs: Array[Double]): Double =
-    if(fs.size == 1) fs(0) else sys.error("safe ring accepts only unit arrays")
+    if(fs.length == 1) fs(0) else sys.error("safe ring accepts only unit arrays")
 
   override def toString: String = "no-op ring"
 }
@@ -64,7 +66,7 @@ object NormalD extends Ring[Double]{
   override def sumA(ss: Array[Double]): Double = {
     var i = 0
     var result = zero
-    while(i < ss.size){
+    while(i < ss.length){
       result += ss(i)
       i += 1
     }
@@ -73,7 +75,7 @@ object NormalD extends Ring[Double]{
   override def prodA(fs: Array[Double]): Double = {
     var i = 0
     var result = one
-    while(i < fs.size){
+    while(i < fs.length){
       result *= fs(i)
       i += 1
     }
@@ -136,7 +138,7 @@ object NormalD extends Ring[Double]{
   override def toString: String = "normal domain"
 }
 
-object LogD extends Ring[Double] {
+object LogD extends Ring[Double] with LazyLogging {
   final val zero: Double = Double.NegativeInfinity
   final val one: Double = 0d
 
@@ -167,7 +169,7 @@ object LogD extends Ring[Double] {
     var maxi = 0
     var i = 0
 
-    while(i < ss.size){
+    while(i < ss.length){
       if(ss(i) > max){
         max = ss(i)
         maxi = i
@@ -182,7 +184,7 @@ object LogD extends Ring[Double] {
     i = 0
     var sum = 0d
     val thresh = Double.NegativeInfinity
-    while(i < ss.size){
+    while(i < ss.length){
       if(i != maxi || ss(i) < thresh){
         sum += math.exp(ss(i) - max)
       }
@@ -194,7 +196,7 @@ object LogD extends Ring[Double] {
   override def prodA(fs: Array[Double]): Double = {
     var i = 0
     var result = one
-    while(i < fs.size){
+    while(i < fs.length){
       result += fs(i)
       i += 1
     }
@@ -211,7 +213,7 @@ object LogD extends Ring[Double] {
   override def normalizeInplace(a: Array[Double]) {
     val z = sumA(a)
     if(z == zero)
-      return
+      logger.error("normalizing null quantity", a)
     var i = 0
     while(i < a.length){
       a(i) -= z

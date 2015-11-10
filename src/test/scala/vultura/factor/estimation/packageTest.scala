@@ -35,6 +35,6 @@ class packageTest extends Specification with FactorMatchers {
     val target = MObsAvgLogLikelihood(Feature.buildProblem(problem.domains,problem.ring,keptFeatures), data, droppedFeatures.map(fv => Seq(fv._1)))
     val (optimized, _) = Optimization.maximize(target)
 
-    optimized must beCloseTo(droppedFeatures.map(_._2))
+    optimized must beCloseToSeq(droppedFeatures.map(_._2))
   }
 }
