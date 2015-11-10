@@ -107,8 +107,25 @@ trait VariationalResult extends MargParI {
   final lazy val logZ: Double = averageEnergy + entropy
 }
 
-trait RegionBeliefs[R] {
+trait RegionBeliefs[R] extends MarginalI {
   def regions: Set[R]
+
+  /** Belief over the variables of a given region.
+    * Normal encoding.
+    */
   def regionBelief(region: R): Factor
   def scopeOfRegion(region: R): Set[Int]
+
+  /** @return marginal distribution of variable in encoding specified by `ring`. */
+  override def encodedVarBelief(variable: Var): Factor = {
+    val normalVBel = varBelief(variable)
+    normalVBel.copy(values = problem.ring.encode(normalVBel.values))
+  }
+
+  /** (Estimated) variable belief, in normal encoding. */
+  override def varBelief(variable: Var): Factor = {
+    val smallestContainingRegion: R = regions.filter(scopeOfRegion(_).contains(variable)).minBy(scopeOfRegion(_).size)
+    val rbel = regionBelief(smallestContainingRegion)
+    Factor.multiplyRetain(NormalD)(problem.domains)(Seq(rbel),Array(variable))
+  }
 }

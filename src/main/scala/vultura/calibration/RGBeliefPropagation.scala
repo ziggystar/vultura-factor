@@ -1,7 +1,7 @@
 package vultura.calibration
 
 import vultura.factor.inference.{RegionBeliefs, VariationalResult}
-import vultura.factor.{Factor, SumProductPowTask, ProblemStructure, Problem}
+import vultura.factor._
 import vultura.factor.inference.gbp.RegionGraph
 
 /** Implementation of the parent-to-child algorithm to optimize region graph free energies.
@@ -21,6 +21,7 @@ with ResultBuilder[RegionBeliefs[RegionGraph#Region] with VariationalResult]{
 
   /** Message for the edge µ→ν. */
   case class M(mu: R, nu: R) extends Node {
+    require(rg.edges.contains(mu -> nu), "instantiating non-existent region-graph edge")
     /** Type of dependencies .*/
     override type D = M
 
@@ -82,13 +83,34 @@ with ResultBuilder[RegionBeliefs[RegionGraph#Region] with VariationalResult]{
       override def problem: Problem = parameters
       override def regions: Set[RegionGraph#Region] = rg.regions.toSeq.toSet
       override def scopeOfRegion(region: RegionGraph#Region): Set[Int] = rg.variablesOf(region.asInstanceOf[R])
-      override def regionBelief(region: RegionGraph#Region): Factor = ???
 
-      override def averageEnergy: Double = ???
+      override def averageEnergy: Double = rg.regions.filter(rg.factorsOf(_).nonEmpty).foldLeft(0d){case (ae,r) =>
+          val factorIdx = rg.factorsOf(r)
+          val rbel = regionBelief(r)
+          //sum the log-factors (which is aquivalent to multiplying their normal values in log encoding
+          val joint = Factor.multiplyRetain(LogD)(ps.domains)(factorIdx.toIndexedSeq.map(problem.logFactor),rbel.variables)
+          val regionEnergy = NormalD.expectation(rbel.values,joint.values)
+          ae + rg.weightOf(r) * regionEnergy
+      }
+      override def entropy: Double = rg.regions.foldLeft(0d){case (h,r) =>
+        val hr = NormalD.entropy(regionBelief(r).values)
+          h + rg.weightOf(r) * hr
+      }
 
-      override def entropy: Double = ???
+      /** This is equation (14). */
+      override def regionBelief(region: RegionGraph#Region): Factor = {
+        import rg._
 
-      /** @return marginal distribution of variable in encoding specified by `ring`. */
-      override def encodedVarBelief(variable: VI): Factor = ???
+        val r = region.asInstanceOf[rg.Region]
+        val potentials: IndexedSeq[Factor] = factorsOf(r).map(parameters.factors)(collection.breakOut)
+        val messages: IndexedSeq[M] = (for {
+                  mu <- boundary(r)
+                  nu <- interior(r) if edges.contains(mu -> nu)
+                } yield M(mu,nu))(collection.breakOut)
+        val messageFactors: IndexedSeq[Factor] = messages.map(m => Factor(m.variables,valuation(m)))
+        val encoded =
+          Factor.multiply(parameters.ring)(ps.domains)(potentials ++ messageFactors).normalize(problem.ring)
+        encoded.copy(values = problem.ring.decode(encoded.values))
+      }
     }
 }
