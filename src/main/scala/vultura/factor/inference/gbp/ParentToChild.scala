@@ -1,7 +1,7 @@
 package vultura.factor.inference.gbp
 
 import vultura.factor._
-import vultura.factor.inference.{IterativeResult, JointMargI, MargParI}
+import vultura.factor.inference.{ConvergenceStats, JointMargI, MargParI}
 import vultura.propagation._
 
 import scala.reflect.ClassTag
@@ -153,7 +153,7 @@ case class ParentToChild(rg: RegionGraph, ring: Ring[Double]) {
 }
 
 object ParentToChild{
-  def infer(rg: RegionGraph, problem: Problem, tol: Double = 1e-12, maxIter: Long = 100000): (MargParI with JointMargI,IterativeResult) = {
+  def infer(rg: RegionGraph, problem: Problem, tol: Double = 1e-12, maxIter: Long = 100000): (MargParI with JointMargI,ConvergenceStats) = {
     require(rg.problemStructure.isCompatible(problem), "problem doesn't fit region graph")
     val ptc = ParentToChild(rg, problem.ring)
 
@@ -165,10 +165,8 @@ object ParentToChild{
     val calibrator = new RoundRobinAD(ptc.calibrationProblem,MaxDiff,neutralValuation.widen.toIVal)
 
     val result = calibrator.calibrate(ptc.parametersFromProblem(problem).widen, maxDiff = tol, maxLoops = maxIter)
-    (ptc.constructResult(result.ival.asInstanceOf[IValuation[ptc.FactorNode]],problem), new IterativeResult {
-      override def maxDiff: Double = result.maxDiff
-      override def iterations: Long = result.totalUpdates
-      override def isConverged: Boolean = result.isConverged
-    })
+    (
+      ptc.constructResult(result.ival.asInstanceOf[IValuation[ptc.FactorNode]],problem),
+      ConvergenceStats(result.totalUpdates,result.maxDiff,result.isConverged))
   }
 }

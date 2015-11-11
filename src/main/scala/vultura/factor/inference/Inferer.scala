@@ -1,5 +1,7 @@
 package vultura.factor.inference
 
+import gnu.trove.TCollections
+import gnu.trove.map.hash.TIntObjectHashMap
 import vultura.factor._
 
 /** Base-trait for probabilistic inference algorithms. */
@@ -42,6 +44,7 @@ trait MargParI extends MarginalI with ParFunI{
   def toResult = new Result(this)
 }
 
+@deprecated("use RegionBeliefs instead")
 trait JointMargI extends MarginalI {
   /** Throws if no clique contains `vars`.
     * @return Normalized belief over given variables in encoding specified by problem ring. */
@@ -85,12 +88,6 @@ class Result(mpi: MargParI) extends MargParI {
   }
 }
 
-trait IterativeResult {
-  def isConverged: Boolean
-  def iterations: Long
-  def maxDiff: Double
-}
-
 case class ConvergenceStats(iterations: Long, maxDiff: Double, isConverged: Boolean) {
   def max(other: ConvergenceStats) = ConvergenceStats(
     iterations max other.iterations,
@@ -122,10 +119,18 @@ trait RegionBeliefs[R] extends MarginalI {
     normalVBel.copy(values = problem.ring.encode(normalVBel.values))
   }
 
+  private val variableBeliefCache = TCollections.synchronizedMap(new TIntObjectHashMap[Factor](problem.numVariables))
+
   /** (Estimated) variable belief, in normal encoding. */
   override def varBelief(variable: Var): Factor = {
-    val smallestContainingRegion: R = regions.filter(scopeOfRegion(_).contains(variable)).minBy(scopeOfRegion(_).size)
-    val rbel = regionBelief(smallestContainingRegion)
-    Factor.multiplyRetain(NormalD)(problem.domains)(Seq(rbel),Array(variable))
+    if (variableBeliefCache.containsKey(variable)) {
+      variableBeliefCache.get(variable)
+    } else {
+      val smallestContainingRegion: R = regions.filter(scopeOfRegion(_).contains(variable)).minBy(scopeOfRegion(_).size)
+      val rbel = regionBelief(smallestContainingRegion)
+      val result = Factor.multiplyRetain(NormalD)(problem.domains)(Seq(rbel),Array(variable))
+      variableBeliefCache.put(variable,result)
+      result
+    }
   }
 }
