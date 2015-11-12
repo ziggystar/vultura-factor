@@ -12,12 +12,12 @@ import org.specs2.matcher.MatchResult
  */
 class packageTest extends Specification with FactorMatchers {
 
-  override def is =
-    "learning on random problems, completely observed" ^
+  override def is = args(skipAll=true) ^
+    ("learning on random problems, completely observed" ^
       "1x3 with two missing parameters" ! randomCompletelyObservedLearningTest(grid(1,2,2,expGauss(0.1)), 2, 2000).orSkip ^
       "4x4 with one missing parameter" ! randomCompletelyObservedLearningTest(grid(4,4,2,expGauss(0.1)), 1, 2000).orSkip ^
       randomCompletelyObservedLearningTest(grid(3,3,2,expGauss(0.1)), 2, 1000).orSkip ^
-      randomCompletelyObservedLearningTest(grid(3,3,2,expGauss(0.1)), 3, 1000).orSkip
+      randomCompletelyObservedLearningTest(grid(3,3,2,expGauss(0.1)), 3, 1000).orSkip)
 
   def randomCompletelyObservedLearningTest(_problem: Problem, numParameters: Int, numData: Int = 50): MatchResult[IndexedSeq[Double]] = {
     val random = new Random(1)
