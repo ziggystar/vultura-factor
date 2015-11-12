@@ -50,8 +50,7 @@ trait JointMargI extends MarginalI {
     * @return Normalized belief over given variables in encoding specified by problem ring. */
   def cliqueBelief(vars: Array[Var]): Factor
 
-  def decodedCliqueBelief(vars: Array[Var]): Factor =
-    if(problem.ring != NormalD) problem.ring.decode(cliqueBelief(vars)) else cliqueBelief(vars)
+  def decodedCliqueBelief(vars: Array[Var]): Factor = cliqueBelief(vars).decodeWith(problem.ring)
 }
 
 @deprecated("use only RegionBeliefs", "24.0.0")
@@ -63,7 +62,9 @@ trait JMIFromRB[R] extends JointMargI {self : RegionBeliefs[R] =>
     val rb = regionBelief(regions
       .filter(r => varSet subsetOf scopeOfRegion(r))
       .minBy(scopeOfRegion(_).size))
-    Factor.multiplyRetain(problem.ring)(problem.domains)(Seq(rb),vars)
+    //marginalize belief to query variables
+    Factor.multiplyRetain(NormalD)(problem.domains)(Seq(rb),vars)
+      .encodeWith(problem.ring)
   }
 }
 
@@ -123,10 +124,7 @@ trait RegionBeliefs[R] extends MarginalI {
 /** Mixin to compute variable marginals from region marginals. Might be inefficient. */
 trait VarBeliefFromRegionBelief[R] extends MarginalI {self: RegionBeliefs[R] =>
   /** @return marginal distribution of variable in encoding specified by `ring`. */
-  override def encodedVarBelief(variable: Var): Factor = {
-    val normalVBel = varBelief(variable)
-    normalVBel.copy(values = problem.ring.encode(normalVBel.values))
-  }
+  override def encodedVarBelief(variable: Var): Factor = varBelief(variable).encodeWith(problem.ring)
 
   private val variableBeliefCache = TCollections.synchronizedMap(new TIntObjectHashMap[Factor](problem.numVariables))
 
