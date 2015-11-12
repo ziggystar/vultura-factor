@@ -11,11 +11,11 @@ trait Inferer {
 
 /** Trait that is implemented by inference algorithms that can compute variable marginals. */
 trait MarginalI extends Inferer {
-  @deprecated("use varBelief")
+  @deprecated("use varBelief", "24.0.0")
   def decodedVariableBelief(vi: Int): Factor = varBelief(vi)
 
   /** @return marginal distribution of variable in encoding specified by `ring`. */
-  @deprecated("use encodedVariableBelief")
+  @deprecated("use encodedVariableBelief", "24.0.0")
   def variableBelief(vi: Int): Factor = encodedVarBelief(vi)
   
   /** @return marginal distribution of variable in encoding specified by `ring`. */
@@ -34,9 +34,9 @@ trait ParFunI extends Inferer {
   /** @return Natural logarithm of partition function. */
   def logZ: Double
   /** @return Partition function in encoding specified by `ring`. */
-  @deprecated("use only logZ")
+  @deprecated("use only logZ", "24.0.0")
   def Z: Double = math.exp(logZ)
-  @deprecated("use only logZ")
+  @deprecated("use only logZ", "24.0.0")
   def decodedZ: Double = problem.ring.decode(Array(Z))(0)
 }
 
@@ -44,7 +44,7 @@ trait MargParI extends MarginalI with ParFunI{
   def toResult = new Result(this)
 }
 
-@deprecated("use RegionBeliefs instead")
+@deprecated("use RegionBeliefs instead", "24.0.0")
 trait JointMargI extends MarginalI {
   /** Throws if no clique contains `vars`.
     * @return Normalized belief over given variables in encoding specified by problem ring. */
@@ -54,7 +54,7 @@ trait JointMargI extends MarginalI {
     if(problem.ring != NormalD) problem.ring.decode(cliqueBelief(vars)) else cliqueBelief(vars)
 }
 
-@deprecated("use only RegionBeliefs")
+@deprecated("use only RegionBeliefs", "24.0.0")
 trait JMIFromRB[R] extends JointMargI {self : RegionBeliefs[R] =>
   /** Throws if no clique contains `vars`.
     * @return Normalized belief over given variables in encoding specified by problem ring. */
