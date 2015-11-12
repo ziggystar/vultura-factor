@@ -212,12 +212,14 @@ object LogD extends Ring[Double] with LazyLogging {
 
   override def normalizeInplace(a: Array[Double]) {
     val z = sumA(a)
-    if(z == zero)
-      logger.error("normalizing null quantity", a)
-    var i = 0
-    while(i < a.length){
-      a(i) -= z
-      i += 1
+    if (z != zero) {
+      var i = 0
+      while (i < a.length) {
+        a(i) -= z
+        i += 1
+      }
+    } else {
+      logger.warn("normalizing null quantity", a)
     }
   }
 
