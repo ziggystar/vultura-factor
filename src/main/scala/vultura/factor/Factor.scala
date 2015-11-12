@@ -94,6 +94,9 @@ case class Factor(variables: Array[Int], values: Array[Double]) {
       newArray
     })
 
+  def decodeWith(ring: Ring[Double]): Factor = this.copy(values = ring.decode(values))
+  def encodeWith(ring: Ring[Double]): Factor = this.copy(values = ring.encode(values))
+
   def sample(r: Random, domains: Array[Int], ring: Ring[Double]): Array[Val] =
     cpi(domains)(vultura.util.wheelOfFortune(ring.decode(values), r))
 }

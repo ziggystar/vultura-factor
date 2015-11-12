@@ -1,7 +1,7 @@
 package vultura.calibration
 
 import com.typesafe.scalalogging.StrictLogging
-import vultura.factor.inference.{RegionBeliefs, VariationalResult}
+import vultura.factor.inference.{VarBeliefFromRegionBelief, RegionBeliefs, VariationalResult}
 import vultura.factor._
 import vultura.factor.inference.gbp.RegionGraph
 
@@ -81,7 +81,7 @@ with StrictLogging with ResultBuilder[RegionBeliefs[RegionGraph#Region] with Var
   override def nodes: Set[N] = rg.edges.map(msgForEdge)
 
   override def buildResult(valuation: (M) => IR): RegionBeliefs[RegionGraph#Region] with VariationalResult =
-    new RegionBeliefs[RegionGraph#Region] with VariationalResult {
+    new RegionBeliefs[RegionGraph#Region] with VariationalResult with VarBeliefFromRegionBelief[RegionGraph#Region] {
       override def problem: Problem = parameters
       override def regions: Set[RegionGraph#Region] = rg.regions.toSeq.toSet
       override def scopeOfRegion(region: RegionGraph#Region): Set[Int] = rg.variablesOf(region.asInstanceOf[R])

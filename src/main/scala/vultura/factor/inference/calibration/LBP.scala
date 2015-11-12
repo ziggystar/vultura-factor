@@ -1,6 +1,6 @@
 package vultura.factor.inference.calibration
 
-import vultura.factor.inference.{JointMargI, MargParI}
+import vultura.factor.inference.{JMIFromRB, MargParI, RegionBeliefs}
 import vultura.factor.{Factor, Problem, SumProductTask, Var}
 
 import scala.collection.mutable
@@ -90,7 +90,7 @@ object LBP{
 }
 
 /** A mixin to calculate variable beliefs and the log partition function from BP messages. */
-trait BPResult extends MargParI with JointMargI {
+trait BPResult extends MargParI with RegionBeliefs[Either[Problem#VI,Problem#FI]] with JMIFromRB[Either[Problem#VI,Problem#FI]] {
   sealed trait Message{
     def vi: Int
     def fi: Int
@@ -117,13 +117,20 @@ trait BPResult extends MargParI with JointMargI {
     Factor.multiply(problem.ring)(problem.domains)(problem.scopeOfFactor(fi).map(vi => messageValue(V2FMsg(vi,fi))) :+ f).normalize(problem.ring)
   }
 
-  /** Throws if no clique contains `vars`.
-    * @return Normalized belief over given variables in encoding specified by problem ring. */
-  override def cliqueBelief(vars: Array[Var]): Factor = {
-    val scope = vars.toSet
-    val containingFactorIdx = problem.scopeOfFactor.zipWithIndex.find(fsc => scope.subsetOf(fsc._1.toSet)).get._2
-    Factor.multiplyRetain(problem.ring)(problem.domains)(Seq(factorBelief(containingFactorIdx)),vars)
+  override val regions: Set[Either[Problem#VI, Problem#FI]] = problem.variableSet.map(Left(_)) ++ problem.factorIndices.map(Right(_))
+
+  override def scopeOfRegion(region: Either[Problem#VI, Problem#FI]): Set[Var] = region match {
+    case Left(vi) => Set(vi)
+    case Right(fi) => problem.scopeOfFactor(fi).toSet
   }
+
+  /** Belief over the variables of a given region.
+    * Normal encoding.
+    */
+  override def regionBelief(region: Either[Problem#VI, Problem#FI]): Factor = (region match {
+    case Left(vi) => encodedVarBelief(vi)
+    case Right(fi) => factorBelief(fi)
+  }).decodeWith(problem.ring)
 
   /** This is lazy to prevent accessing elements in derived classes early.
    * @return Partition function in encoding specified by `ring`. */

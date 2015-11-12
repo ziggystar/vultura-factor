@@ -10,7 +10,8 @@ import scala.collection.mutable
 import scala.util.Random
 
 /** Ordinary Shanoy-Shafer (1990) junction tree algorithm. */
-class JunctionTree(val problem: Problem, val variableOrderer: VariableOrderer = MinDegreeOrderer) extends MargParI with JointMargI {
+class JunctionTree(val problem: Problem, val variableOrderer: VariableOrderer = MinDegreeOrderer)
+  extends MargParI with RegionBeliefs[Set[Int]] with VarBeliefFromRegionBelief[Set[Int]] with JMIFromRB[Set[Int]] {
 
   val variableOrder: VariableOrder = variableOrderer(problem)
 
@@ -41,22 +42,17 @@ class JunctionTree(val problem: Problem, val variableOrderer: VariableOrderer = 
   def initialTrees: Seq[Tree[(Set[Int], Seq[Factor])]] =
     junctionTreesFromOrder(problem.factors.map(f => f.variables.toSet -> f), variableOrder.order.toList)
 
-  private val marginalCache = new mutable.HashMap[Int, Factor]()
-
-  /** @return marginal distribution of variable in encoding specified by `ring`. */
-  override def encodedVarBelief(vi: Int): Factor = marginalCache.getOrElseUpdate(vi, cliqueBelief(Array(vi)))
-
   /** @return Natural logarithm of partition function. */
   override def logZ: Double = if(problem.ring == LogD) mlogZ else math.log(mlogZ)
 
-  /** Throws if no clique contains `vars`.
-    * @return Normalized belief over given variables in encoding specified by problem ring. */
-  def cliqueBelief(vars: Array[Var]): Factor = {
-    val containingClique: Factor = calibratedCliques(ssetCliques.superSetsOf(vars.toSet).minBy(_.size))
-    Factor.multiplyRetain(problem.ring)(problem.domains)(
-      Seq(containingClique),
-      vars).normalize(problem.ring)
-  }
+  override def regions: Set[Set[Var]] = ssetCliques.maximalSets
+
+  override def scopeOfRegion(region: Set[Var]): Set[Var] = region
+
+  /** Belief over the variables of a given region.
+    * Normal encoding.
+    */
+  override def regionBelief(region: Set[Var]): Factor = calibratedCliques(region).normalize(problem.ring).decodeWith(problem.ring)
 
   def sample(r: Random): Map[Var,Val] = calibratedTrees.map{ tree =>
     tree.mapDown(Map[Var,Val]()){ case (cond,factor) =>

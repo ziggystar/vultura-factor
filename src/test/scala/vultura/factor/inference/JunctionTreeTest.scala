@@ -14,9 +14,9 @@ class JunctionTreeTest extends Specification with FactorMatchers {
 
   override def is = s2"" ^
     "sample marginals need to converge to true marginals" ^
-      testSampleMarginals(grid(2,2,2,expGauss(1)), numSamples = 10000) ^
-      testSampleMarginals(grid(3,3,2,expGauss(2)), numSamples = 10000, tol = 5e-2) ^
-      testSampleMarginals(grid(1,2,2,expGauss(0.2)).toRing(LogD), numSamples = 1000, tol = 5e-2) ^
+      "grid 2x2" ! testSampleMarginals(grid(2,2,2,expGauss(1)), numSamples = 10000) ^
+      "grid 3x3" ! testSampleMarginals(grid(3,3,2,expGauss(2)), numSamples = 10000, tol = 5e-2) ^
+      "log ring sampling" ! testSampleMarginals(grid(1,2,2,expGauss(0.2)).toRing(LogD), numSamples = 1000, tol = 5e-2) ^
     p^
     "all orders must produce same marginals" !
       (new JunctionTree(p1).logZ must beCloseTo(new JunctionTree(p1, RandomOrderer()).logZ, 1e-9)) ^
@@ -24,7 +24,9 @@ class JunctionTreeTest extends Specification with FactorMatchers {
       (new JunctionTree(p1,VariableOrderer.fromOrder(p1.variables.tail)) must throwA[Exception]) ^
     "must throw when given intractable problem" ! {
       new JunctionTree(grid(20,20,20)) must throwA[RuntimeException]("size overflow during junction tree construction: found tree decomposition is too large")
-    }
+    } ^
+  "test on small problems vs exact enumeration" ^
+  "2x2 grid" ! (new JunctionTree(p1) must haveSameLogZ(ExactByEnumeration(p1),1e-12))
 
   def testSampleMarginals(p: Problem, numSamples: Int = 1000, tol: Double = 1e-2) = {
     val jt = new JunctionTree(p)

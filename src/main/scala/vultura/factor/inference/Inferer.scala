@@ -52,13 +52,19 @@ trait JointMargI extends MarginalI {
 
   def decodedCliqueBelief(vars: Array[Var]): Factor =
     if(problem.ring != NormalD) problem.ring.decode(cliqueBelief(vars)) else cliqueBelief(vars)
+}
 
-  /** @return marginal distribution of variable in log encoding. */
-  def logCliqueBelief(vars: Array[Var]): Factor  =
-    if(problem.ring == LogD) cliqueBelief(vars) else LogD.encode(decodedCliqueBelief(vars))
-
-  /** @return marginal distribution of variable in encoding specified by `ring`. */
-  override def variableBelief(vi: Int): Factor = cliqueBelief(Array(vi))
+@deprecated("use only RegionBeliefs")
+trait JMIFromRB[R] extends JointMargI {self : RegionBeliefs[R] =>
+  /** Throws if no clique contains `vars`.
+    * @return Normalized belief over given variables in encoding specified by problem ring. */
+  override final def cliqueBelief(vars: Array[Var]): Factor = {
+    val varSet = vars.toSet
+    val rb = regionBelief(regions
+      .filter(r => varSet subsetOf scopeOfRegion(r))
+      .minBy(scopeOfRegion(_).size))
+    Factor.multiplyRetain(problem.ring)(problem.domains)(Seq(rb),vars)
+  }
 }
 
 /** Trait that is implemented by inference algorithms that can compute the most probable explanation, most probable
@@ -112,7 +118,10 @@ trait RegionBeliefs[R] extends MarginalI {
     */
   def regionBelief(region: R): Factor
   def scopeOfRegion(region: R): Set[Int]
+}
 
+/** Mixin to compute variable marginals from region marginals. Might be inefficient. */
+trait VarBeliefFromRegionBelief[R] extends MarginalI {self: RegionBeliefs[R] =>
   /** @return marginal distribution of variable in encoding specified by `ring`. */
   override def encodedVarBelief(variable: Var): Factor = {
     val normalVBel = varBelief(variable)
