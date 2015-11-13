@@ -120,6 +120,7 @@ class LcbpMetaBP(val scheme: FactoredScheme, val maxUpdates: Long = 1000000, val
     override def hasEdge(e: LcbpMessage): Boolean = true
     override def edgeValue(e: LcbpMessage): e.type#TOut = e match {
       case FactorEdge(vars) => Factor.maxEntropy(vars,problem.domains,problem.ring).values.asInstanceOf[e.TOut]
+      case CCP(fc,vc) =>  new DoubleRef(1d / scheme.subConditionsOf(vc, fc.keySet).size).asInstanceOf[e.TOut]
       case ve: DoubleEdge => new DoubleRef(problem.ring.one).asInstanceOf[e.TOut]
     }
   }

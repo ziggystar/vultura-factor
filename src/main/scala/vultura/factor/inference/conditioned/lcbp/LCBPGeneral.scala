@@ -104,6 +104,7 @@ case class LCBPGeneral(scheme: FactoredScheme,
     override def inputs: IndexedSeq[InEdge] = IndexedSeq(MetaProblem)
   }
 
+  /** Probability of `fc` given `vc` in normal encoding. */
   case class CCP(fc: C, vc: C) extends DoubleEdge{
     override type InEdge = MetaProblem.type
     override def inputs: IndexedSeq[InEdge] = IndexedSeq(MetaProblem)
@@ -130,6 +131,7 @@ case class LCBPGeneral(scheme: FactoredScheme,
     override def hasEdge(e: LcbpMessage): Boolean = true
     override def edgeValue(e: LcbpMessage): e.type#TOut = e match {
       case FactorEdge(vars) => Factor.maxEntropy(vars,problem.domains,problem.ring).values.asInstanceOf[e.TOut]
+      case CCP(fc,vc) =>  new DoubleRef(1d / scheme.subConditionsOf(vc, fc.keySet).size).asInstanceOf[e.TOut]
       case ve: DoubleEdge => new DoubleRef(problem.ring.one).asInstanceOf[e.TOut]
       case mp: MetaProblem.type => e.create
     }
