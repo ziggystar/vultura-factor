@@ -24,7 +24,7 @@ organization := "de.uni-ulm"
   - add new graphviz framework that supports directed and undirected graphs (previously only directed graphs were supported)
   - add new graph API
 */
-version := "24.0.0-DEV"
+version := "24.0.0"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 
