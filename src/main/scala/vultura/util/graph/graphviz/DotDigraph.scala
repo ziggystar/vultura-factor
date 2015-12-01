@@ -10,7 +10,8 @@ import scala.sys.process._
 case class DotGraph[N,E](nodes: Iterable[N],
                          edges: Iterable[E],
                          nodeAttributes: Map[N,Seq[NAttr]] = Map[N,Seq[NAttr]](),
-                         edgeAttributes: Map[E,Seq[EAttr]] = Map[E,Seq[EAttr]]()) {
+                         edgeAttributes: Map[E,Seq[EAttr]] = Map[E,Seq[EAttr]](),
+                         graphAttributes: Seq[GAttr] = Seq()) {
   lazy val nodeIndex = new SIIndex[N](nodes)
   lazy val edgeIndex = new SIIndex[E](edges)
 
@@ -37,6 +38,7 @@ case class DotGraph[N,E](nodes: Iterable[N],
 
   def renderDot(implicit dir: Dir[N,E]): String = Seq(
     s"${dir.header} automated {",
+    graphAttributes.map(_.dotString + ";").mkString("\n"),
     nodeIndex.elements.map(nodeString).mkString("\n"),
     edgeIndex.elements
       .map(e => e -> dir.incidentNodes(e))

@@ -1,17 +1,25 @@
 package vultura.util.graph.graphviz
 
 sealed trait Attr {
-  def dotString: String
+  def name: String
+  def value: String
+  def dotString: String = s"$name=$value"
 }
+/** Node attribute. */
 sealed trait NAttr extends Attr
+/** Edge attribute.*/
 sealed trait EAttr extends Attr
+/** Graph attribute. */
+sealed trait GAttr extends Attr
 
 case class Label(text: String) extends NAttr with EAttr {
-  override def dotString: String = s"""label="$text""""
+  override def name: String = "label"
+  override def value: String = s""""$text""""
 }
 
 case class Color(colorName: String) extends NAttr with EAttr {
-  override def dotString: String = s"color=$colorName"
+  override def name: String = "color"
+  override def value: String = colorName
 }
 
 object Color {
@@ -26,14 +34,16 @@ object Color {
   val TEAL = Color("teal")
 }
 
-sealed trait Shape extends NAttr
+sealed trait Shape extends NAttr {
+  override def name: String = "shape"
+}
 object Shape {
-  object ELLIPSE extends Shape { override def dotString: String = "ellipse"}
-  object OVAL extends Shape { override def dotString: String = "oval" }
-  object CIRCLE extends Shape { override def dotString: String = "circle"}
-  object EGG extends Shape { override def dotString: String = "egg"}
-  object TRIANGLE extends Shape { override def dotString: String = "triangle"}
-  object BOX extends Shape { override def dotString: String = "box"}
-  object TRAPEZIUM extends Shape { override def dotString: String = "trapezium"}
-  object HOUSE extends Shape { override def dotString: String = "house"}
+  object ELLIPSE extends Shape { override def value: String = "ellipse"}
+  object OVAL extends Shape { override def value: String = "oval" }
+  object CIRCLE extends Shape { override def value: String = "circle"}
+  object EGG extends Shape { override def value: String = "egg"}
+  object TRIANGLE extends Shape { override def value: String = "triangle"}
+  object BOX extends Shape { override def value: String = "box"}
+  object TRAPEZIUM extends Shape { override def value: String = "trapezium"}
+  object HOUSE extends Shape { override def value: String = "house"}
 }
