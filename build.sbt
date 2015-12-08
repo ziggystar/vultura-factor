@@ -30,7 +30,7 @@ organization := "de.uni-ulm"
   - deprecate some methods in inference result traits (e.g. only logZ remains for partition function)
   - remove buggy mean-field
 */
-version := "24.0.0"
+version := "24.0.1-DEV"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 
@@ -47,7 +47,7 @@ scalacOptions in Compile += "-Xdisable-assertions"
 
 libraryDependencies += "org.apache.commons" % "commons-math3" % "3.2"
 
-libraryDependencies += "de.uni-ulm" %% "vultura-util" % "24.0.0"
+libraryDependencies += "de.uni-ulm" %% "vultura-util" % "24.0.0-DEV"
 
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.+"
 

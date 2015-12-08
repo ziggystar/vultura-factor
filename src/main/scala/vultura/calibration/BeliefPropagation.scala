@@ -120,6 +120,6 @@ case class BeliefPropagation(ps: Problem) extends CalProblem
 object BeliefPropagation {
   def infer(p: Problem, maxIterations: Long = 100000, tol: Double = 1e-12, damping: Double = 0d)
   : (RegionBeliefs[Either[Problem#VI, Problem#FI]] with VariationalResult, ConvergenceStats) = {
-    Calibrator.calibrate(new BeliefPropagation(p))
+    Calibrator.calibrate(new BeliefPropagation(p), maxIterations = maxIterations, tol = tol, damping = damping)
   }
 }
