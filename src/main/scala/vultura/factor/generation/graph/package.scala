@@ -34,7 +34,7 @@ package object graph {
       val nodes = 1 to n
       val edges = for {
         from <- nodes
-        to <- (from+1) to n if r.nextDouble() > p
+        to <- (from+1) to n if r.nextDouble() < p
       } yield Set(from,to)
       Graph[Int](nodes.toSet, edges.toSet)
     }
