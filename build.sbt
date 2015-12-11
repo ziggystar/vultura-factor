@@ -29,6 +29,8 @@ organization := "de.uni-ulm"
 23.0.2-DEV: add nicer generator code
   - deprecate some methods in inference result traits (e.g. only logZ remains for partition function)
   - remove buggy mean-field
+24.0.1:
+  - Result only provides ring and problem structure, no problem parameters anymore, maybe this is a bad idea...
 */
 version := "24.0.1-DEV"
 
