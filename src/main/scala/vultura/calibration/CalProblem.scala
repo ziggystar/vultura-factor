@@ -23,13 +23,16 @@ trait CalProblem {
   /** Node type exposed by a problem. This defined the signature methods `initializer` and `nodes`. */
   type N <: Node
 
+  /** The type of the parameter value that has to be provided to initialize the problem;
+    * e.g. assign values to the source nodes. */
+  type Parameter
+
   /** Node type. A node is a representation of a node within the computation graph, but also carries the
     * computation rule and the set of dependencies. */
   trait Node {
-    type D <: N
     /** Size of the array required to store the state of this edge. */
     def arraySize: Int
-    def dependencies: IndexedSeq[D]
+    def dependencies: IndexedSeq[N]
     /**
      * - first parameter: `zip`s with `dependencies`.
      * - second parameter: Result of computation shall be stored here. Content of result is garbage.
@@ -38,7 +41,7 @@ trait CalProblem {
   }
 
   /** Constructs a new initial value for each edge. */
-  def initializer: N => IR
+  def initializer(param: Parameter): N => IR
 
   /** The set of nodes defined by this problem. */
   def nodes: Set[N]
@@ -47,12 +50,16 @@ trait CalProblem {
     DotGraph[N,(N,N)](nodes, for (e <- nodes; d <- e.dependencies) yield (d, e)).labelNodes{case e => e.toString}
 }
 
+object CalProblem {
+  type Aux[P] = CalProblem {type Parameter = P}
+}
+
 trait ResultBuilder[R] {outer: CalProblem =>
   def buildResult(valuation: outer.N => IR): R
 }
 
 /** Mutable class that holds a calibration state. */
-class Calibrator[CP <: CalProblem](val cp: CP) extends StrictLogging {
+class Calibrator[P,CP <: CalProblem.Aux[P]](val cp: CP) extends StrictLogging {
   /** Internal representation of edge state. */
   type IR = Array[Double]
   type N = cp.N
@@ -61,7 +68,7 @@ class Calibrator[CP <: CalProblem](val cp: CP) extends StrictLogging {
   type NI = Int
 
   protected val nodes: SIIndex[N] = new SIIndex(cp.nodes)
-  protected var state: Array[IR] = nodes.elements.map(cp.initializer)(collection.breakOut)
+  protected var state: Array[IR] = _
   protected val dependencies: IndexedSeq[IndexedSeq[NI]] = nodes.elements.map(_.dependencies.map(nodes(_)))
 
   val stronglyConnectedComponents: IndexedSeq[Set[NI]] = {
@@ -123,12 +130,13 @@ class Calibrator[CP <: CalProblem](val cp: CP) extends StrictLogging {
   }
 
   def calibrate(maxIterations: Long, maxDiff: Double, damping: Double = 0d): ConvergenceStats = {
+    require(state != null, "calibrator has to be initialized prior to calibration")
     require(damping >= 0 && damping < 1d, s"damping has to be within [0,1[, but is $damping")
     stronglyConnectedComponents.indices.map(scc => calibrateComponent(scc,maxIterations,maxDiff,damping)).reduce(_ max _)
   }
 
-  def reset(): Unit = {
-    state = nodes.elements.map(cp.initializer)(collection.breakOut)
+  def initialize(parameters: P): Unit = {
+    state = nodes.elements.map(cp.initializer(parameters))(collection.breakOut)
   }
 
   def nodeState(node: N): IR = state(nodes(node))
@@ -142,12 +150,19 @@ class Calibrator[CP <: CalProblem](val cp: CP) extends StrictLogging {
 }
 
 object Calibrator {
-  def calibrate[R](cp: CalProblem with ResultBuilder[R],
-                    maxIterations: Long = 100000,
-                    tol: Double = 1e-12,
-                    damping: Double = 0d): (R,ConvergenceStats) = {
-    val cal = new Calibrator(cp)
+  def calibrateParam[R,P](cp: CalProblem.Aux[P] with ResultBuilder[R],
+                     parameters: P,
+                     maxIterations: Long = 100000,
+                     tol: Double = 1e-12,
+                     damping: Double = 0d): (R,ConvergenceStats) = {
+    val cal = new Calibrator[P,cp.type](cp)
+    cal.initialize(parameters)
     val calState = cal.calibrate(maxIterations,tol,damping)
     (cal.buildResult,calState)
   }
+
+  def calibrate[R](cp: CalProblem.Aux[Unit] with ResultBuilder[R],
+                   maxIterations: Long = 100000,
+                   tol: Double = 1e-12,
+                   damping: Double = 0d): (R,ConvergenceStats) = calibrateParam[R,Unit](cp,Unit,maxIterations,tol,damping)
 }

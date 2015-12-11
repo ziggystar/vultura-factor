@@ -14,6 +14,9 @@ case class LCBPFactoredGeneral(scheme: FactoredScheme,
                                maxUpdates: Long = 100000,
                                tol: Double = 1e-9,
                                useDeltaTerm: Boolean = false) extends LcbpFactoredBase with MargParI {
+
+  override def ring: Ring[Double] = scheme.problem.ring
+
   override type ST = FactoredScheme
 
   case object MetaProblem extends LcbpMessage {

@@ -9,11 +9,14 @@ import scala.collection.mutable
 
 /** Just one set of variables gets conditioned. */
 class SinglyLCMF(val problem: Problem, val scheme: SimpleScheme, val tol: Double = 1e-9, maxIterations: Int = 1000) extends MargParI {
+
   require(problem.ring == NormalD, "mean field only supports calculation in normal domain")
   require(problem == scheme.problem, "scheme targets a different problem")
   require(
     problem.factors.forall(f => scheme.influencesOf(f.variables.toSet).size <= 1),
     "a factor has two or more influencing conditions")
+
+  override def ring: Ring[Double] = problem.ring
 
   sealed trait Parameter{ def effect: Set[Parameter]}
   case class Marginal(variable: Int, condition: Condition) extends Parameter{

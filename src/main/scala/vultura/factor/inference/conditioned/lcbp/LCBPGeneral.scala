@@ -14,6 +14,9 @@ case class LCBPGeneral(scheme: FactoredScheme,
                        inferer: Problem => JointMargI with ParFunI = p => new JunctionTree(p),
                        maxUpdates: Long = 100000,
                        tol: Double = 1e-9) extends LcbpBase with MargParI {
+
+  override def ring: Ring[Double] = scheme.problem.ring
+
   //the scheme type we require
   override type ST = FactoredScheme
 

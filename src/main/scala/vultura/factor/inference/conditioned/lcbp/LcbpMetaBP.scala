@@ -9,6 +9,9 @@ import vultura.factor.inference.conditioned._
  */
 class LcbpMetaBP(val scheme: FactoredScheme, val maxUpdates: Long = 1000000, val tol: Double = 1e-12, val useDeltaTerm: Boolean = true)
   extends LcbpFactoredBase with MargParI {
+
+  override def ring: Ring[Double] = scheme.problem.ring
+
   override type ST = FactoredScheme
 
   case class MetaV2F(v: MVI, fi: MFI) extends MetaFactorEdge {

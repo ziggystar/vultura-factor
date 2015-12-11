@@ -113,6 +113,8 @@ case class ParentToChild(rg: RegionGraph, ring: Ring[Double]) {
   def constructResult(iValuation: IValuation[FactorNode], p: Problem): MargParI with JointMargI = new MargParI with JointMargI {
     require(rg.problemStructure.isCompatible(p))
 
+    override def ring: Ring[Double] = problem.ring
+
     def regionBelief(r: Reg): Factor = RBel(r).make(iValuation)
     def decodedRegionBelief(r: Reg): Factor = {
       val f = regionBelief(r)

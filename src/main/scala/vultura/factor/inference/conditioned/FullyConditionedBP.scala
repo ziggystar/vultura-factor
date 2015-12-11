@@ -1,6 +1,6 @@
 package vultura.factor.inference.conditioned
 
-import vultura.factor.{Factor, LogD, Problem}
+import vultura.factor.{Ring, Factor, LogD, Problem}
 import vultura.factor.inference.MargParI
 import vultura.factor.inference.calibration.{LBP, BPResult}
 
@@ -17,6 +17,9 @@ case class FullyConditionedBP(problem: Problem,
                               conditionVariables: Set[Int],
                               maxIterations: Int = 100000,
                               tol: Double = 1e-12) extends MargParI {
+
+  override def ring: Ring[Double] = problem.ring
+
   val conditions: IndexedSeq[Map[Int, Int]] = conditionVariables.foldLeft(Seq(Map.empty[Int,Int])){
     case (pcs,nv) => pcs.flatMap(pc => (0 until problem.domains(nv)).map(value => pc + (nv -> value)))
   }.toIndexedSeq

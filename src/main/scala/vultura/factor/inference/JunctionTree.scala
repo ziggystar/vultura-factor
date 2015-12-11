@@ -13,6 +13,8 @@ import scala.util.Random
 class JunctionTree(val problem: Problem, val variableOrderer: VariableOrderer = MinDegreeOrderer)
   extends MargParI with RegionBeliefs[Set[Int]] with VarBeliefFromRegionBelief[Set[Int]] with JMIFromRB[Set[Int]] {
 
+  override def ring: Ring[Double] = problem.ring
+
   val variableOrder: VariableOrder = variableOrderer(problem)
 
   val (calibratedTrees: Seq[Tree[Factor]], mlogZ) = {

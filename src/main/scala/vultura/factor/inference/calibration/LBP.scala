@@ -1,7 +1,7 @@
 package vultura.factor.inference.calibration
 
 import vultura.factor.inference.{JMIFromRB, MargParI, RegionBeliefs}
-import vultura.factor.{Factor, Problem, SumProductTask, Var}
+import vultura.factor._
 
 import scala.collection.mutable
 
@@ -173,6 +173,8 @@ trait BPResult extends MargParI with RegionBeliefs[Either[Problem#VI,Problem#FI]
   * This class should not retain any references to other classes, and thus avoids memory leaks.
   */
 class StoredResult(val problem: Problem, messages: BPResult#Message => Array[Double]) extends BPResult {
+
+  override def ring: Ring[Double] = problem.ring
 
   val msgF2V: Array[Array[Array[Double]]] =
     problem.scopeOfFactor.zipWithIndex.map{case (scope,fi) => scope.map(v => new Array[Double](problem.domains(v)))}

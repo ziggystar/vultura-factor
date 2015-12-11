@@ -1,11 +1,14 @@
 package vultura.factor.inference
 
-import vultura.factor.{NormalD, Factor, Problem}
+import vultura.factor.{Ring, NormalD, Factor, Problem}
 
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
  */
 case class VariableElimination(problem: Problem, orderer: VariableOrderer = MinDegreeOrderer) extends ParFunI {
+
+  override def ring: Ring[Double] = problem.ring
+
   val variableOrder = orderer(problem)
 
   /** @return Partition function in encoding specified by `ring`. */

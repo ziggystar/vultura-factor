@@ -3,6 +3,7 @@ package vultura.factor.inference.conditioned.lcbp
 import java.io.{PrintStream, FileOutputStream}
 
 import org.specs2._
+import vultura.factor.inference.JunctionTree
 import vultura.factor.{LogD, Benchmarks, FactorMatchers}
 import vultura.factor.generators._
 
@@ -47,9 +48,10 @@ class CompareImplementations extends Specification with FactorMatchers {
 
   def exactOn(a: LCBPAlg, scheme: FactoredScheme) = {
     val r = a.inferWithScheme(scheme,tol=1e-15)
+    val exact = new JunctionTree(scheme.problem)
     (r._2.aka("converged") must beTrue) and
-      (r._1.as(_ => a.toString) must haveExactZ(1e-9)) and
-      (r._1.as(_ => a.toString) must haveExactMarginals(1e-9))
+      (r._1.as(_ => a.toString) must haveSameLogZ(exact,1e-9)) and
+      (r._1.as(_ => a.toString) must haveSameMarginals(exact,1e-9))
   }
 
   def exactAgreeOn(s: FactoredScheme) = agreeOn(Seq(OldLCBP,LCBP_G_Exact),s)

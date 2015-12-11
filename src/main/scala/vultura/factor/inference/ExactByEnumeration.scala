@@ -1,6 +1,6 @@
 package vultura.factor.inference
 
-import vultura.factor.{LogD, Factor, Problem}
+import vultura.factor.{Ring, LogD, Factor, Problem}
 import vultura.util.CrossProductIndexer
 
 /** Exact inference of marginal probabilities and partition function by iterating over all assignments.
@@ -27,4 +27,6 @@ case class ExactByEnumeration(problem: Problem) extends MargParI {
   }
   /** @return marginal distribution of variable in encoding specified by `ring`. */
   override def encodedVarBelief(variable: Int): Factor = Factor(Array(variable),encodedVariableBeliefs(variable))
+
+  override def ring: Ring[Double] = problem.ring
 }

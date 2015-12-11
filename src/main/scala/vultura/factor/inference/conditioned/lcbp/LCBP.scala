@@ -13,6 +13,9 @@ class LCBP(val problem: Problem,
            val scheme: GScheme,
            val tol: Double = 1e-12,
            val maxIterations: Int = 1000000) extends MargParI {
+
+  override def ring: Ring[Double] = problem.ring
+
   type FactorIdx = Int
 
   sealed trait LCBPEdge extends Edge { self: Product =>

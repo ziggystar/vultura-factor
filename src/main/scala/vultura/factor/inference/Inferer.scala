@@ -6,7 +6,8 @@ import vultura.factor._
 
 /** Base-trait for probabilistic inference algorithms. */
 trait Inferer {
-  def problem: Problem
+  def problem: ProblemStructure
+  def ring: Ring[Double]
 }
 
 /** Trait that is implemented by inference algorithms that can compute variable marginals. */
@@ -22,11 +23,11 @@ trait MarginalI extends Inferer {
   def encodedVarBelief(variable: Int): Factor
   /** (Estimated) variable belief, in normal encoding. */
   def varBelief(variable: Int): Factor =
-    if(problem.ring != NormalD) problem.ring.decode(encodedVarBelief(variable)) else encodedVarBelief(variable)
+    if(ring != NormalD) ring.decode(encodedVarBelief(variable)) else encodedVarBelief(variable)
 
   /** @return marginal distribution of variable in log encoding. */
   def logVariableBelief(vi: Int): Factor  =
-    if(problem.ring == LogD) encodedVarBelief(vi) else LogD.encode(varBelief(vi))
+    if(ring == LogD) encodedVarBelief(vi) else LogD.encode(varBelief(vi))
 }
 
 /** Trait that is implemented by inference algorithms that can compute the partition function. */
@@ -37,7 +38,7 @@ trait ParFunI extends Inferer {
   @deprecated("use only logZ", "24.0.0")
   def Z: Double = math.exp(logZ)
   @deprecated("use only logZ", "24.0.0")
-  def decodedZ: Double = problem.ring.decode(Array(Z))(0)
+  def decodedZ: Double = ring.decode(Array(Z))(0)
 }
 
 trait MargParI extends MarginalI with ParFunI{
@@ -50,7 +51,7 @@ trait JointMargI extends MarginalI {
     * @return Normalized belief over given variables in encoding specified by problem ring. */
   def cliqueBelief(vars: Array[Var]): Factor
 
-  def decodedCliqueBelief(vars: Array[Var]): Factor = cliqueBelief(vars).decodeWith(problem.ring)
+  def decodedCliqueBelief(vars: Array[Var]): Factor = cliqueBelief(vars).decodeWith(ring)
 }
 
 @deprecated("use only RegionBeliefs", "24.0.0")
@@ -64,7 +65,7 @@ trait JMIFromRB[R] extends JointMargI {self : RegionBeliefs[R] =>
       .minBy(scopeOfRegion(_).size))
     //marginalize belief to query variables
     Factor.multiplyRetain(NormalD)(problem.domains)(Seq(rb),vars)
-      .encodeWith(problem.ring)
+      .encodeWith(ring)
   }
 }
 
@@ -77,7 +78,9 @@ trait MPEI { self: Inferer =>
 }
 
 class Result(mpi: MargParI) extends MargParI {
-  override val problem: Problem = mpi.problem
+  override val problem: ProblemStructure = mpi.problem
+  override def ring: Ring[Double] = mpi.ring
+
   def lookupFromMPI(x: MargParI): Array[Array[Double]] = x.problem.variables.indices.map(v => x.encodedVarBelief(v).values)(collection.breakOut)
   val marginals: Array[Array[Double]] = lookupFromMPI(mpi)
 
@@ -124,7 +127,7 @@ trait RegionBeliefs[R] extends MarginalI {
 /** Mixin to compute variable marginals from region marginals. Might be inefficient. */
 trait VarBeliefFromRegionBelief[R] extends MarginalI {self: RegionBeliefs[R] =>
   /** @return marginal distribution of variable in encoding specified by `ring`. */
-  override def encodedVarBelief(variable: Var): Factor = varBelief(variable).encodeWith(problem.ring)
+  override def encodedVarBelief(variable: Var): Factor = varBelief(variable).encodeWith(ring)
 
   private val variableBeliefCache = TCollections.synchronizedMap(new TIntObjectHashMap[Factor](problem.numVariables))
 

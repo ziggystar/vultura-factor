@@ -28,10 +28,10 @@ trait FactorMatchers {
   def beSimilarTo(ref: Factor, tol: Double): Matcher[Factor] =
     haveSameStructureAs(ref) and haveValuesCloseTo(ref,tol)
 
-  def haveSameLogZ(inference: Problem => ParFunI, tol: Double): Matcher[ParFunI] = new Matcher[ParFunI]{
+  def haveSameLogZ(reference: ParFunI, tol: Double): Matcher[ParFunI] = new Matcher[ParFunI]{
     def apply[S <: ParFunI](t: Expectable[S]): MatchResult[S] = {
       val obtainedZ: Double = t.value.logZ
-      val otherZ: Double = inference(t.value.problem).logZ
+      val otherZ: Double = reference.logZ
       result(
         math.abs(obtainedZ - otherZ) < tol,
         s"${t.description} has same Z as exact inference",
@@ -40,21 +40,17 @@ trait FactorMatchers {
       )
     }
   }
-  def haveSameLogZ(other: ParFunI, tol: Double): Matcher[ParFunI] = haveSameLogZ(_ => other, tol)
 
+  def haveExactMarginals(p: Problem, tol: Double = 1e-9) = haveSameMarginals(new JunctionTree(p),tol)
+  def haveExactZ(p: Problem, tol: Double = 1e-9) = haveSameLogZ(new JunctionTree(p),tol)
 
-  def haveExactMarginals(tol: Double = 1e-9) = haveSameMarginals(new JunctionTree(_),tol)
-  def haveExactZ(tol: Double = 1e-9) = haveSameLogZ(new JunctionTree(_),tol)
-
-  def haveSameMarginals(inference: Problem => MarginalI, tol: Double, logDomain: Boolean = true): Matcher[MarginalI] = new Matcher[MarginalI]{
+  def haveSameMarginals(reference: MarginalI, tol: Double, logDomain: Boolean = true): Matcher[MarginalI] = new Matcher[MarginalI]{
     def apply[S <: MarginalI](t: Expectable[S]): MatchResult[S] = {
       val p = t.value.problem
-      val other = inference(p)
-
       def marg(mi: MarginalI,v: Int): Factor = if(logDomain) mi.logVariableBelief(v) else mi.decodedVariableBelief(v)
 
       val error: Option[(Int, Double)] = p.variables.map(v =>
-        v -> (marg(other,v).values zip marg(t.value,v).values)
+        v -> (marg(reference,v).values zip marg(t.value,v).values)
           .map{case (x,y) => math.abs(x-y)}
           .max
       ).find(_._2 > tol)
@@ -77,8 +73,6 @@ trait FactorMatchers {
     val allAreDistributions: Matcher[Iterable[Iterable[Double]]] = foreach(sumsToOne and nonNegative).updateMessage("is not a valid distribution: " + _)
     allAreDistributions ^^ ((margs: MarginalI) => margs.problem.variables.map(margs.varBelief(_).values.toIterable))
   }
-
-  def haveSameMarginals(other: MarginalI, tol: Double): Matcher[MarginalI] = haveSameMarginals(_ => other, tol)
 
   def beCloseToSeq(ref: Seq[Double], tol: Double = 1e-12): Matcher[Seq[Double]] = new Matcher[Seq[Double]]{
     override def apply[S <: Seq[Double]](t: Expectable[S]): MatchResult[S] = result(

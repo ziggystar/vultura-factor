@@ -2,7 +2,7 @@ package vultura.factor.inference.conditioned
 
 import vultura.factor.inference.MargParI
 import vultura.factor.inference.calibration._
-import vultura.factor.Problem
+import vultura.factor.{Ring, Problem}
 
 /** Approximate BP solver plugin based on cp2 implementation. */
 case class BPSolverPlugin(tol: Double = 1e-10, maxSteps: Long = 10000) extends ApproximateSolver[ExtendedBPResult]{
@@ -35,6 +35,8 @@ case class BPSolverPlugin(tol: Double = 1e-10, maxSteps: Long = 10000) extends A
 }
 
 class CalResult(val problem: Problem, messages: BPResult#Message => (Array[Double],Long), val iterations: Long) extends ExtendedBPResult {
+
+  override def ring: Ring[Double] = problem.ring
 
   val msgF2V: Array[Array[Array[Double]]] =
     problem.scopeOfFactor.zipWithIndex.map{case (scope,fi) => scope.map(v => new Array[Double](problem.domains(v)))}

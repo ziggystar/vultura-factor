@@ -2,8 +2,8 @@ package vultura.calibration
 
 import org.specs2.matcher.MatchResult
 import org.specs2.mutable.Specification
-import vultura.factor.{FactorMatchers, NormalD, Problem}
 import vultura.factor.generation._
+import vultura.factor.{FactorMatchers, NormalD, Problem}
 import vultura.util.graph.graphviz.Directed
 
 class MeanFieldTest extends Specification with FactorMatchers {
@@ -37,8 +37,8 @@ class MeanFieldTest extends Specification with FactorMatchers {
   def exactMeanField(problem: Problem): MatchResult[Any] = {
     val (r, stat) = Calibrator.calibrate(MeanField(problem))
     (stat.isConverged must beTrue) and
-      (r must haveExactZ()) and
-      (r must haveExactMarginals())
+      (r must haveExactZ(problem)) and
+      (r must haveExactMarginals(problem))
   }
   
   def meanFieldIsLowerBound(problem: Problem): MatchResult[Any] = {

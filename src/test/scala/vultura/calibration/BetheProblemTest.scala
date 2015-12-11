@@ -2,7 +2,7 @@ package vultura.calibration
 
 import org.specs2.mutable.Specification
 import vultura.factor.inference.calibration.LBP
-import vultura.factor.{Problem, FactorMatchers, NormalD, generation}
+import vultura.factor.{FactorMatchers, NormalD, Problem, generation}
 
 import scala.util.Random
 
@@ -12,11 +12,13 @@ class BetheProblemTest extends Specification with FactorMatchers {
   val tree = problemGenerator(generation.graph.randomTree(10),param = IIDValuedParam(Generator.uniform(-3,3))).generate(new Random(0)).problem.toRing(NormalD)
   val grid6x6 = problemGenerator(Generator.only(generation.graph.lattice(6 -> false, 6 -> false))).generate(new Random(0)).problem
 
+  def beliefPropagation = ((p: Problem) => BeliefPropagation.infer(p, damping = 0)).aka("belief propagation")
+
   "bethe approximation yields exact result on tree" >> {
     val (result,stats) = BeliefPropagation.infer(tree,damping = 0)
     (stats.isConverged must beTrue) and
-      (result must haveExactZ()) and
-      (result must haveExactMarginals(1e-12))
+      (result must haveExactZ(tree)) and
+      (result must haveExactMarginals(tree,1e-12))
   }
 
   "compare BetheProblem to old LBP implementation" >> {

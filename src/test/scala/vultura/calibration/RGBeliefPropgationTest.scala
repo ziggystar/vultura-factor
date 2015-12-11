@@ -17,7 +17,7 @@ class RGBeliefPropgationTest extends Specification with FactorMatchers {
 
     val (ptcResult, status) = Calibrator.calibrate(RGBeliefPropagation(RegionGraph.betheRG(p1),p1),tol=1e-15)
 
-    status.isConverged and (ptcResult must haveSameMarginals(LBP.infer(_,tol=1e-15),1e-12))
+    status.isConverged and (ptcResult must haveSameMarginals(LBP.infer(p1,tol=1e-15),1e-12))
   }
 
   "compare PTC on bethe RG with ordinary LBP result (normal encoding)" >> {
@@ -25,7 +25,7 @@ class RGBeliefPropgationTest extends Specification with FactorMatchers {
 
     val (ptcResult, status) = Calibrator.calibrate(RGBeliefPropagation(RegionGraph.betheRG(p1_normal),p1_normal),tol=1e-15)
 
-    status.isConverged and (ptcResult must haveSameMarginals(LBP.infer(_,tol=1e-15),1e-12))
+    status.isConverged and (ptcResult must haveSameMarginals(LBP.infer(p1_normal,tol=1e-15),1e-12))
   }
 
   "redundant region graphs" >> {

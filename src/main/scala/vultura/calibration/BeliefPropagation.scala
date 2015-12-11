@@ -14,6 +14,7 @@ case class BeliefPropagation(ps: Problem) extends CalProblem
 
   type VI = ps.VI
   type FI = ps.FI
+  type Parameter = Unit
 
   type N = FactorNode
 
@@ -25,7 +26,6 @@ case class BeliefPropagation(ps: Problem) extends CalProblem
   }
 
   case class V2F(variable: VI, factor: FI) extends FactorNode{
-    type D = F2V
     lazy val dependencies: IndexedSeq[F2V] = ps.factorIdxOfVariable(variable).filterNot(_ == factor).map(F2V(_,variable))
     lazy val task: (Array[IR], IR) => Unit =
       SumProductTask(Array(variable),ps.domains,Array.fill(dependencies.size)(Array(variable)), ps.ring).sumProductNormalize(_,_)
@@ -33,7 +33,6 @@ case class BeliefPropagation(ps: Problem) extends CalProblem
   }
 
   case class F2V(factor: FI, variable: VI) extends FactorNode{
-    override type D = V2F
     lazy val dependencies: IndexedSeq[V2F] = ps.scopeOfFactor(factor).filterNot(_ == variable).map(V2F(_,factor))
     lazy val task = SumProductTask(
       Array(variable),
@@ -56,7 +55,7 @@ case class BeliefPropagation(ps: Problem) extends CalProblem
     (for (vi <- ps.variables; fi <- ps.factorIdxOfVariable(vi); e <- Seq(F2V(fi, vi), V2F(vi, fi))) yield e)(collection.breakOut)
 
   /** Constructs a new initial value for each edge. */
-  override def initializer: N => IR = e => Array.fill[Double](e.arraySize)(ps.ring.one)
+  override def initializer(u: Unit): N => IR = e => Array.fill[Double](e.arraySize)(ps.ring.one)
 
   override def buildResult(valuation: FactorNode => IR)
   : RegionBeliefs[Either[Problem#VI, Problem#FI]] with VariationalResult = {
@@ -77,6 +76,8 @@ case class BeliefPropagation(ps: Problem) extends CalProblem
 
     new RegionBeliefs[Either[Problem#VI, Problem#FI]] with VariationalResult {
       type R = Either[Problem#VI, Problem#FI]
+
+      override def ring: Ring[Double] = ps.ring
 
       override def regions: Set[R] = (ps.variables.map(Left(_)) ++ ps.factorIndices.map(Right(_))).toSet
 

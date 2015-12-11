@@ -14,6 +14,9 @@ with StrictLogging with ResultBuilder[RegionBeliefs[RegionGraph#Region] with Var
     logger.warn( "running rgBP on redundant region graph")
   override type N = M
 
+
+  override type Parameter = Unit
+
   val ps: ProblemStructure = rg.problemStructure
   type VI = ps.VI
   type FI = ps.FI
@@ -24,8 +27,6 @@ with StrictLogging with ResultBuilder[RegionBeliefs[RegionGraph#Region] with Var
   /** Message for the edge µ→ν. */
   case class M(mu: R, nu: R) extends Node {
     require(rg.edges.contains(mu -> nu), "instantiating non-existent region-graph edge")
-    /** Type of dependencies .*/
-    override type D = M
 
     lazy val variables: Array[VI] = rg.variablesOf(nu).toArray.sorted
 
@@ -75,14 +76,16 @@ with StrictLogging with ResultBuilder[RegionBeliefs[RegionGraph#Region] with Var
   }
 
   /** Constructs a new initial value for each edge. */
-  override def initializer: N => IR = {case m@M(mu, nu) => Array.fill(m.arraySize)(parameters.ring.one)}
+  override def initializer(u: Unit): N => IR = {case m@M(mu, nu) => Array.fill(m.arraySize)(parameters.ring.one)}
 
     /** The set of nodes defined by this problem. */
   override def nodes: Set[N] = rg.edges.map(msgForEdge)
 
   override def buildResult(valuation: (M) => IR): RegionBeliefs[RegionGraph#Region] with VariationalResult =
     new RegionBeliefs[RegionGraph#Region] with VariationalResult with VarBeliefFromRegionBelief[RegionGraph#Region] {
-      override def problem: Problem = parameters
+      override def problem: ProblemStructure = parameters
+      override def ring: Ring[Double] = parameters.ring
+
       override def regions: Set[RegionGraph#Region] = rg.regions.toSeq.toSet
       override def scopeOfRegion(region: RegionGraph#Region): Set[Int] = rg.variablesOf(region.asInstanceOf[R])
 
@@ -90,7 +93,7 @@ with StrictLogging with ResultBuilder[RegionBeliefs[RegionGraph#Region] with Var
           val factorIdx = rg.factorsOf(r)
           val rbel = regionBelief(r)
           //sum the log-factors (which is aquivalent to multiplying their normal values in log encoding
-          val joint = Factor.multiplyRetain(LogD)(ps.domains)(factorIdx.toIndexedSeq.map(problem.logFactor),rbel.variables)
+          val joint = Factor.multiplyRetain(LogD)(ps.domains)(factorIdx.toIndexedSeq.map(parameters.logFactor),rbel.variables)
           val regionEnergy = NormalD.expectation(rbel.values,joint.values)
           ae + rg.weightOf(r) * regionEnergy
       }
@@ -111,8 +114,8 @@ with StrictLogging with ResultBuilder[RegionBeliefs[RegionGraph#Region] with Var
                 } yield M(mu,nu))(collection.breakOut)
         val messageFactors: IndexedSeq[Factor] = messages.map(m => Factor(m.variables,valuation(m)))
         val encoded =
-          Factor.multiply(parameters.ring)(ps.domains)(potentials ++ messageFactors).normalize(problem.ring)
-        encoded.copy(values = problem.ring.decode(encoded.values))
+          Factor.multiply(parameters.ring)(ps.domains)(potentials ++ messageFactors).normalize(ring)
+        encoded.copy(values = ring.decode(encoded.values))
       }
     }
 }

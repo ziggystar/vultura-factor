@@ -1,7 +1,7 @@
 package vultura.factor.inference.conditioned
 
 import vultura.factor.inference.{MargParI, ParFunI, Result}
-import vultura.factor.{Factor, LogD, Problem}
+import vultura.factor.{Ring, Factor, LogD, Problem}
 import vultura.util._
 
 import scala.annotation.tailrec
@@ -26,6 +26,8 @@ class ConditionedInference[State <: AnyRef,LSI,VSI](val problem: Problem,
   val hVariable: VariableSelection[VSI] = VariableSelection.HV_MaxDegree)(
   implicit val state2ls: State <:< LSI,
   val state2vs: State <:< VSI) extends MargParI {
+
+  override def ring: Ring[Double] = problem.ring
 
   class Leaf(problem: Problem, oldState: Option[State]){
     val (result: Result, info: Option[(SoftReference[State], Double, Set[GCondition])]) = {
