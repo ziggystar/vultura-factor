@@ -59,7 +59,7 @@ trait OvercountingNumbers { self: RegionGraph =>
     val topological = directedGraph.tarjanSCC.map{
       case ns if ns.size == 1 => ns.head
       case _ => sys.error("region graph graph contains directed cycles")
-    }
+    }.reverse
     topological.foldLeft(Map[Region,Int]()){case (m,r) => m + (r -> (1 - ancestors(r).foldLeft(0)(_ + m(_))))}
   }
   final override def weightOf(r: Region): Double = overCountingNumbers(r).toDouble
@@ -75,6 +75,37 @@ trait FullPartialOrderRegionGraph extends RegionGraph {
     regions.filter(childCand => variablesOf(childCand).subsetOf(set))
   }
   def edgeVariables(parent: Region, child: Region): Set[VI] = variablesOf(child)
+}
+
+case class RgDiagnosis(rg: RegionGraph){
+  lazy val validityChecks: Seq[(String,() => Boolean)] = Seq(
+    "variables are connected" -> (() => variablesAreConnected),
+    "factors are connected" -> (() => factorsAreConnected),
+    "weights of regions containing a variable don't sum to 1" -> (() => variablesAreCountedOnce),
+    "weights of regions containing a factor don't sum to 1" -> (() => factorsAreCountedOnce)
+  )
+
+  lazy val validityIssues: Seq[String] = validityChecks.collect{case (msg,v) if !v() => msg}
+
+  lazy val isValidRegionGraph = validityIssues.isEmpty
+
+  /** Redundancy means that each variable-induced sub-graph is a tree. */
+  def nonRedundantVariables: IndexedSeq[rg.VI] = rg.problemStructure.variables
+    .filterNot(v => rg.directedGraph.filterNodes(rg.regionsWithVariables(Seq(v))).isTree)
+  def isNonRedundant: Boolean = nonRedundantVariables.nonEmpty
+
+  def variablesAreCountedOnce: Boolean = rg.problemStructure.variables
+    .exists(vi => math.abs(rg.regionsWithVariables(Set(vi)).map(rg.weightOf).sum - 1d) > 1e-7)
+
+  def factorsAreCountedOnce: Boolean = rg.problemStructure.factorIndices
+    .forall(fi => math.abs(rg.regionsWithFactors(Seq(fi)).toSeq.map(rg.weightOf).sum - 1d) < 1e-7)
+
+  def factorsAreInOuterRegions: Boolean = rg.regions.exists(r => rg.parentsOf(r).nonEmpty && rg.factorsOf(r).nonEmpty)
+
+  def variablesAreConnected: Boolean = rg.problemStructure.variables
+    .forall(v => rg.directedGraph.filterNodes(rg.regionsWithVariables(Set(v))).connectedComponents.size == 1)
+  def factorsAreConnected: Boolean = rg.problemStructure.factorIndices
+    .forall{fi => rg.directedGraph.filterNodes(rg.regionsWithVariables(rg.problemStructure.scopeOfFactor(fi).toSet)).connectedComponents.size == 1 }
 }
 
 trait TwoLayerRG extends RegionGraph {

@@ -20,12 +20,12 @@ class TwoLayerOCPropagation(val rg: TwoLayerOC, val ring: Ring[Double])
 
   trait FactorNode extends Node {
     def variables: Array[Int]
-    val arraySize = variables.map(variables).product
+    def arraySize = variables.map(rg.problemStructure.domains).product
   }
 
   case class ParamNode(large: Large) extends FactorNode {
     override def dependencies: IndexedSeq[Nothing] = IndexedSeq()
-    override def variables: Array[Int] = large.variables.toArray.sorted
+    val variables: Array[Int] = large.variables.toArray.sorted
     /**
       * - first parameter: `zip`s with `dependencies`.
       * - second parameter: Result of computation shall be stored here. Content of result is garbage.
@@ -36,7 +36,7 @@ class TwoLayerOCPropagation(val rg: TwoLayerOC, val ring: Ring[Double])
   case class S2L(small: Small, large: Large) extends FactorNode {
     lazy val dependencies: IndexedSeq[L2S] = small.parents.filterNot(_ == large).map(ol => L2S(ol,small))(collection.breakOut)
 
-    override def variables: Array[Int] = small.variables.toArray.sorted
+    val variables: Array[Int] = small.variables.toArray.sorted
 
     lazy val task: (IndexedSeq[IR], IR) => Unit =
       SumProductTask(
@@ -47,7 +47,7 @@ class TwoLayerOCPropagation(val rg: TwoLayerOC, val ring: Ring[Double])
   }
 
   case class L2S(large: Large, small: Small) extends FactorNode {
-    override def variables: Array[Int] = small.variables.toArray.sorted
+    val variables: Array[Int] = small.variables.toArray.sorted
     lazy val dependencies: IndexedSeq[FactorNode] = ParamNode(large) +: large.children.filterNot(_ == small).map(os => S2L(os,large))(collection.breakOut)
     lazy val task: (IndexedSeq[IR], IR) => Unit =
       SumProductTask(
