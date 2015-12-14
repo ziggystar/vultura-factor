@@ -81,19 +81,28 @@ class Calibrator[P,CP <: CalProblem.Aux[P]](val cp: CP) extends StrictLogging {
   }
 
   protected def calibrateComponent(componentIndex: Int, maxIterations: Long, maxDiff: Double, damping: Double = 0d): ConvergenceStats = {
+    //TODO this is a bit hacky, we do not update edges that have no dependencies,
+    // since those should be initialized to their correct value;
+    // it would be better if the CalProb interface makes this more clear
     def newNodeValue(ei: NI): Array[Double] = {
       //update edge
       val node = nodes.backward(ei)
-      val newValue = new Array[Double](node.arraySize)
-      node.compute(dependencies(ei).map(state)(collection.breakOut), newValue)
-      newValue
+      if(node.dependencies.isEmpty)
+        state(ei)
+      else {
+        val newValue = new Array[Double](node.arraySize)
+        node.compute(dependencies(ei).map(state)(collection.breakOut), newValue)
+        newValue
+      }
     }
 
     val component = stronglyConnectedComponents(componentIndex)
     if(component.size == 1) {
       //just update the edge
       val ni = component.head
-      state(ni) = newNodeValue(ni)
+      val newVal: IR = newNodeValue(ni)
+      require(newVal.size == state(ni).size)
+      state(ni) = newVal
       ConvergenceStats(iterations = 1, maxDiff = 0, isConverged = true)
     } else {
       val componentNodes: IndexedSeq[NI] = component.toIndexedSeq
@@ -136,7 +145,11 @@ class Calibrator[P,CP <: CalProblem.Aux[P]](val cp: CP) extends StrictLogging {
   }
 
   def initialize(parameters: P): Unit = {
-    state = nodes.elements.map(cp.initializer(parameters))(collection.breakOut)
+    state = nodes.elements.map(n => {
+      val newVal = cp.initializer(parameters)(n)
+      require(newVal.length == n.arraySize, "initializing with array of wrong size")
+      newVal
+    })(collection.breakOut)
   }
 
   def nodeState(node: N): IR = state(nodes(node))

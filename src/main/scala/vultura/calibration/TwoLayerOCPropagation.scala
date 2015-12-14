@@ -36,7 +36,7 @@ class TwoLayerOCPropagation(val rg: TwoLayerOC, val ring: Ring[Double])
   case class S2L(small: Small, large: Large) extends FactorNode {
     lazy val dependencies: IndexedSeq[L2S] = small.parents.filterNot(_ == large).map(ol => L2S(ol,small))(collection.breakOut)
 
-    val variables: Array[Int] = small.variables.toArray.sorted
+    val variables: Array[Int] = rg.edgeVariables(large,small).toArray.sorted
 
     lazy val task: (IndexedSeq[IR], IR) => Unit =
       SumProductTask(
@@ -47,7 +47,7 @@ class TwoLayerOCPropagation(val rg: TwoLayerOC, val ring: Ring[Double])
   }
 
   case class L2S(large: Large, small: Small) extends FactorNode {
-    val variables: Array[Int] = small.variables.toArray.sorted
+    val variables: Array[Int] = rg.edgeVariables(large,small).toArray.sorted
     lazy val dependencies: IndexedSeq[FactorNode] = ParamNode(large) +: large.children.filterNot(_ == small).map(os => S2L(os,large))(collection.breakOut)
     lazy val task: (IndexedSeq[IR], IR) => Unit =
       SumProductTask(
@@ -68,7 +68,7 @@ class TwoLayerOCPropagation(val rg: TwoLayerOC, val ring: Ring[Double])
 
   /** Constructs a new initial value for each edge. */
   override def initializer(factors: IndexedSeq[Factor]): N => IR = {
-    case ParamNode(l) => Factor.multiply(ring)(ps.domains)(l.factors.toIndexedSeq.map(factors)).values
+    case pn@ParamNode(l) => Factor.multiplyRetain(ring)(ps.domains)(l.factors.toIndexedSeq.map(factors),pn.variables).values
     case otherwise => Factor.maxEntropy(otherwise.variables, ps.domains, ring).values
   }
 

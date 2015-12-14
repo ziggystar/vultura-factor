@@ -110,12 +110,17 @@ case class RgDiagnosis(rg: RegionGraph){
 
 trait TwoLayerRG extends RegionGraph {
 
-  protected[TwoLayerRG] def smallRegionsData: Set[Set[VI]]
-  protected[TwoLayerRG] def largeRegionsData: Set[(Set[VI],Set[FI])]
+  protected[TwoLayerRG] def smallRegionsScopes: Set[Set[VI]]
+  protected[TwoLayerRG] def largeRegionsScopes: Set[Set[VI]]
+  protected[TwoLayerRG] def largeRegionFactors(large: Set[VI]): Set[FI]
+  protected[TwoLayerRG] def edgeLabels(from: Set[VI], to: Set[VI]): Set[VI]
 
-  protected[TwoLayerRG] val smallRegionsLookup: SIIndex[Set[VI]] = new SIIndex[Set[VI]](smallRegionsData)
-  protected[TwoLayerRG] val largeRegionsLookup: SIIndex[(Set[VI],Set[FI])] = new SIIndex[(Set[VI], Set[FI])](largeRegionsData)
+  protected[TwoLayerRG] val smallRegionsLookup: SIIndex[Set[VI]] = new SIIndex[Set[VI]](smallRegionsScopes)
+  protected[TwoLayerRG] val largeRegionsLookup: SIIndex[Set[VI]] = new SIIndex[Set[VI]](largeRegionsScopes)
 
+  type SI = Int
+  type LI = Int
+  /** Two layer region type. */
   sealed trait TLR {
     def variables: Set[VI]
     def factors: Set[FI]
@@ -125,14 +130,19 @@ trait TwoLayerRG extends RegionGraph {
   case class Small protected[TwoLayerRG] (si: Int) extends TLR {
     override def variables: Set[VI] = smallRegionsLookup.elements(si)
     override def factors: Set[FI] = Set()
-    val parentsI: IndexedSeq[VI] =
-      largeRegionsLookup.indices.filter(li => variables.subsetOf(largeRegionsLookup.backward(li)._1))
+    //parents are all large regions whose variable set subsumes the varset of this region, and the edge has
+    //a non-empty label set
+    val parentsI: IndexedSeq[LI] = largeRegionsLookup.indices
+      .filter{li =>
+        val largeVariables: Set[VI] = largeRegionsLookup.backward(li)
+        variables.subsetOf(largeVariables) && edgeLabels(largeVariables,variables).nonEmpty
+      }
     def parents: Seq[Large] = parentsI.map(Large)
     override def children: Seq[Small] = Seq()
   }
   case class Large protected[TwoLayerRG](li: Int) extends TLR {
-    override def variables: Set[VI] = largeRegionsLookup.elements(li)._1
-    override def factors: Set[FI] = largeRegionsLookup.elements(li)._2
+    override def variables: Set[VI] = largeRegionsLookup.elements(li)
+    override def factors: Set[FI] = largeRegionFactors(variables)
     def parents: Seq[Large] = Seq()
     override def children: Seq[Small] = smallRegions.filter(_.parents.contains(this))
   }
@@ -150,28 +160,38 @@ trait TwoLayerRG extends RegionGraph {
   override def childrenOf(r: TLR): Set[TLR] = r.children.toSet
 
   //the following methods *could* be defined through the above methods. */
-  override def edgeVariables(parent: TLR, child: TLR): Set[VI] = child.variables
+  override def edgeVariables(parent: TLR, child: TLR): Set[VI] = (parent,child) match {
+    case (l: Large, s: Small) => edgeLabels(l.variables,s.variables)
+  }
 }
 
-/** Two-layered region graph with overcounting numbers.
-  *
-  * @param largeRegionsData first tuple entry is the variable scope of the region, second are the indices of the included factors
-  * @param smallRegionsData a small region is just a variable scope
-  */
-case class TwoLayerOC(problemStructure: ProblemStructure, largeRegionsData: Set[(Set[Int],Set[Int])], smallRegionsData: Set[Set[Int]])
-  extends TwoLayerRG with OvercountingNumbers
+/** Two-layered region graph with overcounting numbers. */
+class TwoLayerOC(val problemStructure:      ProblemStructure,
+                 val smallRegionsScopes:    Set[Set[Int]],
+                 val largeRegionsScopes:    Set[Set[Int]],
+                 val factorsOfLargeRegions: Set[Int] => Set[Int],
+                 val separatorSets:         (Set[Int],Set[Int]) => Set[Int])
+  extends TwoLayerRG with OvercountingNumbers {
+  override def largeRegionFactors(large: Set[VI]): Set[FI] = factorsOfLargeRegions(large)
+  override def edgeLabels(from: Set[VI], to: Set[VI]): Set[VI] = separatorSets(from,to)
+}
 
 object TwoLayerOC {
   /** Constructs a Bethe region graph.
     * The construction aggregates factors with containing/subsumed scopes to avoid redundancy. */
   def betheRegionGraph(ps: ProblemStructure): TwoLayerOC = {
     val scopeLookup = new SSet[Int](ps.scopeOfFactor.map(_.toSet)(collection.breakOut))
-    val largeRegions: Set[(Set[Int], Set[Int])] = scopeLookup.maximalSets.map { maxSet =>
-      val factors = maxSet.map(ps.factorIdxOfVariable(_).toSet).reduce(_ intersect _)
-      maxSet -> factors
-    }
+    val largeRegions: Map[Set[Int],Set[Int]] = scopeLookup.maximalSets.map { maxSet =>
+          val factors = maxSet.map(ps.factorIdxOfVariable(_).toSet).reduce(_ intersect _)
+          maxSet -> factors
+        }(collection.breakOut)
 
-    TwoLayerOC(ps, largeRegions, ps.variableSet.map(Set(_)))
+    new TwoLayerOC(
+      problemStructure = ps,
+      smallRegionsScopes = ps.variableSet.map(Set(_)),
+      largeRegionsScopes = largeRegions.keySet,
+      factorsOfLargeRegions = largeRegions.apply,
+      separatorSets = {case (large,small) if small.subsetOf(large) => small})
   }
 
   def junctionTreeMinDegree(problemStructure: ProblemStructure): TwoLayerOC = {
@@ -191,17 +211,30 @@ object TwoLayerOC {
     //2. merge all factors of each clique into one
     val compactedTrees: Seq[Tree[(Set[VI], Seq[FI])]] = compactJTrees(rawJunctionTrees)
 
-    val largeRegions: Set[(Set[VI], Set[FI])] = compactedTrees.flatMap(_.flatten).map{
+    compactedTrees.foreach(t => println(t.draw.mkString("\n")))
+
+    val largeRegions: Map[Set[VI], Set[FI]] = compactedTrees.flatMap(_.flatten).map{
       case (vs,fs) => (vs,fs.toSet)
     }(collection.breakOut)
 
     def slidingTree[A](t: Tree[A]): Stream[(A,A)] = t match {
       case Tree.Node(a, leafs)    => leafs.map(l => (a,l.rootLabel)) ++ leafs.flatMap(slidingTree)
     }
-    val smallRegions: Set[Set[VI]] = compactedTrees.flatMap(tree =>
-      slidingTree(tree).map{case ((pa,_),(ca,_)) => pa intersect ca}
-    )(collection.breakOut)
 
-    TwoLayerOC(problemStructure, largeRegions, smallRegions)
+    //map a small region to its large parent regions (the cliques of the junction tree)
+    //note that different neighbouring large regions may have the same sepset, and we collapse the resulting
+    //identically-scoped small regions into one (I assume this is correct)
+    val smallRegionsWithParents: Map[Set[VI],Seq[Set[VI]]] = compactedTrees.flatMap(tree =>
+      slidingTree(tree).map{case ((pa,_),(ca,_)) => (pa intersect ca,Seq(pa,ca))}
+    )
+      .groupBy(_._1).map{case (small,intersections) => small -> intersections.flatMap(_._2).distinct} //group identical small regions together
+
+    new TwoLayerOC(
+      problemStructure = problemStructure,
+      smallRegionsScopes = smallRegionsWithParents.keySet,
+      largeRegionsScopes = largeRegions.keySet,
+      largeRegions.apply,
+      { (l: Set[VI], s: Set[VI]) => if (smallRegionsWithParents(s).contains(l)) s else Set() }
+    )
   }
 }

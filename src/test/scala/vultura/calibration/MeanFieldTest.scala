@@ -18,10 +18,7 @@ class MeanFieldTest extends Specification with FactorMatchers {
   def complete(size: Int) = problemGenerator(Generator.only(graph.complete(size))).withSeed().problem.toRing(NormalD)
 
   "mean field must be exact for unconnected problem" >> {
-    "size 1" >> {
-      MeanField(unconnected(1)).computationGraph.renderPDF("mf-1")(Directed(identity))
-      exactMeanField(unconnected(1))
-    }
+    "size 1" >> exactMeanField(unconnected(1))
     "size 2" >> exactMeanField(unconnected(2))
     "size 10" >> exactMeanField(unconnected(10))
   }
