@@ -23,8 +23,10 @@ organization := "de.uni-ulm"
   - add Dist probability monad
   - add new graphviz framework that supports directed and undirected graphs (previously only directed graphs were supported)
   - add new graph API
+24.0.1:
+  - fix bug in tree decomposition, heuristic was completely broken and crashed on trees
 */
-version := "24.0.0"
+version := "24.0.1"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 

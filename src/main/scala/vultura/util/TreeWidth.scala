@@ -453,13 +453,22 @@ object TreeWidth {
   def minDegreeOrdering(cliques: Seq[Set[Int]]): List[Int] = minDegreeOrderingAndWidth(cliques.toIndexedSeq)._1
 
   def treeDecomposition[S](cliques: AA[Int],
-                        domains: Array[Int],
-                        heuristic: OrderingHeuristic[S] = MinFillHeuristic,
-                        cutoff: Long = Long.MaxValue,
-                        random: Random = new Random(0)): Option[Seq[Int]] = {
-    val neighbours: Array[BSType] = cliques.map(_.toBitSet)
+                           domains: Array[Int],
+                           heuristic: OrderingHeuristic[S] = MinFillHeuristic,
+                           cutoff: Long = Long.MaxValue,
+                           random: Random = new Random(0)): Option[Seq[Int]] = {
+    val cliqueBS: Array[BSType] = cliques.map(_.toBitSet)
+    val maxVar = cliqueBS.foldLeft(0){case (m,clique) => math.max(m,clique.toIterator.max)}
+    val allNodes: BSType = FastBitSet.newBitSet(maxVar)
+    val neighbours: Array[BSType] = Array.fill(maxVar + 1)(FastBitSet.newBitSet(maxVar))
+    //now fill `allNodes` and `neighbours`
+    cliqueBS.foreach{ clique =>
+      allNodes.or(clique)
+      clique.foreach(v => neighbours(v).or(clique))
+    }
+
     heuristicDecomposition(heuristic)(
-      remaining = neighbours.foldLeft(FastBitSet.newBitSet())((acc,n) => {acc.or(n);acc}),
+      remaining = allNodes,
       neighbours = neighbours,
       state = heuristic.initialState(neighbours),
       domains = domains,
