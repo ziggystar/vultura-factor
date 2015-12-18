@@ -99,6 +99,7 @@ class TwoLayerOCPropagation(val rg: TwoLayerOC, val ring: Ring[Double])
         val inMsgs = region match {
           case s: Small => s.parents.map(l => L2S(l,s))
           case l: Large => l.children.map(s => S2L(s,l)) :+ ParamNode(l)
+          case _        => sys.error("supplying a region of the wrong region graph")
         }
         Factor.multiply(ring)(ps.domains)(inMsgs.map(msg => Factor(msg.variables,valuation(msg)))(collection.breakOut))
           .normalize(ring)

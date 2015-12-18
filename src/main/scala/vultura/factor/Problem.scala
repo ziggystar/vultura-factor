@@ -110,6 +110,7 @@ object Problem{
       .takeWhile(_ != null)
 
     val tokens: Iterator[String] = lines
+      .filterNot(_.startsWith("#")) //filter out comment lines
       .flatMap(_.split(Array(' ','\t','\r')))
       .filterNot(_.isEmpty)
 
@@ -117,7 +118,7 @@ object Problem{
     (tokens.next().toUpperCase match {
         case "BAYES" => Right(true)
         case "MARKOV" => Right(false)
-        case _ => Left("problem file must start with 'BAYES' or 'MARKOV'")
+        case l => Left(s"problem file must start with 'BAYES' or 'MARKOV' but found '$l'")
     }).right.map { isBayes =>
       val numVars = tokens.next().toInt
       val domains: Array[Int] = Array.fill(numVars)(tokens.next().toInt)

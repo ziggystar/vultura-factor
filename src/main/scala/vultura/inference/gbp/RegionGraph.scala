@@ -162,6 +162,7 @@ trait TwoLayerRG extends RegionGraph {
   //the following methods *could* be defined through the above methods. */
   override def edgeVariables(parent: TLR, child: TLR): Set[VI] = (parent,child) match {
     case (l: Large, s: Small) => edgeLabels(l.variables,s.variables)
+    case _ => Set()
   }
 }
 
@@ -194,14 +195,19 @@ object TwoLayerOC {
       separatorSets = {case (large,small) if small.subsetOf(large) => small})
   }
 
-  def junctionTreeMinDegree(problemStructure: ProblemStructure): TwoLayerOC = {
+  def junctionTreeMinDegree(problemStructure: ProblemStructure) = {
+    import vultura.util.TreeWidth._
+    val variableOrder: Seq[Int] = treeDecomposition(problemStructure.scopeOfFactor, problemStructure.domains)
+      .getOrElse(sys.error("could not find a small tree decomposition"))
+
+    junctionTree(problemStructure,variableOrder)
+  }
+
+  def junctionTree(problemStructure: ProblemStructure, variableOrder: Seq[Int]): TwoLayerOC = {
     import vultura.util.TreeWidth._
 
     type VI = problemStructure.VI
     type FI = problemStructure.FI
-
-    val variableOrder: Seq[VI] = treeDecomposition(problemStructure.scopeOfFactor, problemStructure.domains)
-      .getOrElse(sys.error("could not find a small tree decomposition"))
 
     val rawJunctionTrees: Seq[Tree[(Set[VI], Seq[FI])]] = junctionTreesFromOrder(
       problemStructure.factorIndices.map(fi => problemStructure.scopeOfFactor(fi).toSet -> fi),

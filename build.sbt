@@ -32,7 +32,7 @@ organization := "de.uni-ulm"
 24.0.1:
   - Result only provides ring and problem structure, no problem parameters anymore, maybe this is a bad idea...
 */
-version := "24.0.1-DEV"
+version := "24.0.1-DEV2"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 
@@ -47,7 +47,7 @@ scalaVersion := "2.11.7"
 //assertions are only used in tests
 scalacOptions in Compile += "-Xdisable-assertions"
 
-libraryDependencies += "org.apache.commons" % "commons-math3" % "3.2"
+libraryDependencies += "org.apache.commons" % "commons-math3" % "3.5"
 
 libraryDependencies += "de.uni-ulm" %% "vultura-util" % "24.0.1"
 
