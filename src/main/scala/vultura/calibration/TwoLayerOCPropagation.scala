@@ -23,14 +23,8 @@ class TwoLayerOCPropagation(val rg: TwoLayerOC, val ring: Ring[Double])
     def arraySize = variables.map(rg.problemStructure.domains).product
   }
 
-  case class ParamNode(large: Large) extends FactorNode {
-    override def dependencies: IndexedSeq[Nothing] = IndexedSeq()
+  case class ParamNode(large: Large) extends FactorNode with SourceNode {
     val variables: Array[Int] = large.variables.toArray.sorted
-    /**
-      * - first parameter: `zip`s with `dependencies`.
-      * - second parameter: Result of computation shall be stored here. Content of result is garbage.
-      */
-    override def compute(ins: Array[IR], result: IR): Unit = {}
   }
 
   case class S2L(small: Small, large: Large) extends FactorNode {

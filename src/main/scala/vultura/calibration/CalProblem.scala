@@ -40,6 +40,12 @@ trait CalProblem {
     def compute(ins: Array[IR], result: IR): Unit
   }
 
+  trait SourceNode{self: Node =>
+    override final def dependencies: IndexedSeq[Nothing] = IndexedSeq.empty
+    override final def compute(ins: Array[CalProblem#IR], result: CalProblem#IR): Unit =
+      sys.error("this must never be called by the Calibrator, values are supplied by initialization")
+  }
+
   /** Constructs a new initial value for each edge. */
   def initializer(param: Parameter): N => IR
 
