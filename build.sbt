@@ -25,8 +25,10 @@ organization := "de.uni-ulm"
   - add new graph API
 24.0.1:
   - fix bug in tree decomposition, heuristic was completely broken and crashed on trees
+24.0.2:
+  - fix Java target version to 1.6
 */
-version := "24.0.1"
+version := "24.0.2"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 
@@ -37,6 +39,8 @@ description := "Tools for probabilistic inference in discrete-valued factor grap
 licenses += "MIT" -> url("http://opensource.org/licenses/MIT")
 
 scalaVersion := "2.11.7"
+
+javacOptions ++= Seq("-source", "1.6", "-target", "1.6")
 
 //asserions are only used in tests
 scalacOptions in Compile += "-Xdisable-assertions"
