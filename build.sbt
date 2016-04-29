@@ -31,8 +31,10 @@ organization := "de.uni-ulm"
   - remove buggy mean-field
 24.0.1:
   - Result only provides ring and problem structure, no problem parameters anymore, maybe this is a bad idea...
+24.1.0:
+  - refactor calibrator to allow selective updates
 */
-version := "24.0.1-DEV2"
+version := "24.1.0"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 
