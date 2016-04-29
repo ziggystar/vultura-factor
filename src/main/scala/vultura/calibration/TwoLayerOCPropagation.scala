@@ -4,7 +4,12 @@ import vultura.factor._
 import vultura.factor.inference.{VarBeliefFromRegionBelief, VariationalResult, RegionBeliefs}
 import vultura.inference.gbp.TwoLayerOC
 
-
+/** Message-Passing algorithm implementing two-way message passing on bipartite region graphs.
+  * This makes the algorithm applicable to junction graphs, bethe graphs, cluster graphs.
+  * Application to bethe graphs yields Beleif Propagation on factor graphs.
+  * @param rg
+  * @param ring
+  */
 class TwoLayerOCPropagation(val rg: TwoLayerOC, val ring: Ring[Double])
   extends CalProblem with ResultBuilder[RegionBeliefs[TwoLayerOC#Region] with VariationalResult] { outer =>
 
@@ -23,8 +28,14 @@ class TwoLayerOCPropagation(val rg: TwoLayerOC, val ring: Ring[Double])
     def arraySize = variables.map(rg.problemStructure.domains).product
   }
 
-  case class ParamNode(large: Large) extends FactorNode with SourceNode {
+  case class ParamNode(large: Large) extends FactorNode {
+    override def dependencies: IndexedSeq[Nothing] = IndexedSeq()
     val variables: Array[Int] = large.variables.toArray.sorted
+    /**
+      * - first parameter: `zip`s with `dependencies`.
+      * - second parameter: Result of computation shall be stored here. Content of result is garbage.
+      */
+    override def compute(ins: Array[IR], result: IR): Unit = {}
   }
 
   case class S2L(small: Small, large: Large) extends FactorNode {

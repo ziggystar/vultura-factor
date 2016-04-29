@@ -71,10 +71,27 @@ trait OvercountingNumbers { self: RegionGraph =>
 trait FullPartialOrderRegionGraph extends RegionGraph {
   /** Direct successors of `r`. */
   def childrenOf(r: Region): Set[Region] = {
-    val set: Set[VI] = variablesOf(r)
-    regions.filter(childCand => variablesOf(childCand).subsetOf(set))
+    val scope: Set[VI] = variablesOf(r)
+    val descendants = regions.filter(cand => variablesOf(cand).subsetOf(scope)) - r
+    //now compute *direct* descandants
+    descendants.filter(cand => !descendants.exists(mediator => variablesOf(cand).subsetOf(variablesOf(mediator))))
   }
   def edgeVariables(parent: Region, child: Region): Set[VI] = variablesOf(child)
+}
+
+object FullPartialOrderRegionGraph {
+  def poRG(ps: ProblemStructure,
+           _regions: Iterable[Set[ProblemStructure#VI]],
+           factorAssignment: Map[ProblemStructure#FI,Set[ProblemStructure#VI]]) = new FullPartialOrderRegionGraph with OvercountingNumbers {
+    override type Region = Set[ps.VI]
+    override val regions: Set[Region] = _regions.toSet
+    override val problemStructure: ProblemStructure = ps
+
+    require(factorAssignment.values.forall(regions.contains), "assigning factor to non-existant region")
+
+    override def factorsOf(r: Region): Set[FI] = factorAssignment.collect{case (fi,reg) if r == reg => fi}(collection.breakOut)
+    override def variablesOf(r: Region): Set[VI] = r
+  }
 }
 
 case class RgDiagnosis(rg: RegionGraph){
