@@ -234,8 +234,6 @@ object TwoLayerOC {
     //2. merge all factors of each clique into one
     val compactedTrees: Seq[Tree[(Set[VI], Seq[FI])]] = compactJTrees(rawJunctionTrees)
 
-    compactedTrees.foreach(t => println(t.draw.mkString("\n")))
-
     val largeRegions: Map[Set[VI], Set[FI]] = compactedTrees.flatMap(_.flatten).map{
       case (vs,fs) => (vs,fs.toSet)
     }(collection.breakOut)

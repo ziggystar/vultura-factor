@@ -3,6 +3,7 @@ package vultura.calibration
 import com.typesafe.scalalogging.StrictLogging
 import vultura.factor.inference.ConvergenceStats
 import vultura.util.{FastBitSet, OpenBitSet, SIIndex}
+import FastBitSet._
 
 import collection.mutable
 import scala.collection.immutable.IndexedSeq
@@ -72,7 +73,7 @@ class Calibrator[P,CP <: CalProblem.Aux[P]](val cp: CP) extends StrictLogging {
     }
 
     val componentNodes: IndexedSeq[NI] = component.toIndexedSeq.sorted
-    var iteration = 0L
+    var iteration = -1L //we need one iteration for asserting convergence
     var iterationDiff: Double = 0d
     do {
       iterationDiff = 0d
