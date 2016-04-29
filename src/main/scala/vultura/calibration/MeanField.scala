@@ -11,7 +11,7 @@ case class MeanField(p: Problem) extends CalProblem with ResultBuilder[Variation
 
   type N = VBel
   /* Parameters of fully factored mean field are the marginal distributions over the variables. */
-  case class VBel(vi: p.VI) extends Node {
+  case class VBel(vi: p.VI) extends ComputedNode {
     /** Size of the array required to store the state of this edge. */
     override def arraySize: Int = p.domains(vi)
     override def dependencies: IndexedSeq[VBel] = p.neighboursOfVariableEx(vi).map(VBel)

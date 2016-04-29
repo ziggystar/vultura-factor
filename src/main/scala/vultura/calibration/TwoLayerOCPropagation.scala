@@ -15,7 +15,7 @@ class TwoLayerOCPropagation(val rg: TwoLayerOC, val ring: Ring[Double])
 
   type Region = rg.Region
 
-  override type N = FactorNode
+  override type N = Node with FactorNode
 
   override type Parameter = IndexedSeq[Factor]
 
@@ -23,22 +23,16 @@ class TwoLayerOCPropagation(val rg: TwoLayerOC, val ring: Ring[Double])
   type Small = rg.Small
   type Large = rg.Large
 
-  trait FactorNode extends Node {
+  trait FactorNode {self: Node =>
     def variables: Array[Int]
     def arraySize = variables.map(rg.problemStructure.domains).product
   }
 
-  case class ParamNode(large: Large) extends FactorNode {
-    override def dependencies: IndexedSeq[Nothing] = IndexedSeq()
+  case class ParamNode(large: Large) extends ParameterNode with FactorNode{
     val variables: Array[Int] = large.variables.toArray.sorted
-    /**
-      * - first parameter: `zip`s with `dependencies`.
-      * - second parameter: Result of computation shall be stored here. Content of result is garbage.
-      */
-    override def compute(ins: Array[IR], result: IR): Unit = {}
   }
 
-  case class S2L(small: Small, large: Large) extends FactorNode {
+  case class S2L(small: Small, large: Large) extends ComputedNode with FactorNode {
     lazy val dependencies: IndexedSeq[L2S] = small.parents.filterNot(_ == large).map(ol => L2S(ol,small))(collection.breakOut)
 
     val variables: Array[Int] = rg.edgeVariables(large,small).toArray.sorted
@@ -51,9 +45,9 @@ class TwoLayerOCPropagation(val rg: TwoLayerOC, val ring: Ring[Double])
     override def compute(ins: Array[IR], result: IR): Unit = task(ins,result)
   }
 
-  case class L2S(large: Large, small: Small) extends FactorNode {
+  case class L2S(large: Large, small: Small) extends ComputedNode with FactorNode {
     val variables: Array[Int] = rg.edgeVariables(large,small).toArray.sorted
-    lazy val dependencies: IndexedSeq[FactorNode] = ParamNode(large) +: large.children.filterNot(_ == small).map(os => S2L(os,large))(collection.breakOut)
+    lazy val dependencies: IndexedSeq[N] = ParamNode(large) +: large.children.filterNot(_ == small).map(os => S2L(os,large))(collection.breakOut)
     lazy val task: (IndexedSeq[IR], IR) => Unit =
       SumProductTask(
         variables,

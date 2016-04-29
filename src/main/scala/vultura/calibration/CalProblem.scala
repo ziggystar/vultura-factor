@@ -1,8 +1,5 @@
 package vultura.calibration
 
-import com.typesafe.scalalogging.StrictLogging
-import vultura.factor.inference.ConvergenceStats
-import vultura.util.SIIndex
 import vultura.util.graph.graphviz.DotGraph
 
 trait Edge
@@ -29,15 +26,22 @@ trait CalProblem {
 
   /** Node type. A node is a representation of a node within the computation graph, but also carries the
     * computation rule and the set of dependencies. */
-  trait Node {
+  sealed trait Node {
     /** Size of the array required to store the state of this edge. */
     def arraySize: Int
+    def dependenciesOpt: Option[IndexedSeq[N]]
+  }
+  trait ComputedNode extends Node {
     def dependencies: IndexedSeq[N]
+    override def dependenciesOpt: Option[IndexedSeq[N]] = Some(dependencies)
     /**
      * - first parameter: `zip`s with `dependencies`.
      * - second parameter: Result of computation shall be stored here. Content of result is garbage.
       */
     def compute(ins: Array[IR], result: IR): Unit
+  }
+  trait ParameterNode extends Node {
+    override def dependenciesOpt: Option[IndexedSeq[N]] = None
   }
 
   /** Constructs a new initial value for each edge. */
@@ -47,7 +51,10 @@ trait CalProblem {
   def nodes: Set[N]
 
   def computationGraph: DotGraph[N,(N,N)] =
-    DotGraph[N,(N,N)](nodes, for (e <- nodes; d <- e.dependencies) yield (d, e)).labelNodes{case e => e.toString}
+    DotGraph[N,(N,N)](
+      nodes,
+      for (e <- nodes; d <- e.dependenciesOpt.getOrElse(IndexedSeq()))
+        yield (d, e)).labelNodes{case e => e.toString}
 }
 
 object CalProblem {

@@ -20,19 +20,19 @@ case class BeliefPropagation(ps: Problem) extends CalProblem
 
   val aggregateFactors = new SSet[Int](ps.scopeOfFactor.map(_.toSet).toSet)
 
-  trait FactorNode extends Node {
+  trait FactorNode extends ComputedNode {
     def variable: Int
     val arraySize = ps.domains(variable)
   }
 
-  case class V2F(variable: VI, factor: FI) extends FactorNode{
+  case class V2F(variable: VI, factor: FI) extends FactorNode {
     lazy val dependencies: IndexedSeq[F2V] = ps.factorIdxOfVariable(variable).filterNot(_ == factor).map(F2V(_,variable))
     lazy val task: (Array[IR], IR) => Unit =
       SumProductTask(Array(variable),ps.domains,Array.fill(dependencies.size)(Array(variable)), ps.ring).sumProductNormalize(_,_)
     override def compute(ins: Array[IR], result: IR): Unit = task(ins,result)
   }
 
-  case class F2V(factor: FI, variable: VI) extends FactorNode{
+  case class F2V(factor: FI, variable: VI) extends FactorNode {
     lazy val dependencies: IndexedSeq[V2F] = ps.scopeOfFactor(factor).filterNot(_ == variable).map(V2F(_,factor))
     lazy val task = SumProductTask(
       Array(variable),

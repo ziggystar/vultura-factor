@@ -25,7 +25,7 @@ with StrictLogging with ResultBuilder[RegionBeliefs[RegionGraph#Region] with Var
   def msgForEdge(e: (R,R)): M = M(e._1,e._2)
 
   /** Message for the edge µ→ν. */
-  case class M(mu: R, nu: R) extends Node {
+  case class M(mu: R, nu: R) extends ComputedNode {
     require(rg.edges.contains(mu -> nu), "instantiating non-existent region-graph edge")
 
     lazy val variables: Array[VI] = rg.variablesOf(nu).toArray.sorted
