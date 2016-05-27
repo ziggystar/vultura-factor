@@ -37,8 +37,10 @@ organization := "de.uni-ulm"
   - relax test for supersetting factors in vultura.propagation.BeliefPropagation to exclude singleton factors; also turn it into warning
 24.1.2:
   - don't stop calibration of calibration.Calibrator for non-finite differences
+24.1.3:
+  - fix calibration not working with damping and singleton SCCs
 */
-version := "24.1.2"
+version := "24.1.3"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 

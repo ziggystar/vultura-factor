@@ -58,19 +58,20 @@ class Calibrator[P,CP <: CalProblem.Aux[P]](val cp: CP) extends StrictLogging {
     }
   }
 
-  protected def calibrateComponent(component: Array[Int], maxIterations: Long, maxDiff: Double, damping: Double = 0d): ConvergenceStats = {
-    def newNodeValue(ei: NI): Array[Double] = {
-      //update edge
-      val node = nodes.backward(ei)
-      node match {
-        case n: PN =>
-          throw new RuntimeException("this point should not be reached")
-        case n: CN =>
-          val newValue = new Array[Double](node.arraySize)
-          n.compute(dependencies(ei).map(state)(collection.breakOut), newValue)
-          newValue
-      }
+  private final def newNodeValue(ei: NI): Array[Double] = {
+    //update edge
+    val node = nodes.backward(ei)
+    node match {
+      case n: PN =>
+        throw new RuntimeException("this point should not be reached")
+      case n: CN =>
+        val newValue = new Array[Double](node.arraySize)
+        n.compute(dependencies(ei).map(state)(collection.breakOut), newValue)
+        newValue
     }
+  }
+
+  protected def calibrateComponent(component: Array[Int], maxIterations: Long, maxDiff: Double, damping: Double = 0d): ConvergenceStats = {
 
     val componentNodes: IndexedSeq[NI] = component.toIndexedSeq.sorted
     var iteration = -1L //we need one iteration for asserting convergence
@@ -144,8 +145,13 @@ class Calibrator[P,CP <: CalProblem.Aux[P]](val cp: CP) extends StrictLogging {
 
       stronglyConnectedComponents
         .map(_.toArray.sorted)
-        .map(calibrateComponent(_, maxIterations, maxDiff, damping))
-        .reduce(_ max _)
+        .map(edges =>
+          if(edges.size == 1) {
+            state(edges.head) = newNodeValue(edges.head)
+            ConvergenceStats(1,0d,true)
+          }
+          else calibrateComponent(edges, maxIterations, maxDiff, damping)
+        ).reduce(_ max _)
     } else {
       calibrateComponent(edges.map(nodes.forward).toArray.distinct.sorted, maxIterations, maxDiff, damping)
     }
