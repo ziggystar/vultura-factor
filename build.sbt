@@ -35,8 +35,10 @@ organization := "de.uni-ulm"
   - refactor calibrator to allow selective updates
 24.1.1:
   - relax test for supersetting factors in vultura.propagation.BeliefPropagation to exclude singleton factors; also turn it into warning
+24.1.2:
+  - don't stop calibration of calibration.Calibrator for non-finite differences
 */
-version := "24.1.1"
+version := "24.1.2"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 

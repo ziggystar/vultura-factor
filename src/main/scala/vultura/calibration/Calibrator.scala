@@ -106,7 +106,7 @@ class Calibrator[P,CP <: CalProblem.Aux[P]](val cp: CP) extends StrictLogging {
       }
 
       iteration += 1
-    } while (iterationDiff > maxDiff && iteration < maxIterations)
+    } while (!(iterationDiff < maxDiff) && iteration < maxIterations)
 
     ConvergenceStats(iteration,iterationDiff,iterationDiff < maxDiff)
   }
