@@ -33,8 +33,10 @@ organization := "de.uni-ulm"
   - Result only provides ring and problem structure, no problem parameters anymore, maybe this is a bad idea...
 24.1.0:
   - refactor calibrator to allow selective updates
+24.1.1:
+  - relax test for supersetting factors in vultura.propagation.BeliefPropagation to exclude singleton factors; also turn it into warning
 */
-version := "24.1.0"
+version := "24.1.1"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 

@@ -1,5 +1,6 @@
 package vultura.calibration
 
+import com.typesafe.scalalogging.LazyLogging
 import vultura.factor._
 import vultura.factor.inference._
 import vultura.util.SSet
@@ -7,10 +8,15 @@ import vultura.util.SSet
 /** Belief propagation on the factor graph representation. Parameters are factor-to-variable messages (F2V), and
   * variable-to-factor messages (V2F). */
 case class BeliefPropagation(ps: Problem) extends CalProblem
-  with ResultBuilder[RegionBeliefs[Either[Problem#VI, Problem#FI]] with VariationalResult] {
-  require(
-    new SSet[Int](ps.scopeOfFactor.map(_.toSet).toSet).maximalSets.size == ps.factors.size,
-    "no factor scope may be subset of another one, simplify problem first")
+  with ResultBuilder[RegionBeliefs[Either[Problem#VI, Problem#FI]] with VariationalResult] with LazyLogging {
+  if ({
+    val sset = new SSet[Int](ps.scopeOfFactor.map(_.toSet).toSet)
+    ps.scopeOfFactor
+      .filter(_.size > 1)
+      .exists(scope => scope.map(vi => ps.factorIdxOfVariable(vi).toSet).reduce(_ intersect _).count(fi => ps.scopeOfFactor(fi).size > 1) > 1)
+  }) {
+    logger.warn("non-singleton factors that are subsets of other factors lead to poor approximations, simplify problem first ")
+  }
 
   type VI = ps.VI
   type FI = ps.FI
