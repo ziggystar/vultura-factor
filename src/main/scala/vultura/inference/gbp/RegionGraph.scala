@@ -104,7 +104,7 @@ case class RgDiagnosis(rg: RegionGraph){
 
   lazy val validityIssues: Seq[String] = validityChecks.collect{case (msg,v) if !v() => msg}
 
-  lazy val isValidRegionGraph = validityIssues.isEmpty
+  lazy val isValidRegionGraph: Boolean = validityIssues.isEmpty
 
   /** Redundancy means that each variable-induced sub-graph is a tree. */
   def nonRedundantVariables: IndexedSeq[rg.VI] = rg.problemStructure.variables
@@ -212,7 +212,7 @@ object TwoLayerOC {
       separatorSets = {case (large,small) if small.subsetOf(large) => small})
   }
 
-  def junctionTreeMinDegree(problemStructure: ProblemStructure) = {
+  def junctionTreeMinDegree(problemStructure: ProblemStructure): TwoLayerOC = {
     import vultura.util.TreeWidth._
     val variableOrder: Seq[Int] = treeDecomposition(problemStructure.scopeOfFactor, problemStructure.domains)
       .getOrElse(sys.error("could not find a small tree decomposition"))

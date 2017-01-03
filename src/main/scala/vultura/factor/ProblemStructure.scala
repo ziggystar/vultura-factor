@@ -86,6 +86,10 @@ trait ProblemStructure {
     DotGraph(for{f <- factorIndices; v <- scopeOfFactor(f)} yield (Left(v),Right(f)), variables.map(Left(_)))
   def dotMarkovNetwork: DotGraph[VI] =
     DotGraph(for{fs <- scopeOfFactor; v1 <- fs; v2 <- fs if v1 != v2} yield (v1,v2),variables)
+
+  /** Generate a problem by supplying a parameterization. */
+  def parameterize(parameterization: FI => Array[Double], ring: Ring[Double] = LogD): Problem =
+    Problem(factors = factorIndices.map(fi => Factor(scopeOfFactor(fi),parameterization(fi))), domains, ring)
 }
 
 /** Implementation of [[ProblemStructure]]. */

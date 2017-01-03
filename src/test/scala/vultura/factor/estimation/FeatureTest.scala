@@ -3,7 +3,6 @@ package vultura.factor.estimation
 import org.specs2._
 import vultura.factor._
 import vultura.factor.generators._
-import scala.Some
 import org.specs2.matcher.MatchResult
 
 /**

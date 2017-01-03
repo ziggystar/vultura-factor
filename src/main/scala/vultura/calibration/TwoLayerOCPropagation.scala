@@ -6,7 +6,7 @@ import vultura.inference.gbp.TwoLayerOC
 
 /** Message-Passing algorithm implementing two-way message passing on bipartite region graphs.
   * This makes the algorithm applicable to junction graphs, bethe graphs, cluster graphs.
-  * Application to bethe graphs yields Beleif Propagation on factor graphs.
+  * Application to bethe graphs yields Belief Propagation on factor graphs.
   * @param rg
   * @param ring
   */

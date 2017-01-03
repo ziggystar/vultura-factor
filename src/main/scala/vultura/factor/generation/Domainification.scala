@@ -13,10 +13,8 @@ trait Domainification[-N]{
 case class IIDDomainSize(ds: Generator[Int]) extends Domainification[Any] {
   override def addDomains[L <: Any](graph: Graph[L]): Generator[LabeledProblemStructure[L]] = {
     val nodes = new SIIndex(graph.nodes)
-    val domains: Generator[Array[Int]] = Generator.seq(Seq.fill(nodes.size)(ds)).map(_.toArray)
-    domains.map(doms =>
-      LabeledProblemStructure(StructureOnly(doms,graph.edges.map(_.map(nodes.forward)(collection.breakOut): Array[Int])(collection.breakOut)),nodes)
-    )
+    val domains: Generator[L => Int] = Generator.seq(Seq.fill(nodes.size)(ds)).map(_.toArray).map(ds => l => ds(nodes(l)))
+    domains.map(doms => LabeledProblemStructure.fromGraph(graph,doms) )
   }
 }
 
