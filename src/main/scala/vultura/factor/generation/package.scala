@@ -24,7 +24,7 @@ package object generation {
 
   /** Generates a Potts factor in Log domain. */
   def pottsFactor(domains: Array[Int], scope: Array[Var], coupling: Generator[Double]): Generator[Factor] = Generator(random =>
-    Factor.fromFunction(scope, domains, state => if (state.distinct.size == 1) coupling.generate(random) else 0d)
+    Factor.fromFunction(scope, domains, state => if (state.distinct.length == 1) coupling.generate(random) else 0d)
   )
 
   /** Works only for binary valued problems.
@@ -48,4 +48,20 @@ package object generation {
       p <- param.parameterize(ps)
       magnetized <- magnetization.map(mag => mag.magnetize[N] _).getOrElse(Generator.only[LabeledProblem[N]] _)(p)
     } yield magnetized
+
+  /** Functions for generating clique potentials in log domain. */
+  object interaction {
+    /** Generate a potts interaction for a pairwise interaction. The factor yields `j` if the variables are equal,
+      * and zero else. Positive values of `j` yield attractive interactions, and negative ones yield
+      * repulsive interactions.
+      * @param domains
+      * @param j
+      * @return
+      */
+    def potts(domains: Array[Int], j: Double): Array[Double] = {
+      require(domains.length == 2, "potts interaction is only defined for pairwise factors")
+      require(domains.toSet.size == 1, "for potts interactions, the interacting variables have to be of same cardinality")
+      Factor.fromFunction(Array(0,1),domains, (vals: Array[Int]) => if(vals(0) == vals(1)) j else 0d).values
+    }
+  }
 }
