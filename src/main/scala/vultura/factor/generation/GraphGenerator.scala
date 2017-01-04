@@ -22,7 +22,8 @@ object LabeledProblemStructure {
   def fromGraph[N](g: Graph[N], domainSize: N => Int): LabeledProblemStructure[N] = {
     val nodes = new SIIndex(g.nodes)
     val domains: Array[Int] = nodes.elements.map(domainSize)(collection.breakOut)
-    LabeledProblemStructure(StructureOnly(domains, g.edges.map(_.map(nodes.forward)(collection.breakOut): Array[Int])(collection.breakOut)), nodes)
+    //we have to sort the variable indices of the created factor scopes
+    LabeledProblemStructure(StructureOnly(domains, g.edges.toArray.map(e => e.map(nodes.forward).toArray.sorted)), nodes)
   }
 }
 
