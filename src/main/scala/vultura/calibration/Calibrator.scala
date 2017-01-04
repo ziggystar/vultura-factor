@@ -9,7 +9,7 @@ import collection.mutable
 import scala.collection.immutable.IndexedSeq
 
 /** Mutable class that holds a calibration state. */
-class Calibrator[P,CP <: CalProblem.Aux[P]](val cp: CP) extends StrictLogging {
+class Calibrator[CP <: CalProblem](val cp: CP) extends StrictLogging {
   /** Internal representation of edge state. */
   type IR = Array[Double]
   type N = cp.N
@@ -39,8 +39,8 @@ class Calibrator[P,CP <: CalProblem.Aux[P]](val cp: CP) extends StrictLogging {
   }
 
   /** Sets the parameters of the problem, and invalidates edge convergence states. */
-  def initialize(parameters: P): Unit = {
-    val initializer = cp.initializer(parameters)
+  def initialize(parameters: CP#Parameter): Unit = {
+    val initializer = cp.initializer(parameters.asInstanceOf[cp.Parameter])
 
     state = nodes.elements.map(n => {
       val newVal = initializer(n)
@@ -177,7 +177,7 @@ object Calibrator {
                      maxIterations: Long = 100000,
                      tol: Double = 1e-12,
                      damping: Double = 0d): (R,ConvergenceStats) = {
-    val cal = new Calibrator[P,cp.type](cp)
+    val cal = new Calibrator(cp)
     cal.initialize(parameters)
     val calState = cal.calibrate(maxIterations,tol,damping)
     (cal.buildResult,calState)
