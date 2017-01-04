@@ -183,7 +183,9 @@ trait TwoLayerRG extends RegionGraph {
   }
 }
 
-/** Two-layered region graph with overcounting numbers. */
+/** Two-layered region graph with overcounting numbers.
+  * @param factorsOfLargeRegions Maps a large region (represented by the set of included variable indices)
+  *   to a set of factor indices. */
 class TwoLayerOC(val problemStructure:      ProblemStructure,
                  val smallRegionsScopes:    Set[Set[Int]],
                  val largeRegionsScopes:    Set[Set[Int]],
