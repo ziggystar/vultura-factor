@@ -63,7 +63,7 @@ class Calibrator[CP <: CalProblem](val cp: CP) extends StrictLogging {
     val node = nodes.backward(ei)
     node match {
       case n: PN =>
-        throw new RuntimeException("this point should not be reached")
+        throw new RuntimeException("Parameter nodes must already be initialized; this must be a bug in Calibrator")
       case n: CN =>
         val newValue = new Array[Double](node.arraySize)
         n.compute(dependencies(ei).map(state)(collection.breakOut), newValue)
@@ -147,7 +147,10 @@ class Calibrator[CP <: CalProblem](val cp: CP) extends StrictLogging {
         .map(_.toArray.sorted)
         .map(edges =>
           if(edges.size == 1) {
-            state(edges.head) = newNodeValue(edges.head)
+            //compute the result for single-node components right away
+            //but only calculate if the value is not already valid (as for parameters)
+            if(!nodeConverged.fastGet(edges.head))
+              state(edges.head) = newNodeValue(edges.head)
             ConvergenceStats(1,0d,true)
           }
           else calibrateComponent(edges, maxIterations, maxDiff, damping)
