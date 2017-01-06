@@ -28,6 +28,10 @@ trait MarginalI extends Inferer {
   /** @return marginal distribution of variable in log encoding. */
   def logVariableBelief(vi: Int): Factor  =
     if(ring == LogD) encodedVarBelief(vi) else LogD.encode(varBelief(vi))
+
+  def showMarginals: String = problem.variables
+    .map(vi => s"Var\t$vi:\t" + varBelief(vi).values.map(m => f"$m%02.3f").mkString("|"))
+    .mkString("\n")
 }
 
 /** Trait that is implemented by inference algorithms that can compute the partition function. */
