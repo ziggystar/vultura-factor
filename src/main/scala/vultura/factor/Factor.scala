@@ -11,9 +11,6 @@ import scala.util.Random
  * Date: 5/31/13
  */
 case class Factor(variables: Array[Int], values: Array[Double]) {
-  //TODO find out where this is used and then remove this requirement
-  require(Factor.isStrictlyIncreasing(variables), "variables are not ordered increasingly")
-
   /** Check whether this factor is independent of some variable. (with no tolerance!) */
   def simplify(domains: Array[Int]): Factor = {
     def isIndependentIn(factor: Factor, variable: Int): Boolean = {
@@ -48,12 +45,12 @@ case class Factor(variables: Array[Int], values: Array[Double]) {
       val condVals: Array[Double] = new Array[Double](remVars.map(domains).product)
 
       //loop state
-      val countReg: Array[Int] = Array.fill(remVars.size)(0)
+      val countReg: Array[Int] = Array.fill(remVars.length)(0)
       var i = 0
 
       //work begins here
       condVals(i) = this.values(pos)
-      while (i < condVals.size - 1) {
+      while (i < condVals.length - 1) {
         i += 1
         //side-effecting call
         val overflow = Factor.incrementCounter(countReg, remDomains)
@@ -88,11 +85,7 @@ case class Factor(variables: Array[Int], values: Array[Double]) {
 
   def eval(vals: Array[Val], domains: Array[Int]): Double = values(index(vals,domains))
   def set(vals: Array[Val], domains: Array[Int], to: Double): Factor =
-    copy(values = {
-      val newArray: Array[Double] = this.values.clone()
-      newArray(index(vals,domains)) = to
-      newArray
-    })
+    copy(values = this.values.updated(index(vals,domains), to))
 
   def decodeWith(ring: Ring[Double]): Factor = this.copy(values = ring.decode(values))
   def encodeWith(ring: Ring[Double]): Factor = this.copy(values = ring.encode(values))
@@ -170,30 +163,11 @@ object Factor{
     Factor(variables, ring.normalize(Array.fill(variables.foldLeft(1)(_ * domains(_)))(ring.one))).normalize(ring)
 
   def fromFunction(variables: Array[Int], domains: Array[Int], f: Array[Int] => Double): Factor =
-    orderIfNecessary(variables, new IntDomainCPI(variables.map(v => Array.range(0,domains(v)))).map(f)(collection.breakOut), domains)
+    Factor(variables, IntDomainCPI(variables.map(v => Array.range(0, domains(v)))).map(f)(collection.breakOut))
 
   def constant(variables: Array[Int], domains: Array[Int], value: Double): Factor = fromFunction(variables,domains,_ => value)
 
-
-  def orderIfNecessary(variables: Array[Int], values: Array[Double], domains: Array[Int]): Factor = {
-    val ordered = variables.sorted
-    val newValues = new Array[Double](values.size)
-    sumProduct(ordered,domains,Array(variables),Array(values): Array[Array[Double]],SafeD,newValues)
-    Factor(ordered,newValues)
-  }
-
-  def isStrictlyIncreasing(xs: Array[Int]): Boolean = {
-    var last = Integer.MIN_VALUE
-    var i = 0
-    while(i < xs.size){
-      if(xs(i) <= last) return false
-      last = xs(i)
-      i += 1
-    }
-    true
-  }
-
-  /** Merge some sorted sequences of integers into a new array. */
+  /** Merge some sequences of integers into a new array. */
   def merge(xxs: Seq[Array[Int]], exclude: Array[Int] = Array()): Array[Int] =
     xxs.flatten.toArray.distinct.filterNot(exclude.contains).sorted
 
@@ -205,16 +179,16 @@ object Factor{
     Factor(variables,values)
   }
 
-  /**
+  /** Multiply the given factors while marginalizing (summing) over some variables.
    *
-   * @param ring
-   * @param domains
-   * @param factors
+   * @param ring Operations for addition and multiplication.
+   * @param domains Domain sizes of variables.
+   * @param factors The factors to multiply.
    * @param marginalize These variables will be summed out.
    * @return
    */
   def multiplyMarginalize(ring: Ring[Double])(domains: Array[Int])(factors: Seq[Factor], marginalize: Array[Int]): Factor = {
-    val variables = merge(factors.map(_.variables),exclude=marginalize)
+    val variables: Array[Var] = merge(factors.map(_.variables),exclude=marginalize)
     val numValues = mapMultiply(variables,domains)
     val values = new Array[Double](numValues)
     sumProduct(variables,domains,factors.map(_.variables)(collection.breakOut),factors.map(_.values)(collection.breakOut): Array[Array[Double]],ring,values)
@@ -255,8 +229,8 @@ object Factor{
     //mod will only hold the negative overflow values
     var mod = 0
     var i = 0
-    val result = new Array[Int](varOrdering.size + 1)
-    while(i < varOrdering.size){
+    val result = new Array[Int](varOrdering.length + 1)
+    while(i < varOrdering.length){
       val v = varOrdering(i)
       val factorIndex = factorVariables.indexOf(v)
 
@@ -326,10 +300,10 @@ object Factor{
                                                    factorValues: Array[Array[T]],
                                                    ring: Ring[T],
                                                    result: Array[T]) {
-    val numFactors: Int = factorValues.size
-    require(factorVariables.size == numFactors)
+    val numFactors: Int = factorValues.length
+    require(factorVariables.length == numFactors)
     val remainSize: Int = mapMultiply(remainingVars,domainSizes)
-    require(result.size == remainSize, "result array must fit exactly")
+    require(result.length == remainSize, "result array must fit exactly")
 
     //collect all variables
     val (cliqueOrdering,margVars) = {
@@ -351,7 +325,7 @@ object Factor{
     val cliqueDomains: Array[Int] = cliqueOrdering.map(domainSizes)
 
     //counting register
-    val counter: Array[Int] = new Array[Int](cliqueOrdering.size)
+    val counter: Array[Int] = new Array[Int](cliqueOrdering.length)
 
     //factor pointers
     val factorPointers: Array[Int] = new Array[Int](numFactors)
@@ -383,8 +357,6 @@ object Factor{
       remainIdx += 1
     }
   }
-
-
 
   /**
    * @param is Array of indices into `factors`.
@@ -435,7 +407,7 @@ object Factor{
     }
 
     if(ring == NormalD) {
-      assert(weights.size == factors.size)
+      assert(weights.length == factors.size)
       val weighted: Array[Factor] = factors.zip(weights).map{case (f,w) => f.map(_ * w)}(collection.breakOut)
       sumFactors(weighted,NormalD)
     } else {

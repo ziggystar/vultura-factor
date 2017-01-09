@@ -131,7 +131,7 @@ object Problem{
         val nv = tokens.next().toInt
         Array.fill(nv)(tokens.next().toDouble)
       }
-      val factors = (factorVars, factorValues).zipped.map { case (vars, values) => Factor.orderIfNecessary(vars.reverse, values, domains)}
+      val factors = (factorVars, factorValues).zipped.map { case (vars, values) => Factor(vars.reverse, values)}
       (Problem(factors.toIndexedSeq, domains, NormalD), isBayes)
     }
   }
