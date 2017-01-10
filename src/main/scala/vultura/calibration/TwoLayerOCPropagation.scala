@@ -19,13 +19,13 @@ class TwoLayerOCPropagation(val rg: TwoLayerOC, val ring: Ring[Double])
 
   override type Parameter = IndexedSeq[Factor]
 
-  val ps = rg.problemStructure
+  val ps: ProblemStructure = rg.problemStructure
   type Small = rg.Small
   type Large = rg.Large
 
   trait FactorNode {self: Node =>
     def variables: Array[Int]
-    def arraySize = variables.map(rg.problemStructure.domains).product
+    def arraySize: Var = variables.map(rg.problemStructure.domains).product
   }
 
   case class ParamNode(large: Large) extends ParameterNode with FactorNode{
