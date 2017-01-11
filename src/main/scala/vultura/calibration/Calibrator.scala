@@ -27,7 +27,8 @@ class Calibrator[CP <: CalProblem](val cp: CP) extends StrictLogging {
     bs
   }
   protected val (dependencies,successors): (Array[Array[NI]], Array[Array[NI]]) = {
-    val deps: Array[Array[NI]] = nodes.elements.map(_.dependenciesOpt.getOrElse(IndexedSeq[N]()).map(nodes.forward(_))(collection.breakOut): Array[NI])(collection.breakOut)
+    val deps: Array[Array[NI]] =
+      nodes.elements.map(_.dependenciesOpt.getOrElse(IndexedSeq[N]()).map(nodes.forward)(collection.breakOut): Array[NI])(collection.breakOut)
     val succs: IndexedSeq[mutable.Set[NI]] = nodes.indices.map(_ => mutable.Set[NI]())
     for{
       n <- deps.indices
@@ -72,7 +73,6 @@ class Calibrator[CP <: CalProblem](val cp: CP) extends StrictLogging {
   }
 
   protected def calibrateComponent(component: Array[Int], maxIterations: Long, maxDiff: Double, damping: Double = 0d): ConvergenceStats = {
-
     val componentNodes: IndexedSeq[NI] = component.toIndexedSeq.sorted
     var iteration = -1L //we need one iteration for asserting convergence
     var iterationDiff: Double = 0d
@@ -82,7 +82,7 @@ class Calibrator[CP <: CalProblem](val cp: CP) extends StrictLogging {
       //component node index
       var cni = 0
       while(cni < componentNodes.size){
-        val ei = componentNodes(cni)
+        val ei: NI = componentNodes(cni)
         if(!nodeConverged.fastGet(ei)) {
           //update edge
           val oldValue = state(ei)
@@ -109,7 +109,9 @@ class Calibrator[CP <: CalProblem](val cp: CP) extends StrictLogging {
       iteration += 1
     } while (!(iterationDiff < maxDiff) && iteration < maxIterations)
 
-    ConvergenceStats(iteration,iterationDiff,iterationDiff < maxDiff)
+    val convStats = ConvergenceStats(iteration,iterationDiff,iterationDiff < maxDiff)
+    logger.debug(s"calibrated cyclic component of size ${component.length} with maxIt: $maxIterations, maxDiff: $maxDiff, damping: $damping: " + convStats)
+    convStats
   }
 
   /** Calibrate (part of) the problem.
@@ -146,12 +148,12 @@ class Calibrator[CP <: CalProblem](val cp: CP) extends StrictLogging {
       stronglyConnectedComponents
         .map(_.toArray.sorted)
         .map(edges =>
-          if(edges.size == 1) {
+          if(edges.length == 1) {
             //compute the result for single-node components right away
             //but only calculate if the value is not already valid (as for parameters)
             if(!nodeConverged.fastGet(edges.head))
               state(edges.head) = newNodeValue(edges.head)
-            ConvergenceStats(1,0d,true)
+            ConvergenceStats(1, 0d, isConverged = true)
           }
           else calibrateComponent(edges, maxIterations, maxDiff, damping)
         ).reduce(_ max _)
