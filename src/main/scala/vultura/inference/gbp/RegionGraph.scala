@@ -51,7 +51,7 @@ trait RegionGraph {
   }
 
   lazy val directedGraph: LabeledGraph[Region] = LabeledGraph.fromChildList(regions,r => childrenOf(r))
-  def toDot: DotGraph[Region, (Region,Region)] = DotGraph.apply(regions,edges).labelNodes{case r => weightOf(r).toString}
+  def toDot: DotGraph[Region, (Region,Region)] = DotGraph(regions,edges).labelNodes{case r => weightOf(r).toString}
 }
 
 trait OvercountingNumbers { self: RegionGraph =>
@@ -199,12 +199,12 @@ class TwoLayerOC(val problemStructure:      ProblemStructure,
 object TwoLayerOC {
   /** Constructs a Bethe region graph.
     * The construction aggregates factors with containing/subsumed scopes to avoid redundancy. */
-  def betheRegionGraph(ps: ProblemStructure): TwoLayerOC = {
+  def betheRegionGraph(ps: ProblemStructure, aggregateFactors: Boolean = true): TwoLayerOC = {
     val scopeLookup = new SSet[Int](ps.scopeOfFactor.map(_.toSet)(collection.breakOut))
-    val largeRegions: Map[Set[Int],Set[Int]] = scopeLookup.maximalSets.map { maxSet =>
-          val factors = maxSet.map(ps.factorIdxOfVariable(_).toSet).reduce(_ intersect _)
-          maxSet -> factors
-        }(collection.breakOut)
+    val largeRegions: Map[Set[ps.VI],Set[ps.FI]] = if(aggregateFactors)
+      ps.factorIndices.toSet.groupBy(fi => scopeLookup.maximalSuperSetsOf(ps.scopeOfFactor(fi).toSet).head)
+    else
+      ps.factorIndices.toSet.groupBy(fi => ps.scopeOfFactor(fi).toSet)
 
     new TwoLayerOC(
       problemStructure = ps,
