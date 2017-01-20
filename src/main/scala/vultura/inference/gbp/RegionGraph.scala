@@ -156,12 +156,16 @@ trait TwoLayerRG extends RegionGraph {
       }
     def parents: Seq[Large] = parentsI.map(Large)
     override def children: Seq[Small] = Seq()
+
+    override def toString: String = s"S(${variables.toSeq.sorted.mkString(",")})"
   }
   case class Large protected[TwoLayerRG](li: Int) extends TLR {
     override def variables: Set[VI] = largeRegionsLookup.elements(li)
     override def factors: Set[FI] = largeRegionFactors(variables)
     def parents: Seq[Large] = Seq()
     override def children: Seq[Small] = smallRegions.filter(_.parents.contains(this))
+
+    override def toString: String = s"L(${variables.toSeq.sorted.mkString(",")})"
   }
 
   val smallRegions: IndexedSeq[Small] = smallRegionsLookup.indices.map(Small)
