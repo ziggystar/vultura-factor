@@ -40,8 +40,6 @@ licenses += "MIT" -> url("http://opensource.org/licenses/MIT")
 
 scalaVersion := "2.11.7"
 
-javacOptions ++= Seq("-source", "1.6", "-target", "1.6")
-
 //asserions are only used in tests
 scalacOptions in Compile += "-Xdisable-assertions"
 
