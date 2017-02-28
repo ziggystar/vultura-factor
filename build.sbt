@@ -39,8 +39,10 @@ organization := "de.uni-ulm"
   - don't stop calibration of calibration.Calibrator for non-finite differences
 24.1.3:
   - fix calibration not working with damping and singleton SCCs
+25.0.0:
+  - migrate to scala 2.12
 */
-version := "24.1.3"
+version := "25.0.0"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 
@@ -50,25 +52,25 @@ description := "Tools for probabilistic inference in discrete-valued factor grap
 
 licenses += "MIT" -> url("http://opensource.org/licenses/MIT")
 
-scalaVersion := "2.11.7"
+scalaVersion := "2.12.1"
 
 //assertions are only used in tests
 scalacOptions in Compile += "-Xdisable-assertions"
 
 libraryDependencies += "org.apache.commons" % "commons-math3" % "3.5"
 
-libraryDependencies += "de.uni-ulm" %% "vultura-util" % "24.0.2"
+libraryDependencies += "de.uni-ulm" %% "vultura-util" % "25.0.0"
 
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.+"
 
-libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0"
+libraryDependencies +=  "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0"
 
 // --------------- Publishing ----------------------------------
 
 //testing dependencies
-libraryDependencies += "org.specs2" %% "specs2-core" % "3.6.5" % "test"
+libraryDependencies += "org.specs2" %% "specs2-core" % "3.8.8" % "test"
 
-libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.12" % "test"
+libraryDependencies +=  "org.slf4j" % "slf4j-simple" % "1.7.12" % "test"
 
 scalacOptions in Test ++= Seq("-Yrangepos") //for specs2
 
