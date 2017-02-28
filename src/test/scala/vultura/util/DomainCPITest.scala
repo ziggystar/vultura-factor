@@ -1,6 +1,7 @@
 package vultura.util
 
 import org.specs2._
+import specification.Fragments
 
 class DomainCPITest extends Specification {
   val cpi1 = new DomainCPI(Seq(Array(1, 2), Array(3)))

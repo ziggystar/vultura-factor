@@ -38,7 +38,7 @@ description := "Tools for probabilistic inference in discrete-valued factor grap
 
 licenses += "MIT" -> url("http://opensource.org/licenses/MIT")
 
-scalaVersion := "2.11.7"
+scalaVersion := "2.12.1"
 
 //asserions are only used in tests
 scalacOptions in Compile += "-Xdisable-assertions"
@@ -48,4 +48,6 @@ libraryDependencies += "net.sf.trove4j" % "trove4j" % "3.0.+"
 // --------------- Publishing ----------------------------------
 
 //testing dependencies
-libraryDependencies += "org.specs2" %% "specs2-core" % "3.6.4" % "test"
+libraryDependencies += "org.specs2" %% "specs2-core" % "3.8.+" % "test"
+
+libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.13.+" % "test"

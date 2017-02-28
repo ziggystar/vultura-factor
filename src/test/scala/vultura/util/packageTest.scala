@@ -1,6 +1,7 @@
 package vultura.util
 
 import org.specs2.Specification
+import org.specs2.specification.Fragments
 
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
