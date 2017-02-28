@@ -27,8 +27,10 @@ organization := "de.uni-ulm"
   - fix bug in tree decomposition, heuristic was completely broken and crashed on trees
 24.0.2:
   - fix Java target version to 1.6
+25.0.0:
+  - migrate to Scala 2.12
 */
-version := "24.0.2"
+version := "25.0.0"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 
