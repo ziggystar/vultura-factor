@@ -228,10 +228,10 @@ class LCBP(val problem: Problem,
 
 
   object convTest extends ConvergenceTest[LCBPEdge] {
-    def isConverged(e: LCBPEdge)(old: e.type#TOut, updated: e.type#TOut): Boolean = ((old,updated) match {
-      case (o: Factor, u: Factor) => vultura.util.maxDiff(o.values,u.values)
-      case (o: Array[Double], u: Array[Double]) => vultura.util.maxDiff(o,u)
-      case (o: Double, u: Double) => math.abs(o - u)
+    def isConverged(e: LCBPEdge)(old: e.type#TOut, updated: e.type#TOut): Boolean = (e match {
+      case ef: FactorEdge => vultura.util.maxDiff(old.asInstanceOf[ef.type#TOut].values,updated.asInstanceOf[ef.type#TOut].values)
+      case cd: ConditionDistribution => vultura.util.maxDiff(old.asInstanceOf[cd.type#TOut],updated.asInstanceOf[cd.type#TOut])
+      case vf: ValueEdge => math.abs(old.asInstanceOf[vf.type#TOut] - updated.asInstanceOf[vf.type#TOut])
     }) <= tol
   }
 
