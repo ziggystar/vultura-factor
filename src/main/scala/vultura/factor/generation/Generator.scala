@@ -22,6 +22,8 @@ trait Generator[+A] { outer =>
       res
     }
   }
+
+  def replicate(n: Int): Generator[IndexedSeq[A]] = Generator(r => IndexedSeq.fill(n)(this.generate(r)))
 }
 
 object Generator {
