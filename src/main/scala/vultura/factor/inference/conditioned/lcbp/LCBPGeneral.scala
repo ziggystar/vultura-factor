@@ -145,6 +145,8 @@ case class LCBPGeneral(scheme: FactoredScheme,
       case (o: Array[Double], u: Array[Double]) => vultura.util.maxDiff(o,u)
       case (o: DoubleRef, u: DoubleRef) => math.abs(o.value - u.value)
       case (o: ObjectRef[_], u: ObjectRef[_]) => Double.PositiveInfinity //hope this works
+      case _ => throw new MatchError("shouldn't happen")
+
     }) <= tol
   }
 

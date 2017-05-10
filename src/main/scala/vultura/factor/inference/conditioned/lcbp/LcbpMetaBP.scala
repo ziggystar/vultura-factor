@@ -132,6 +132,7 @@ class LcbpMetaBP(val scheme: FactoredScheme, val maxUpdates: Long = 1000000, val
     def isConverged(e: LcbpMessage)(old: e.type#TOut, updated: e.type#TOut): Boolean = ((old,updated) match {
       case (o: Array[Double], u: Array[Double]) => vultura.util.maxDiff(o,u)
       case (o: DoubleRef, u: DoubleRef) => math.abs(o.value - u.value)
+      case _ => throw new MatchError("shouldn't happen")
     }) <= tol
   }
 
