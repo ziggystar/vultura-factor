@@ -38,7 +38,7 @@ case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[
     ).mkString("\n")
   }
 
-  override def hashCode = {
+  override def hashCode: Int = {
     import scala.util.hashing.MurmurHash3._
     val mix1: Int = mix(arrayHash(domains), orderedHash(factors))
     val mix2: Int = mixLast(mix1, ring.hashCode())
@@ -49,7 +49,7 @@ case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[
     case _ => false
   }
 
-  lazy val hasDuplicateFactors = factors.size != factors.toSet.size
+  lazy val hasDuplicateFactors: Boolean = factors.size != factors.toSet.size
 
   def toRing(newRing: Ring[Double]): Problem = Problem(factors.map(f => newRing.encode(ring.decode(f))),domains,newRing)
 

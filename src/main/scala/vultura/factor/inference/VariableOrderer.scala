@@ -17,6 +17,7 @@ object VariableOrderer{
   def fromOrder(order: Seq[Int]) = new VariableOrderer {
     override def apply(v1: Problem): VariableOrder = VariableOrder(order, v1)
   }
+  def by[T: Ordering](f: Problem#VI => T): VariableOrderer = fromFunction(_.variables.sortBy(f))
 }
 
 case object MinDegreeOrderer extends VariableOrderer {

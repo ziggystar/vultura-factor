@@ -23,7 +23,7 @@ class TwoLayerOCPropagation(val rg: TwoLayerOC, val ring: Ring[Double])
   type Small = rg.Small
   type Large = rg.Large
 
-  trait FactorNode {self: Node =>
+  sealed trait FactorNode {self: Node =>
     def variables: Array[Int]
     def arraySize: Var = variables.map(rg.problemStructure.domains).product
   }
@@ -71,13 +71,11 @@ class TwoLayerOCPropagation(val rg: TwoLayerOC, val ring: Ring[Double])
     case otherwise => Factor.maxEntropy(otherwise.variables, ps.domains, ring).values
   }
 
-  override def buildResult(valuation: (N) => IR): RegionBeliefs[TwoLayerOC#Region] with VariationalResult =
+  override def buildResult(valuation: N => IR): RegionBeliefs[TwoLayerOC#Region] with VariationalResult =
     new RegionBeliefs[TwoLayerOC#Region] with VariationalResult with VarBeliefFromRegionBelief[TwoLayerOC#Region] {
       override def ring: Ring[Double] = outer.ring
       override def problem: ProblemStructure = rg.problemStructure
-
       override def regions: Set[TwoLayerOC#Region] = rg.regions.map(identity) //set invariance...
-
       override def scopeOfRegion(region: TwoLayerOC#Region): Set[Int] = rg.variablesOf(region.asInstanceOf[Region])
 
       override def averageEnergy: Double = rg.largeRegions.foldLeft(0d){case (ae,large) =>

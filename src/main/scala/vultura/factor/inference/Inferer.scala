@@ -110,6 +110,10 @@ case class ConvergenceStats(iterations: Long, maxDiff: Double, isConverged: Bool
   )
 }
 
+object ConvergenceStats {
+  def exact: ConvergenceStats = ConvergenceStats(1, 0d, isConverged = true)
+}
+
 trait VariationalResult extends MargParI {
   def averageEnergy: Double
   def entropy: Double
@@ -133,6 +137,9 @@ trait VarBeliefFromRegionBelief[R] extends MarginalI {self: RegionBeliefs[R] =>
   /** @return marginal distribution of variable in encoding specified by `ring`. */
   override def encodedVarBelief(variable: Var): Factor = varBelief(variable).encodeWith(ring)
 
+  def selectRegionForVariableBelief(variable: Var): R =
+    regions.filter(scopeOfRegion(_).contains(variable)).minBy(scopeOfRegion(_).size)
+
   private val variableBeliefCache = TCollections.synchronizedMap(new TIntObjectHashMap[Factor](problem.numVariables))
 
   /** (Estimated) variable belief, in normal encoding. */
@@ -140,7 +147,7 @@ trait VarBeliefFromRegionBelief[R] extends MarginalI {self: RegionBeliefs[R] =>
     if (variableBeliefCache.containsKey(variable)) {
       variableBeliefCache.get(variable)
     } else {
-      val smallestContainingRegion: R = regions.filter(scopeOfRegion(_).contains(variable)).minBy(scopeOfRegion(_).size)
+      val smallestContainingRegion: R = selectRegionForVariableBelief(variable)
       val rbel = regionBelief(smallestContainingRegion)
       val result = Factor.multiplyRetain(NormalD)(problem.domains)(Seq(rbel),Array(variable))
       variableBeliefCache.put(variable,result)
