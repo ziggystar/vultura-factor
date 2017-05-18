@@ -20,7 +20,7 @@ trait FactorMatchers {
     def apply[S <: Factor](t: Expectable[S]): MatchResult[S] = result(
       Factor.maxDiff(t.value,ref,NormalD) < tol,
       s"${t.description} has close marginals to " + ref,
-      s"${t.description} differs in some value by  " + Factor.maxDiff(t.value,ref,NormalD),
+      s"${t.description} differs in some value from $ref by  " + Factor.maxDiff(t.value,ref,NormalD),
       t
     )
   }
