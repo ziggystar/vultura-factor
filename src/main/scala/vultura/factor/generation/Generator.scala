@@ -1,5 +1,8 @@
 package vultura.factor.generation
 
+import org.apache.commons.math3.distribution.GammaDistribution
+import org.apache.commons.math3.random.JDKRandomGenerator
+
 import scala.util.Random
 
 /** A probability monad.
@@ -32,6 +35,20 @@ object Generator {
   }
   def seq[X](xs: Seq[Generator[X]]): Generator[Seq[X]] = Generator(r => xs.map(_.generate(r)))
   def gaussian(mean: Double = 0d, sd: Double = 1d): Generator[Double] = Generator(_.nextGaussian() * sd + mean)
+  def gamma(shape: Double, scale: Double): Generator[Double] = new Generator[Double] {
+    val rand: JDKRandomGenerator = new JDKRandomGenerator()
+    val gamma: GammaDistribution = new GammaDistribution(rand,shape, scale)
+
+    override def generate(r: Random): Double = {
+      rand.setSeed(rand.nextInt())
+      gamma.sample()
+    }
+
+    override def replicate(n: Int): Generator[IndexedSeq[Double]] = Generator { r =>
+      rand.setSeed(r.nextInt())
+      gamma.sample(n).toIndexedSeq
+    }
+  }
 
   /** @param lower Lower, inclusive bound.
     * @param upper Upper, exclusive bound.
