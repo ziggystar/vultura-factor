@@ -72,9 +72,8 @@ case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[
     * @return The resulting problem. It will contain a constant representing the product over the now assigned factors.
     */
   def condition(condition: Map[Var,Val]): Problem = {
-    val newP = map(_.condition(condition,domains))
-
-    newP.copy(factors = newP.factors ++ condition.map(kv => Factor.deterministicMaxEntropy(Array(kv._1),Map(kv),domains,ring)))
+    val factorsConditioned: Problem = map(_.condition(condition,domains))
+    factorsConditioned.copy(factors = factorsConditioned.factors ++ condition.map(kv => Factor.deterministicMaxEntropy(Array(kv._1),Map(kv),domains,ring)))
   }
 
   def fixUncoveredVariables: Problem = {
