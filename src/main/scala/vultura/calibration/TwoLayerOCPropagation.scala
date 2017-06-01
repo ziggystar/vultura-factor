@@ -59,7 +59,7 @@ class TwoLayerOCPropagation(val rg: TwoLayerOC, val ring: Ring[Double])
   }
 
   /** The set of nodes defined by this problem. */
-  override def nodes: Set[N] =  ((for {
+  override val nodes: Set[N] =  ((for {
     s <- rg.smallRegions
     l <- s.parents
     m <- Seq(L2S(l, s), S2L(s, l))
