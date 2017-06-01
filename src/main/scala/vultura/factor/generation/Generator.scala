@@ -36,16 +36,15 @@ object Generator {
   def seq[X](xs: Seq[Generator[X]]): Generator[Seq[X]] = Generator(r => xs.map(_.generate(r)))
   def gaussian(mean: Double = 0d, sd: Double = 1d): Generator[Double] = Generator(_.nextGaussian() * sd + mean)
   def gamma(shape: Double, scale: Double): Generator[Double] = new Generator[Double] {
-    val rand: JDKRandomGenerator = new JDKRandomGenerator()
-    val gamma: GammaDistribution = new GammaDistribution(rand,shape, scale)
+    val gamma: GammaDistribution = new GammaDistribution(shape, scale)
 
     override def generate(r: Random): Double = {
-      rand.setSeed(rand.nextInt())
+      gamma.reseedRandomGenerator(r.nextLong)
       gamma.sample()
     }
 
     override def replicate(n: Int): Generator[IndexedSeq[Double]] = Generator { r =>
-      rand.setSeed(r.nextInt())
+      gamma.reseedRandomGenerator(r.nextLong)
       gamma.sample(n).toIndexedSeq
     }
   }
