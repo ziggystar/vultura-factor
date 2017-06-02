@@ -13,17 +13,29 @@ trait IsDirectedGraph[-X,N] {
   def children(x: X, node: N): Set[N] = (for((p,c) <- edges(x) if p == node) yield c)(collection.breakOut)
 }
 
-/** Implementing this minimal directed graph interface provides a IsDirectedGraph type-class instance automatically. */
-trait DiGraph[N] {
-  def nodes: Set[N]
-  def edges: Set[(N,N)]
-}
-
-object DiGraph {
+object IsDirectedGraph {
   implicit def diGraphInstance[N] = new IsDirectedGraph[DiGraph[N],N] {
     override def nodes(x: DiGraph[N]): Set[N] = x.nodes
     override def edges(x: DiGraph[N]): Set[(N, N)] = x.edges
   }
+
+  object instances {
+    implicit def tupleInstance[N]: IsDirectedGraph[Iterable[(N,N)],N] = new IsDirectedGraph[Iterable[(N,N)],N]{
+      override def nodes(x: Iterable[(N, N)]): Set[N] = x.flatMap(nn => Seq(nn._1,nn._2))(collection.breakOut)
+      override def edges(x: Iterable[(N, N)]): Set[(N, N)] = x.toSet
+    }
+    implicit def mapInstance[N]: IsDirectedGraph[Map[N,Iterable[N]],N] = new IsDirectedGraph[Map[N,Iterable[N]],N]{
+      override def nodes(x: Map[N, Iterable[N]]): Set[N] = x.keySet
+      override def edges(x: Map[N, Iterable[N]]): Set[(N, N)] =
+        x.flatMap{case (k,vs) => vs.map(k -> _)}(collection.breakOut)
+    }
+  }
+}
+
+/** Implementing this minimal directed graph interface provides a IsDirectedGraph type-class instance automatically. */
+trait DiGraph[N] {
+  def nodes: Set[N]
+  def edges: Set[(N,N)]
 }
 
 /** This trait defines the operations available on directed graphs with nodes of type `N`. */
@@ -46,7 +58,7 @@ trait DiGraphOps[N] extends DiGraph[N] {
   def isTree: Boolean
   def filterNodes(p: N => Boolean): DiGraphOps[N] = filter(p, _ => true)
   def filterEdges(p: ((N,N)) => Boolean): DiGraphOps[N] = filter(_ => true, p)
-  def graphEqual[X](other: X)(implicit dg: IsDirectedGraph[X,N])
+  def graphEqual[X](other: X)(implicit dg: IsDirectedGraph[X,N]): Boolean
 }
 
 /** This trait implements operations of [[vultura.util.graph.DiGraphOps]] rather inefficiently.
@@ -60,7 +72,7 @@ trait DiGraphInstOps[N] extends DiGraphOps[N] {
   def edges: Set[(N,N)] = typeClass.edges(instance)
   def children(node: N): Set[N] = typeClass.children(instance, node)
 
-  lazy val lGraph = LabeledGraph(instance)(typeClass)
+  lazy val lGraph: LabeledGraph[N] = LabeledGraph(instance)(typeClass)
 
   def filter(pnodes: N => Boolean, pedges: ((N,N)) => Boolean): DiGraphOps[N] = lGraph.filter(pnodes,pedges)
 
@@ -97,5 +109,6 @@ trait DiGraphInstOps[N] extends DiGraphOps[N] {
       }
     cc(nodes,Set())
   }
-  def graphEqual[X](other: X)(implicit dg: IsDirectedGraph[X,N]) = nodes == dg.nodes(other) && edges == dg.edges(other)
+  def graphEqual[X](other: X)(implicit dg: IsDirectedGraph[X,N]): Boolean =
+    nodes == dg.nodes(other) && edges == dg.edges(other)
 }

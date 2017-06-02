@@ -3,7 +3,7 @@ package vultura.util.graph.graphviz
 import java.io.{File, FileOutputStream, PrintStream}
 
 import vultura.util.SIIndex
-import vultura.util.graph.BiSet
+import vultura.util.graph.{BiSet, IsDirectedGraph, IsUndirectedGraph}
 
 import scala.sys.process._
 
@@ -32,6 +32,7 @@ case class DotGraph[N,E](nodes: Iterable[N],
 
   def labelNodes(labels: PartialFunction[N,String]): DotGraph[N,E] = addNodeAttribute(labels andThen (Label(_)))
   def labelEdges(labels: PartialFunction[E,String]): DotGraph[N,E] = addEdgeAttribute(labels andThen (Label(_)))
+  def layoutNodes(layout: PartialFunction[N,(Int,Int)]): DotGraph[N,E] = addNodeAttribute(layout andThen (Pos(_,_)).tupled)
 
   def nodeString(n: N): String =
     s"\t${nodeID(n)} [${nodeAttributes.getOrElse(n, Seq()).map(_.dotString).mkString(",")}];"
@@ -56,6 +57,12 @@ case class DotGraph[N,E](nodes: Iterable[N],
   }
 }
 
+object DotGraph {
+  def directed[X,N](x: X)(implicit isDir: IsDirectedGraph[X,N]): DotGraph[N,(N,N)] =
+    DotGraph[N,(N,N)](isDir.nodes(x), isDir.edges(x))
+  def undirected[X,N](x: X)(implicit isUndir: IsUndirectedGraph[X,N]): DotGraph[N,BiSet[N]] = ???
+}
+
 sealed trait Dir[N,E] {
   /** layout engine passed as option `-K`. */
   def layout: String
@@ -66,6 +73,7 @@ sealed trait Dir[N,E] {
 
 object Dir {
   implicit def tupleDirectedInstance[N]: Directed[N, (N, N)] = Directed[N,(N,N)](identity)
+  implicit def biSetUndirInstance[N]: Undirected[N,BiSet[N]] = Undirected(identity)
 }
 case class Undirected[N,E](f: E => BiSet[N], layout: String = "neato") extends Dir[N,E]{
   def header = "graph"

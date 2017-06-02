@@ -11,17 +11,18 @@ trait HyperGraph[-X,N] {
 }
 
 /** Type-class for undirected graphs.
-  *
+  * Has to implement one of neighbours or edges.
   * @tparam X
   * @tparam N
   */
-trait UndirectedGraph[-X,N] {
+trait IsUndirectedGraph[-X,N] {
   def nodes(x: X): Set[N]
-  def neighbours(x: X, n: N): Set[N]
+  def neighbours(x: X, n: N): Set[N] = edges(x).collect{case bs if bs.contains(n) => bs.toSet}.flatten
+  def edges(x: X): Set[BiSet[N]] = nodes(x).flatMap(n => neighbours(x,n).map(nn => BiSet(n,n)))(collection.breakOut)
 }
 
-object UndirectedGraph {
-  def fromDirectedGraph[X,N,E](implicit dg: IsDirectedGraph[X,N]): UndirectedGraph[X,N] = new UndirectedGraph[X,N] {
+object IsUndirectedGraph {
+  def fromDirectedGraph[X,N,E](implicit dg: IsDirectedGraph[X,N]): IsUndirectedGraph[X,N] = new IsUndirectedGraph[X,N] {
     override def nodes(x: X): Set[N] = dg.nodes(x)
     override def neighbours(x: X, n: N): Set[N] =
       dg.children(x,n) ++ dg.nodes(x).filter(dg.children(x,_).contains(n))

@@ -27,6 +27,11 @@ case class Color(colorName: String) extends NAttr with EAttr {
   override def value: String = colorName
 }
 
+case class Pos(x: Int, y: Int) extends NAttr {
+  override def name: String = "pos"
+  override def value: String = s""""${x},${y}!""""
+}
+
 object Color {
   val RED = Color("red")
   val BLACK = Color("black")

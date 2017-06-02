@@ -37,7 +37,7 @@ class LabeledGraph[N] protected[LabeledGraph](val index: Index[N], protected val
         searchAll(newNodes, closed ++ fringe, succ)
     }
 
-    lazy val tarjanSCC = {
+    lazy val tarjanSCC: List[Set[Int]] = {
       val tj_index = Array.fill[Int](numNodes)(-1)
       val lowLink = new Array[Int](numNodes)
       val stack = new mutable.Stack[Int]()
@@ -109,7 +109,7 @@ class LabeledGraph[N] protected[LabeledGraph](val index: Index[N], protected val
     override def instance: G = outer
   }
   override def isAcyclic: Boolean = instGraph.isAcyclic
-  override def graphEqual[X](other: X)(implicit dg: IsDirectedGraph[X, N]): Unit = instGraph.graphEqual(other)
+  override def graphEqual[X](other: X)(implicit dg: IsDirectedGraph[X, N]): Boolean = instGraph.graphEqual(other)
   override def isTree: Boolean = instGraph.isTree
 
   /** Partition the graph into a set of (weakly) connected components, this means that arrow direction is ignored.
@@ -125,10 +125,14 @@ object LabeledGraph {
       index,
       index.elements.map(n => dg.children(x,n).map(index.forward)(collection.breakOut):Array[Int])(collection.breakOut))
   }
-  def fromChildList[N](nodes: Iterable[N], children: N => Iterable[N]) = {
+  def fromChildList[N](nodes: Iterable[N], children: N => Iterable[N]): LabeledGraph[N] = {
     val index = new SIIndex(nodes)
     new LabeledGraph[N](
       index,
       index.elements.map(n => children(n).map(index.forward)(collection.breakOut):Array[Int])(collection.breakOut))
+  }
+  implicit def isDiGraph[N]: IsDirectedGraph[LabeledGraph[N],N] = new IsDirectedGraph[LabeledGraph[N],N] {
+    override def nodes(x: LabeledGraph[N]): Set[N] = x.nodes
+    override def edges(x: LabeledGraph[N]): Set[(N, N)] = x.edges
   }
 }
