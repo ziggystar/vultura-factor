@@ -84,6 +84,26 @@ case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[
   }
 
   def hasUncoveredVariable: Boolean = degrees.contains(0)
+
+  /** Compute the mutual information between a pair of variables induced only by direct interactions between them.
+    * This is not the exact mutual information induced by the joint distribution.
+    * @param v1
+    * @param v2
+    * @return None if the variables are not neighbours.
+    */
+  def localMutualInformation(v1: VI, v2: VI): Double = {
+    def factorMI(f: Factor): Double = {
+      require(f.variables.length == 2)
+      val hxy = ring.entropy(f.values)
+      val h1 = ring.entropy(Factor.multiplyRetain(ring)(domains)(Seq(f),Array(v1)).values)
+      val h2= ring.entropy(Factor.multiplyRetain(ring)(domains)(Seq(f),Array(v2)).values)
+      h1 + h2 - hxy
+    }
+    val coveringFactors: Array[VI] = factorIdxOfVariable(v1).filter(factorIdxOfVariable(v2).toSet)
+
+    if(coveringFactors.isEmpty) 0d
+    else factorMI(Factor.multiplyRetain(ring)(domains)(coveringFactors.map(factors), Array(v1,v2)).normalize(ring))
+  }
 }
 
 object Problem{
