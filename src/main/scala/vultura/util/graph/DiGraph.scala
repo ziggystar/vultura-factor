@@ -90,11 +90,11 @@ case class EdgeMapDiGraph[N](nodes: Set[N], successorsMap: Map[N,Set[N]]){
     val hits: mutable.HashMap[N,Int] = nodes.map(_ -> 0)(collection.breakOut)
 
     /**
-     * @param picked Already included in the cover to be built.
-     * @param pickSuccessors Nodes that are successors to picked nodes. These cannot be included if they have a picked successor.
-     *                       If this is detected, they get removed.
-     * @param remaining Nodes that can still be picked and have not been included in pickSuccessors.
-     */
+      * @param picked Already included in the cover to be built.
+      * @param pickSuccessors Nodes that are successors to picked nodes. These cannot be included if they have a picked successor.
+      *                       If this is detected, they get removed.
+      * @param remaining Nodes that can still be picked and have not been included in pickSuccessors.
+      */
     @tailrec
     def buildCover(picked: Set[N], pickSuccessors: Set[N], remaining: Set[N]): Set[N] = {
       val activeSuccs = pickSuccessors.filter(ps => successors(ps).forall(!picked(_)))

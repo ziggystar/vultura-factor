@@ -30,7 +30,7 @@ organization := "de.uni-ulm"
 25.0.0:
   - migrate to Scala 2.12
 */
-version := "25.0.0"
+version := "26.0.0-DEV"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 
