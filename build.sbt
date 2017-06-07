@@ -42,7 +42,7 @@ organization := "de.uni-ulm"
 25.0.0:
   - migrate to scala 2.12
 */
-version := "25.0.0"
+version := "26.0.0-DEV"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
 
@@ -59,7 +59,7 @@ scalacOptions in Compile += "-Xdisable-assertions"
 
 libraryDependencies += "org.apache.commons" % "commons-math3" % "3.5"
 
-libraryDependencies += "de.uni-ulm" %% "vultura-util" % "25.0.0"
+libraryDependencies += "de.uni-ulm" %% "vultura-util" % "26.0.0-DEV"
 
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.+"
 
