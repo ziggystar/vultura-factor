@@ -6,7 +6,10 @@ package vultura.factor
 object SampleProblems {
   class Example(val resourcePath: String, val logZ: Option[Double]){
     val filename: String = resourcePath.split("/").last
-    lazy val problem: Problem = Problem.parseUAIProblem(Thread.currentThread().getContextClassLoader.getResourceAsStream(resourcePath)).right.get
+    lazy val problem: Problem =
+      Option(Thread.currentThread().getContextClassLoader.getResourceAsStream(resourcePath))
+        .flatMap(s => Problem.parseUAIProblem(s).toOption)
+        .get
   }
 
   //if there is a ground truth for log Z, then append it in log_10 base after a '}'
