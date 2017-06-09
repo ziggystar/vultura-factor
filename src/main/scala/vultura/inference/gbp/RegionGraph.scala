@@ -198,6 +198,15 @@ class TwoLayerOC(val problemStructure:      ProblemStructure,
   extends TwoLayerRG with OvercountingNumbers {
   override def largeRegionFactors(large: Set[VI]): Set[FI] = factorsOfLargeRegions(large)
   override def edgeLabels(from: Set[VI], to: Set[VI]): Set[VI] = separatorSets(from,to)
+
+  val regionsWithVariable: IndexedSeq[Set[TLR]] = {
+    require(problemStructure.variables.min == 0 && problemStructure.variables.step == 1)
+    problemStructure.variables.map{vi => regions.filter(r => variablesOf(r).contains(vi))}
+  }
+  override def regionsWithVariables(vs: Iterable[VI]): Set[TLR] = {
+    val set = vs.toSet
+    set.flatMap(regionsWithVariable).filter(r => variablesOf(r).subsetOf(set))
+  }
 }
 
 object TwoLayerOC {
