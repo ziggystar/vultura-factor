@@ -26,10 +26,14 @@ class TwoLayerOCPropagation(val rg: TwoLayerOC, val ring: Ring[Double])
   sealed trait FactorNode {self: Node =>
     def variables: Array[Int]
     def arraySize: Var = variables.map(rg.problemStructure.domains).product
+    def targetRegion: rg.TLR
+    def sourceRegion: Option[rg.TLR]
   }
 
   case class ParamNode(large: Large) extends ParameterNode with FactorNode{
     val variables: Array[Int] = large.variables.toArray.sorted
+    override def targetRegion: rg.TLR = large
+    override def sourceRegion: Option[rg.TLR] = None
   }
 
   case class S2L(small: Small, large: Large) extends ComputedNode with FactorNode {
@@ -43,6 +47,9 @@ class TwoLayerOCPropagation(val rg: TwoLayerOC, val ring: Ring[Double])
         ps.domains,
         dependencies.map(_.variables)(collection.breakOut), ring).sumProductNormalize
     override def compute(ins: Array[IR], result: IR): Unit = task(ins,result)
+
+    override def targetRegion: rg.TLR = large
+    override def sourceRegion: Option[rg.TLR] = Some(small)
   }
 
   case class L2S(large: Large, small: Small) extends ComputedNode with FactorNode {
@@ -56,6 +63,9 @@ class TwoLayerOCPropagation(val rg: TwoLayerOC, val ring: Ring[Double])
         ring
       ).sumProductNormalize
     override def compute(ins: Array[IR], result: IR): Unit = task(ins,result)
+
+    override def targetRegion: rg.TLR = small
+    override def sourceRegion: Option[rg.TLR] = Some(large)
   }
 
   /** The set of nodes defined by this problem. */
