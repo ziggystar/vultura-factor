@@ -145,8 +145,8 @@ trait TwoLayerRG extends RegionGraph {
   sealed trait TLR {
     def variables: Set[VI]
     def factors: Set[FI]
-    def children: Seq[Small]
-    def parents: Seq[Large]
+    def children: Set[Small]
+    def parents: Set[Large]
   }
   final case class Small protected[TwoLayerRG] (si: Int) extends TLR {
     override val variables: Set[VI] = smallRegionsLookup.elements(si)
@@ -158,16 +158,16 @@ trait TwoLayerRG extends RegionGraph {
         val largeVariables: Set[VI] = largeRegionsLookup.backward(li)
         variables.subsetOf(largeVariables) && edgeLabels(largeVariables,variables).nonEmpty
       }
-    def parents: Seq[Large] = parentsI.map(Large)
-    override def children: Seq[Small] = Seq()
+    def parents: Set[Large] = parentsI.map(Large)(collection.breakOut)
+    override def children: Set[Small] = Set()
 
     override def toString: String = s"S(${variables.toSeq.sorted.mkString(",")})"
   }
   final case class Large protected[TwoLayerRG](li: Int) extends TLR {
     override val variables: Set[VI] = largeRegionsLookup.elements(li)
     override val factors: Set[FI] = largeRegionFactors(variables)
-    def parents: Seq[Large] = Seq()
-    override def children: Seq[Small] = smallRegions.filter(_.parents.contains(this))
+    def parents: Set[Large] = Set()
+    override def children: Set[Small] = regionsWithVariables(variables).collect{case s: Small if s.parents.contains(this) => s}
 
     override def toString: String = s"L(${variables.toSeq.sorted.mkString(",")})"
   }
