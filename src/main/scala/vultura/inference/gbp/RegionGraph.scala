@@ -148,8 +148,8 @@ trait TwoLayerRG extends RegionGraph {
     def children: Seq[Small]
     def parents: Seq[Large]
   }
-  case class Small protected[TwoLayerRG] (si: Int) extends TLR {
-    override def variables: Set[VI] = smallRegionsLookup.elements(si)
+  final case class Small protected[TwoLayerRG] (si: Int) extends TLR {
+    override val variables: Set[VI] = smallRegionsLookup.elements(si)
     override def factors: Set[FI] = Set()
     //parents are all large regions whose variable set subsumes the varset of this region, and the edge has
     //a non-empty label set
@@ -163,9 +163,9 @@ trait TwoLayerRG extends RegionGraph {
 
     override def toString: String = s"S(${variables.toSeq.sorted.mkString(",")})"
   }
-  case class Large protected[TwoLayerRG](li: Int) extends TLR {
-    override def variables: Set[VI] = largeRegionsLookup.elements(li)
-    override def factors: Set[FI] = largeRegionFactors(variables)
+  final case class Large protected[TwoLayerRG](li: Int) extends TLR {
+    override val variables: Set[VI] = largeRegionsLookup.elements(li)
+    override val factors: Set[FI] = largeRegionFactors(variables)
     def parents: Seq[Large] = Seq()
     override def children: Seq[Small] = smallRegions.filter(_.parents.contains(this))
 
@@ -177,7 +177,7 @@ trait TwoLayerRG extends RegionGraph {
 
   type Region = TLR
 
-  override def regions: Set[Region] = (smallRegions ++ largeRegions).toSet
+  override val regions: Set[Region] = (smallRegions ++ largeRegions).toSet
   override def variablesOf(r: Region): Set[VI] = r.variables
   override def factorsOf(r: Region): Set[FI] = r.factors
 
