@@ -167,7 +167,8 @@ trait TwoLayerRG extends RegionGraph {
     override val variables: Set[VI] = largeRegionsLookup.elements(li)
     override val factors: Set[FI] = largeRegionFactors(variables)
     def parents: Set[Large] = Set()
-    override def children: Set[Small] = smallRegions.toSet.filter(_.parents.contains(this)) //TODO optimize
+    override def children: Set[Small] =
+      variables.flatMap(regionsOfVariable).collect{case s: Small if s.parents.contains(this) => s}
 
     override def toString: String = s"L(${variables.toSeq.sorted.mkString(",")})"
   }
