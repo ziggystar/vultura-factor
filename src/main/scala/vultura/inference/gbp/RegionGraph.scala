@@ -41,9 +41,13 @@ trait RegionGraph {
     } yield p
   }
 
+  lazy val regionsOfVariable: IndexedSeq[Set[Region]] = problemStructure.variables.map{vi =>
+    regions.filter(r => variablesOf(r).contains(vi))
+  }
+
   def regionsWithVariables(vs: Iterable[VI]): Set[Region] = {
     val s = vs.toSet
-    regions.filter(r => s.subsetOf(variablesOf(r)))
+    s.map(regionsOfVariable).reduce(_ intersect _)
   }
   def regionsWithFactors(fs: Iterable[FI]): Set[Region] = {
     val f = fs.toSet
