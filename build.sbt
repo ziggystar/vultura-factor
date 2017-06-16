@@ -58,7 +58,7 @@ licenses += "MIT" -> url("http://opensource.org/licenses/MIT")
 
 scalaVersion := "2.12.2"
 
-lazy val util = project in file("vultura.util")
+lazy val util = project in file("util")
 
 lazy val factor = (project in file("."))
   .aggregate(util)
@@ -76,7 +76,7 @@ libraryDependencies +=  "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0
 // --------------- Publishing ----------------------------------
 
 //testing dependencies
-libraryDependencies += "org.specs2" %% "specs2-core" % "3.8.+" % "test"
+libraryDependencies += "org.specs2" %% "specs2-core" % "3.8.8" % "test"
 
 libraryDependencies +=  "org.slf4j" % "slf4j-simple" % "1.7.12" % "test"
 
