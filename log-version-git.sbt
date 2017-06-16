@@ -1,4 +1,4 @@
-resourceGenerators in Compile <+= Def.task {
+resourceGenerators in Compile += Def.task {
   import scala.sys.process._
   val file = (resourceManaged in Compile).value / "vultura" / "factor" / "version.properties"
   val gitHash = "git rev-parse HEAD".!!
