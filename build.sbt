@@ -60,7 +60,7 @@ scalaVersion := "2.12.2"
 
 lazy val util = project in file("vultura.util")
 
-lazy val root = (project in file("."))
+lazy val factor = (project in file("."))
   .aggregate(util)
   .dependsOn(util)
 
