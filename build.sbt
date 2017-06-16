@@ -41,7 +41,11 @@ organization := "de.uni-ulm"
   - fix calibration not working with damping and singleton SCCs
 25.0.0:
   - migrate to scala 2.12
+26.0.0-DEV:
+  - integrate vultura.util as subproject
+  - improve graph library
 */
+
 version := "26.0.0-DEV"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
@@ -52,14 +56,18 @@ description := "Tools for probabilistic inference in discrete-valued factor grap
 
 licenses += "MIT" -> url("http://opensource.org/licenses/MIT")
 
-scalaVersion := "2.12.1"
+scalaVersion := "2.12.2"
+
+lazy val util = project in file("vultura.util")
+
+lazy val root = (project in file("."))
+  .aggregate(util)
+  .dependsOn(util)
 
 //assertions are only used in tests
 scalacOptions in Compile += "-Xdisable-assertions"
 
 libraryDependencies += "org.apache.commons" % "commons-math3" % "3.5"
-
-libraryDependencies += "de.uni-ulm" %% "vultura-util" % "26.0.0-DEV"
 
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.+"
 
@@ -68,21 +76,7 @@ libraryDependencies +=  "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0
 // --------------- Publishing ----------------------------------
 
 //testing dependencies
-libraryDependencies += "org.specs2" %% "specs2-core" % "3.8.8" % "test"
+libraryDependencies += "org.specs2" %% "specs2-core" % "3.8.+" % "test"
 
 libraryDependencies +=  "org.slf4j" % "slf4j-simple" % "1.7.12" % "test"
 
-scalacOptions in Test ++= Seq("-Yrangepos") //for specs2
-
-//for vultura-util
-resolvers += "mvn@mirkwood" at "http://mirkwood.informatik.uni-ulm.de/mvn"
-
-//--- fixing exit code for jenkins
-testResultLogger in (Test, testOnly) := new TestResultLogger {
-  import sbt.Tests._
-  def run(log: Logger, results: Output, taskName: String): Unit = {
-    println("Exit code always 0...as you wish")
-    // uncomment to have the default behaviour back
-    // TestResultLogger.SilentWhenNoTests.run(log, results, taskName)
-  }
-}
