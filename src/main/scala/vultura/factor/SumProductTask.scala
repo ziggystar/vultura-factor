@@ -36,6 +36,9 @@ case class SumProductTask(remainingVars: Array[Int],
   val counter: Array[Int] = new Array[Int](counterSize)
   val factorPointers: Array[Int] = new Array[Int](numFactors)
 
+  val additions: Int = (margSize - 1) * remainSize
+  val multiplications: Int = (numFactors - 1) * remainSize * margSize
+
   final def sumProduct(factorValues: IndexedSeq[Array[Double]], result: Array[Double]) {
     //TODO maybe the clearing is not needed
     java.util.Arrays.fill(counter,0)
