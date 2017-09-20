@@ -33,6 +33,7 @@ object Generator {
   def apply[A](f: Random => A): Generator[A] = new Generator[A]{
     override def generate(r: Random): A = f(r)
   }
+  def draw[A](as: Seq[A]): Generator[A] = (r: Random) => as(r.nextInt(as.size))
   def seq[X](xs: Seq[Generator[X]]): Generator[Seq[X]] = Generator(r => xs.map(_.generate(r)))
   def gaussian(mean: Double = 0d, sd: Double = 1d): Generator[Double] = Generator(_.nextGaussian() * sd + mean)
   def gamma(shape: Double, scale: Double): Generator[Double] = new Generator[Double] {
