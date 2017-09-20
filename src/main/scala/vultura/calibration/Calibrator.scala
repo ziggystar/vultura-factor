@@ -4,6 +4,7 @@ import com.typesafe.scalalogging.StrictLogging
 import vultura.factor.inference.ConvergenceStats
 import vultura.util.{FastBitSet, OpenBitSet, SIIndex}
 import FastBitSet._
+import vultura.factor.inference.conditioned.CBP.CLAMP_METHOD
 
 import collection.mutable
 import scala.collection.immutable.IndexedSeq
@@ -19,7 +20,22 @@ class Calibrator[CP <: CalProblem](val cp: CP) extends StrictLogging {
   /** An node index. */
   type NI = Int
 
+  /** Holds information wrt a single edge within a computation graph.
+    * @param totalUpdates Number of total updates this edge has received.
+    * @param lastUpdate Iteration during which the last update was made.
+    * @param lastDiff Difference between last and second to last update.
+    * @param totalDiff Sum of differences over all updates of this edge.
+    */
+  case class EdgeInfo(totalUpdates: Long, lastUpdate: Long, lastDiff: Double, totalDiff: Double)
+
   protected val nodes: SIIndex[N] = new SIIndex(cp.nodes)
+
+  protected var edgeLastUpdate: Array[Long] = null
+  protected var edgeTotalUpdates: Array[Long] = null
+  protected var edgeLastDiff: Array[Double] = null
+  protected var edgeTotalDiff: Array[Double] = null
+  protected var doEdgeUpdates: Boolean = false
+
   protected var state: Array[IR] = _
   protected val nodeConverged: OpenBitSet = {
     val bs = new OpenBitSet(nodes.size)
@@ -72,7 +88,10 @@ class Calibrator[CP <: CalProblem](val cp: CP) extends StrictLogging {
     }
   }
 
-  protected def calibrateComponent(component: Array[Int], maxIterations: Long, maxDiff: Double, damping: Double = 0d): ConvergenceStats = {
+  protected def calibrateComponent( component: Array[Int]
+                                  , maxIterations: Long
+                                  , maxDiff: Double
+                                  , damping: Double = 0d): ConvergenceStats = {
     val componentNodes: IndexedSeq[NI] = component.toIndexedSeq.sorted
     var iteration = -1L //we need one iteration for asserting convergence
     var iterationDiff: Double = 0d
@@ -99,6 +118,13 @@ class Calibrator[CP <: CalProblem](val cp: CP) extends StrictLogging {
           if(newDiff >= maxDiff) {
             state(ei) = newValue
             successors(ei).foreach(nodeConverged.fastClear)
+            //only store per edge stats if requested
+            if(doEdgeUpdates){
+              edgeTotalUpdates(ei) += 1
+              edgeTotalDiff(ei)    += newDiff
+              edgeLastDiff(ei)     =  newDiff
+              edgeLastUpdate(ei)   = iteration
+            }
           }
           nodeConverged.fastSet(ei)
           iterationDiff = math.max(iterationDiff, newDiff)
@@ -160,6 +186,28 @@ class Calibrator[CP <: CalProblem](val cp: CP) extends StrictLogging {
     } else {
       calibrateComponent(edges.map(nodes.forward).toArray.distinct.sorted, maxIterations, maxDiff, damping)
     }
+  }
+
+  def calibrateExtended(maxIterations: Long,
+                        maxDiff: Double,
+                        damping: Double = 0d,
+                        sccDecomposition: Boolean = true,
+                        edges: Iterable[N] = nodes.elements): (ConvergenceStats, Map[CP#ComputedNode,EdgeInfo]) = {
+    //initialize storage for per-edge stats
+    this.edgeLastUpdate = new Array(nodes.size)
+    this.edgeTotalUpdates = new Array(nodes.size)
+    this.edgeLastDiff = new Array(nodes.size)
+    this.edgeTotalDiff = new Array(nodes.size)
+    this.doEdgeUpdates = true
+    //run calibration; it checks whether the arrays for the per-edge stats are non-null
+    val stats = calibrate(maxIterations, maxDiff, damping, sccDecomposition, edges)
+    doEdgeUpdates = false
+    val edgeStats: Map[CP#ComputedNode, EdgeInfo] = cp.nodes.asInstanceOf[Set[CP#Node]].collect{
+          case n: CP#ComputedNode =>
+            val ni = nodes.forward(n.asInstanceOf[this.N])
+            n -> EdgeInfo(totalUpdates = edgeTotalUpdates(ni), lastUpdate = edgeLastUpdate(ni), lastDiff = edgeLastDiff(ni), totalDiff = edgeTotalDiff(ni) )
+        }(collection.breakOut)
+    stats -> edgeStats
   }
 
   def nodeState(node: N): IR = state(nodes(node))
