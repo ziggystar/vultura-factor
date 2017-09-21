@@ -14,7 +14,7 @@ trait IsDirectedGraph[-X,N] {
 }
 
 object IsDirectedGraph {
-  implicit def diGraphInstance[N] = new IsDirectedGraph[DiGraph[N],N] {
+  implicit def diGraphInstance[N]: IsDirectedGraph[DiGraph[N], N] = new IsDirectedGraph[DiGraph[N],N] {
     override def nodes(x: DiGraph[N]): Set[N] = x.nodes
     override def edges(x: DiGraph[N]): Set[(N, N)] = x.edges
   }

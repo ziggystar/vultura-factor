@@ -10,7 +10,7 @@ object BiSet{
   }
 }
 
-class BiSet[E] protected (val e1: E, val e2: E) {
+class BiSet[E] protected (val e1: E, val e2: E) extends Iterable[E] {
   require(e1 != e2)
   def contains(e: E): Boolean = e == e1 || e == e2
   def map[F](f: E => F) = BiSet(f(e1),f(e2))
@@ -19,5 +19,5 @@ class BiSet[E] protected (val e1: E, val e2: E) {
     case _ => false
   }
   override def hashCode(): Int = Set(e1,e2).hashCode()
-  def toSet: Set[E] = Set(e1,e2)
+  override def iterator = Iterator(e1,e2)
 }

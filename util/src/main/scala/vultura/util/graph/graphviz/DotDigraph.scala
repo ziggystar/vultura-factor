@@ -60,7 +60,8 @@ case class DotGraph[N,E](nodes: Iterable[N],
 object DotGraph {
   def directed[X,N](x: X)(implicit isDir: IsDirectedGraph[X,N]): DotGraph[N,(N,N)] =
     DotGraph[N,(N,N)](isDir.nodes(x), isDir.edges(x))
-  def undirected[X,N](x: X)(implicit isUndir: IsUndirectedGraph[X,N]): DotGraph[N,BiSet[N]] = ???
+  def undirected[X,N](x: X)(implicit isUndir: IsUndirectedGraph[X,N]): DotGraph[N,BiSet[N]] =
+    DotGraph[N,BiSet[N]](isUndir.nodes(x), isUndir.edges(x))
 }
 
 sealed trait Dir[N,E] {
