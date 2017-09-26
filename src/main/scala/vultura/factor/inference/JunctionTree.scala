@@ -6,7 +6,6 @@ import vultura.util._
 import vultura.util.graph.Tree
 import vultura.util.graph.Tree._
 
-import scala.collection.mutable
 import scala.util.Random
 
 /** Ordinary Shanoy-Shafer (1990) junction tree algorithm. */

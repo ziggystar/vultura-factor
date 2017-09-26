@@ -32,6 +32,20 @@ trait MarginalI extends Inferer {
   def showMarginals: String = problem.variables
     .map(vi => s"Var\t$vi:\t" + varBelief(vi).values.map(m => f"$m%02.3f").mkString("|"))
     .mkString("\n")
+
+  /** The KL divergence for a specific variable marginal, when taking this [[MarginalI]] as the exact distribution. */
+  def variableKL(estimate: MarginalI, v: Problem#VI): Double = {
+    require(this.problem.domains(v) == estimate.problem.domains(v), "variable domains do not match")
+    val pr = this.varBelief(v).values
+    val pt = estimate.varBelief(v).values
+    NormalD.expectation(pr,(pr zip pt).map(xx => xx._1 / xx._2).map(math.log))
+  }
+
+  /** The sum of the KL divergence over all marginals, when taking this [[MarginalI]] as the exact distribution. */
+  def totalKLDiv(estimate: MarginalI): Double = this.problem.variables.map(variableKL(estimate,_)).sum
+
+  /** The total KL divergence divided by the number of nats required to represent one joint state. */
+  def normalizedKLDiv(estimate: MarginalI): Double = totalKLDiv(estimate) / problem.domains.map(math.log(_)).sum
 }
 
 /** Trait that is implemented by inference algorithms that can compute the partition function. */
@@ -47,6 +61,11 @@ trait ParFunI extends Inferer {
 
 trait MargParI extends MarginalI with ParFunI{
   def toResult = new Result(this)
+  def maxDiff(other: MargParI): Double = {
+    require(this.problem.domains.deep == other.problem.domains.deep, "variable domains must match for marginal difference")
+    ???
+  }
+
 }
 
 @deprecated("use RegionBeliefs instead", "24.0.0")
