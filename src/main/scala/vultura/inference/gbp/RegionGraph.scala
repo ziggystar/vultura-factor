@@ -86,7 +86,8 @@ trait FullPartialOrderRegionGraph extends RegionGraph {
 object FullPartialOrderRegionGraph {
   def poRG(ps: ProblemStructure,
            _regions: Iterable[Set[ProblemStructure#VI]],
-           factorAssignment: Map[ProblemStructure#FI,Set[ProblemStructure#VI]]) = new FullPartialOrderRegionGraph with OvercountingNumbers {
+           factorAssignment: Map[ProblemStructure#FI,Set[ProblemStructure#VI]]): FullPartialOrderRegionGraph with OvercountingNumbers =
+    new FullPartialOrderRegionGraph with OvercountingNumbers {
     override type Region = Set[ps.VI]
     override val regions: Set[Region] = _regions.toSet
     override val problemStructure: ProblemStructure = ps
@@ -112,11 +113,11 @@ case class RgDiagnosis(rg: RegionGraph){
 
   /** Redundancy means that each variable-induced sub-graph is a tree. */
   def nonRedundantVariables: IndexedSeq[rg.VI] = rg.problemStructure.variables
-    .filterNot(v => rg.directedGraph.filterNodes(rg.regionsWithVariables(Seq(v))).isTree)
+    .filterNot(v => rg.directedGraph.filterNodes(rg.regionsOfVariable(v)).isTree)
   def isNonRedundant: Boolean = nonRedundantVariables.nonEmpty
 
   def variablesAreCountedOnce: Boolean = rg.problemStructure.variables
-    .exists(vi => math.abs(rg.regionsWithVariables(Set(vi)).map(rg.weightOf).sum - 1d) > 1e-7)
+    .exists(vi => math.abs(rg.regionsOfVariable(vi).map(rg.weightOf).sum - 1d) > 1e-7)
 
   def factorsAreCountedOnce: Boolean = rg.problemStructure.factorIndices
     .forall(fi => math.abs(rg.regionsWithFactors(Seq(fi)).toSeq.map(rg.weightOf).sum - 1d) < 1e-7)
@@ -124,7 +125,7 @@ case class RgDiagnosis(rg: RegionGraph){
   def factorsAreInOuterRegions: Boolean = rg.regions.exists(r => rg.parentsOf(r).nonEmpty && rg.factorsOf(r).nonEmpty)
 
   def variablesAreConnected: Boolean = rg.problemStructure.variables
-    .forall(v => rg.directedGraph.filterNodes(rg.regionsWithVariables(Set(v))).connectedComponents.size == 1)
+    .forall(v => rg.directedGraph.filterNodes(rg.regionsOfVariable(v)).connectedComponents.size == 1)
   def factorsAreConnected: Boolean = rg.problemStructure.factorIndices
     .forall{fi => rg.directedGraph.filterNodes(rg.regionsWithVariables(rg.problemStructure.scopeOfFactor(fi).toSet)).connectedComponents.size == 1 }
 }
@@ -210,7 +211,7 @@ class TwoLayerOC(val problemStructure:      ProblemStructure,
   }
   override def regionsWithVariables(vs: Iterable[VI]): Set[TLR] = {
     val set = vs.toSet
-    set.flatMap(regionsWithVariable).filter(r => variablesOf(r).subsetOf(set))
+    set.flatMap(regionsWithVariable).filter(r => set subsetOf variablesOf(r))
   }
 }
 
