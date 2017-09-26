@@ -7,7 +7,8 @@ trait ExternalBuilder[CP <: CalProblem, R] { outer =>
 }
 
 object ExternalBuilder {
-  def fromBuilder[R] = new ExternalBuilder[CalProblem with ResultBuilder[R],R] {
-    override def build(cp: CalProblem with ResultBuilder[R])(valuation: (cp.N) => cp.IR): R = cp.buildResult(valuation)
-  }
+  def fromBuilder[R]: ExternalBuilder[CalProblem with ResultBuilder[R], R] =
+    new ExternalBuilder[CalProblem with ResultBuilder[R],R] {
+      override def build(cp: CalProblem with ResultBuilder[R])(valuation: (cp.N) => cp.IR): R = cp.buildResult(valuation)
+    }
 }

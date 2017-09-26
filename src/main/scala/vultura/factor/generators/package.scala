@@ -65,7 +65,7 @@ package object generators {
       .continually(Array.fill(factorSize)(random.nextInt(numVariables)))
       .filter(_.toSet.size == factorSize)
       .next()
-    Problem(Array.fill(numFactors)(factorGenerator(genFactorVariables,domains,random)),domains,NormalD)
+    Problem(Array.fill(numFactors)(factorGenerator(genFactorVariables,domains,random)),domains,NormalD).simplify
   }
   def treeK(numFactors: Int,
             k: Int,

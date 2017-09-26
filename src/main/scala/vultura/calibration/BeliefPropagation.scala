@@ -4,6 +4,7 @@ import com.typesafe.scalalogging.LazyLogging
 import vultura.factor._
 import vultura.factor.inference._
 import vultura.util.SSet
+import vultura.util.graph.graphviz.{DotGraph, NAttr, Shape}
 
 /** Belief propagation on the factor graph representation. Parameters are factor-to-variable messages (F2V), and
   * variable-to-factor messages (V2F). */
@@ -125,6 +126,22 @@ case class BeliefPropagation(ps: Problem) extends CalProblem
         case r@Right(fi) => NormalD.entropy(regionBelief(r).values)
       }.sum
     }
+  }
+
+  def messageGraph(valuation: FactorNode => IR): DotGraph[Either[Int,Int], BeliefPropagation#FactorNode] = {
+    val graphNodes: Seq[Either[Int, Int]] = ps.variables.map(Left(_)) ++ ps.factorIndices.map(Right(_))
+    val graph = DotGraph(graphNodes, nodes.asInstanceOf[Set[BeliefPropagation#FactorNode]])
+    graph
+      .labelNodes{
+        case Left(vi) => vi.toString
+        case Right(fi) => fi.toString
+      }
+      .labelEdges{
+        case n => valuation(n.asInstanceOf[this.FactorNode]).map(x => f"$x%.2f").mkString(",")
+      }
+      .addNodeAttribute{
+        case Right(fi) => Shape.SQUARE
+      }
   }
 }
 

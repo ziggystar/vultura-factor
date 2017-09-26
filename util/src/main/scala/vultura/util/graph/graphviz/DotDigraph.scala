@@ -74,6 +74,7 @@ sealed trait Dir[N,E] {
 
 object Dir {
   implicit def tupleDirectedInstance[N]: Directed[N, (N, N)] = Directed[N,(N,N)](identity)
+  implicit def fromTupleConversion[T,N](implicit ev: T <:< (N,N)): Directed[N,T] = Directed(ev)
   implicit def biSetUndirInstance[N]: Undirected[N,BiSet[N]] = Undirected(identity)
 }
 case class Undirected[N,E](f: E => BiSet[N], layout: String = "neato") extends Dir[N,E]{
