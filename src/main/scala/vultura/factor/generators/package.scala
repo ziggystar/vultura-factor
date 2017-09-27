@@ -60,6 +60,7 @@ package object generators {
               domainSize: Int = 2,
               factorGenerator: FactorGenerator = expGauss(),
               random: Random = new Random(0)): Problem = {
+    require(factorSize <= numVariables)
     val domains = Array.fill(numVariables)(domainSize)
     def genFactorVariables: Array[Int] = Iterator
       .continually(Array.fill(factorSize)(random.nextInt(numVariables)))

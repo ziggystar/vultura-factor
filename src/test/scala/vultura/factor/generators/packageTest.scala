@@ -20,7 +20,5 @@ class packageTest extends Specification {
   def topologyTests =
     "grid 3x6 has correct number of factors" ! (grid(3,6,2,maxEntropy, new Random(0)).factors.size === (18 + 3*5 + 6 * 2)) ^
     "grid 3x6 has correct number of variables" ! (grid(3,6,2,maxEntropy, new Random(0)).variables.size === 3*6) ^
-    "randomK has correct number of variables" ! (randomK(25,100,3,2,maxEntropy,new Random(0)).variables.size == 25) ^
-    "randomK has correct number of factors" ! (randomK(25,100,3,2,maxEntropy,new Random(0)).factors.size == 100)
-
+    "randomK has correct number of variables" ! (randomK(25,100,3,2,maxEntropy,new Random(0)).variables.size == 25)
 }
