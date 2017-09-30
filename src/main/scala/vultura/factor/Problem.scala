@@ -53,7 +53,7 @@ case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[
 
   def toRing(newRing: Ring[Double]): Problem = Problem(factors.map(f => newRing.encode(ring.decode(f))),domains,newRing)
 
-  def toBriefString: String = f"(Problem: ${variables.size} variables, ${factors.size} factors, ring: $ring"
+  def toBriefString: String = f"(Problem: ${variables.size} variables, ${factors.size} factors, ring: $ring)"
 
   /** @return Exact log Z obtained by junction tree algorithm. */
   lazy val logZ: Double = VariableElimination(this).logZ

@@ -10,10 +10,12 @@ case class LabeledProblemStructure[N](structure: ProblemStructure, variableLabel
   require(variableLabels.size == structure.numVariables)
   def parameterize(params: structure.FI => Array[Double], ring: Ring[Double] = LogD): LabeledProblem[N] =
     LabeledProblem(structure.parameterize(params),variableLabels)
+
+  /** Add singleton cliques to the variables specified by `pred`. */
   def addSingletons(pred: N => Boolean): LabeledProblemStructure[N] = {
     val singletonsToAdd: Seq[Var] = structure.variables
       .filter(pred compose variableLabels.backward)
-        .filter(vi => structure.factorIdxOfVariable(vi).forall(fi => structure.scopeOfFactor(fi).length != 1))
+      .filter(vi => structure.factorIdxOfVariable(vi).forall(fi => structure.scopeOfFactor(fi).length != 1))
     LabeledProblemStructure(StructureOnly(structure.domains,structure.scopeOfFactor ++ singletonsToAdd.map(Array(_))), variableLabels)
   }
 }
