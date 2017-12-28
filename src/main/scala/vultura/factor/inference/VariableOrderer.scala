@@ -11,12 +11,13 @@ import scala.util.Random
 trait VariableOrderer extends (Problem => VariableOrder)
 
 object VariableOrderer{
-  def fromFunction(f: Problem => Seq[Int]) = new VariableOrderer {
-    override def apply(v1: Problem): VariableOrder = VariableOrder(f(v1),v1)
-  }
-  def fromOrder(order: Seq[Int]) = new VariableOrderer {
-    override def apply(v1: Problem): VariableOrder = VariableOrder(order, v1)
-  }
+
+  def fromFunction(f: Problem => Seq[Int]): VariableOrderer =
+    (v1: Problem) => VariableOrder(f(v1), v1)
+
+  def fromOrder(order: Seq[Int]): VariableOrderer =
+    (v1: Problem) => VariableOrder(order, v1)
+
   def by[T: Ordering](f: Problem#VI => T): VariableOrderer = fromFunction(_.variables.sortBy(f))
 }
 

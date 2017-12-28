@@ -23,6 +23,9 @@ class TwoLayerOCPropagation(val rg: TwoLayerOC, val ring: Ring[Double])
   type Small = rg.Small
   type Large = rg.Large
 
+  sealed trait MyComputedNode extends ComputedNode {
+    def spt: SumProductTask
+  }
   sealed trait FactorNode {self: Node =>
     def variables: Array[Int]
     def arraySize: Var = variables.map(rg.problemStructure.domains).product
@@ -36,34 +39,31 @@ class TwoLayerOCPropagation(val rg: TwoLayerOC, val ring: Ring[Double])
     override def sourceRegion: Option[rg.TLR] = None
   }
 
-  case class S2L(small: Small, large: Large) extends ComputedNode with FactorNode {
+  case class S2L(small: Small, large: Large) extends MyComputedNode with FactorNode {
     lazy val dependencies: IndexedSeq[L2S] = small.parents.filterNot(_ == large).map(ol => L2S(ol,small))(collection.breakOut)
 
     val variables: Array[Int] = rg.edgeVariables(large,small).toArray.sorted
 
-    lazy val task: (IndexedSeq[IR], IR) => Unit =
-      SumProductTask(
+    lazy val spt: SumProductTask = SumProductTask(
         variables,
         ps.domains,
-        dependencies.map(_.variables)(collection.breakOut), ring).sumProductNormalize
-    override def compute(ins: Array[IR], result: IR): Unit = task(ins,result)
+        dependencies.map(_.variables)(collection.breakOut), ring)
+
+    override def compute(ins: Array[IR], result: IR): Unit = spt.sumProductNormalize(ins,result)
 
     override def targetRegion: rg.TLR = large
     override def sourceRegion: Option[rg.TLR] = Some(small)
   }
 
-  case class L2S(large: Large, small: Small) extends ComputedNode with FactorNode {
+  case class L2S(large: Large, small: Small) extends MyComputedNode with FactorNode {
     val variables: Array[Int] = rg.edgeVariables(large,small).toArray.sorted
     lazy val dependencies: IndexedSeq[N] = ParamNode(large) +: large.children.filterNot(_ == small).map(os => S2L(os,large))(collection.breakOut)
-    lazy val task: (IndexedSeq[IR], IR) => Unit =
-      SumProductTask(
-        variables,
-        ps.domains,
-        dependencies.map(_.variables)(collection.breakOut),
-        ring
-      ).sumProductNormalize
-    override def compute(ins: Array[IR], result: IR): Unit = task(ins,result)
-
+    lazy val spt: SumProductTask = SumProductTask(
+      variables,
+      ps.domains,
+      dependencies.map(_.variables)(collection.breakOut),
+      ring)
+    override def compute(ins: Array[IR], result: IR): Unit = spt.sumProductNormalize(ins,result)
     override def targetRegion: rg.TLR = small
     override def sourceRegion: Option[rg.TLR] = Some(large)
   }
