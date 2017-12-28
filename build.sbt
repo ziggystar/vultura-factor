@@ -56,7 +56,7 @@ description := "Tools for probabilistic inference in discrete-valued factor grap
 
 licenses += "MIT" -> url("http://opensource.org/licenses/MIT")
 
-scalaVersion := "2.12.2"
+scalaVersion := "2.12.4"
 
 lazy val util = project in file("util")
 
@@ -69,7 +69,7 @@ scalacOptions in Compile += "-Xdisable-assertions"
 
 libraryDependencies += "org.apache.commons" % "commons-math3" % "3.5"
 
-libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.+"
+libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.6"
 
 libraryDependencies +=  "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0"
 
