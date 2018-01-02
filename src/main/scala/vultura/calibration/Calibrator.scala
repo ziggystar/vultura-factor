@@ -177,8 +177,14 @@ class Calibrator[CP <: CalProblem](val cp: CP) extends StrictLogging {
           if(edges.length == 1) {
             //compute the result for single-node components right away
             //but only calculate if the value is not already valid (as for parameters)
-            if(!nodeConverged.fastGet(edges.head))
+            if(!nodeConverged.fastGet(edges.head)) {
               state(edges.head) = newNodeValue(edges.head)
+              if(doEdgeUpdates){
+                edgeTotalUpdates(edges.head) += 1
+                edgeLastDiff(edges.head)      = 0d
+                edgeLastUpdate(edges.head)    = 0
+              }
+            }
             ConvergenceStats(1, 0d, isConverged = true)
           }
           else calibrateComponent(edges, maxIterations, maxDiff, damping)
