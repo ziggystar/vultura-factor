@@ -22,7 +22,7 @@ trait ProblemStructure {
   lazy val variableSet: Set[Int] = (0 until numVariables).toSet
 
   /** Number of incident factors to variable. Indexed by variable index. */
-  lazy val degrees: Array[Int] = {
+  lazy val factorDegreeOfVariable: Array[Int] = {
     val r = new Array[Int](numVariables)
     for{
       scope <- scopeOfFactor
@@ -35,7 +35,7 @@ trait ProblemStructure {
 
   /** Indexing with a variable index yields the factor indices this variable participates in. */
   lazy val factorIdxOfVariable: Array[Array[FI]] = {
-    val result: Array[Array[Int]] = degrees.map(new Array[Int](_))
+    val result: Array[Array[Int]] = factorDegreeOfVariable.map(new Array[Int](_))
     val counter = new Array[Int](numVariables)
     var fi = 0
     while(fi < numFactors){

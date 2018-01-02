@@ -194,7 +194,7 @@ case class MaxMedianHeuristic[-I](heuristics: Seq[NumericVariableHeuristic[I]], 
 }
 
 object VariableSelection{
-  val HV_MaxDegree = NumericVariableHeuristic("Max Degree", (_: Any,p) => v => p.degreeOfVariable(v).toDouble)
+  val HV_MaxDegree = NumericVariableHeuristic("Max Degree", (_: Any,p) => v => p.factorDegreeOfVariable(v).toDouble)
   val HV_TTC = NumericVariableHeuristic[ExtendedBPResult]("TTC", (bp,p) => v =>
     p.factorIdxOfVariable(v).map(f =>
       math.max(bp.lastUpdate(bp.V2FMsg(v,f)), bp.lastUpdate(bp.F2VMsg(f,v)))

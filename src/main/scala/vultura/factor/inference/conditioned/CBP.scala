@@ -129,7 +129,7 @@ object CBP {
     val MAX_DEGREE, RANDOM, LAST_UPDATE, MIN_ENTROPY, LU_BIDI = Value
 
     def variableSelectionHighDegree(bp: BeliefPropagation, random: Random): Int =
-      vultura.util.maxByMultiple(bp.problem.variables)(bp.problem.degreeOfVariable).pickRandom(random)
+      vultura.util.maxByMultiple(bp.problem.variables)(bp.problem.factorDegreeOfVariable).pickRandom(random)
 
     def variableSelectionRandom(bp: BeliefPropagation, random: Random): Int = bp.problem.variables.pickRandom(random)
 

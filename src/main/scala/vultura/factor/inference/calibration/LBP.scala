@@ -148,7 +148,7 @@ trait BPResult extends MargParI with RegionBeliefs[Either[Problem#VI,Problem#FI]
         //check whether we are inconsistent
         if(entropy == 0d && problem.ring.sumA(vb) == problem.ring.zero)
           logExp = Double.NegativeInfinity
-        variableEntropy = variableEntropy + entropy * (1 - problem.degreeOfVariable(i))
+        variableEntropy = variableEntropy + entropy * (1 - problem.factorDegreeOfVariable(i))
         i = i + 1
       }
     }

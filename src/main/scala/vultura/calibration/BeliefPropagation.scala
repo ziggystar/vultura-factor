@@ -122,7 +122,7 @@ case class BeliefPropagation(ps: Problem) extends CalProblem
       }.sum
 
       override def entropy: Double = regions.toSeq.map{
-        case r@Left(vi) => (1 - ps.degreeOfVariable(vi)) * NormalD.entropy(regionBelief(r).values)
+        case r@Left(vi) => (1 - ps.factorDegreeOfVariable(vi)) * NormalD.entropy(regionBelief(r).values)
         case r@Right(fi) => NormalD.entropy(regionBelief(r).values)
       }.sum
     }

@@ -106,7 +106,7 @@ class LcbpMetaBP(val scheme: FactoredScheme, val maxUpdates: Long = 1000000, val
         (vb,fb,fs)
       }
       val variableEntropy = vbels.map(metaRing.entropy)
-        .zip(metaStructure.variables.map(v => 1 - metaStructure.degrees(v)))
+        .zip(metaStructure.variables.map(v => 1 - metaStructure.factorDegreeOfVariable(v)))
         .map{case (x,y) => x * y}.sum
       val factorEntropy = fbels.map(metaRing.entropy).sum
       val factorLogExpect = (fbels zip factors).map{case (fb,f) => metaRing.logExpectation(fb,f)}.sum

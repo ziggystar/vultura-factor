@@ -231,7 +231,7 @@ trait LcbpBase {
 
     /** These computations don't have to be thread-safe. */
     override def mCompute(): (IndexedSeq[InEdge#TOut], TOut) => Unit = { (vbel,result) =>
-      result.value = problem.ring.entropy(vbel(0)) * (1 - problem.degreeOfVariable(v))
+      result.value = problem.ring.entropy(vbel(0)) * (1 - problem.factorDegreeOfVariable(v))
     }
 
     override def drawColor: String = "coral"

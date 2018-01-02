@@ -20,7 +20,6 @@ case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[
 
   def logFactor(fi: Int): Factor = if(ring == LogD) factors(fi) else factors(fi).map(math.log)
 
-  def degreeOfVariable(v: Int): Int = degrees(v)
   //noinspection SameElementsToEquals
   def uaiString: String = {
     require(variables sameElements variables.indices)
@@ -57,7 +56,7 @@ case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[
 
   /** @return Exact log Z obtained by junction tree algorithm. */
   lazy val logZ: Double = VariableElimination(this).logZ
-  
+
   /** merges factors into other factors where possible */
   def simplify: Problem = {
     val sset: SSet[Int] = new SSet(factors.map(_.variables.toSet)(collection.breakOut))
@@ -78,12 +77,12 @@ case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[
 
   def fixUncoveredVariables: Problem = {
     val newFactors = for{
-      v <- variables if degrees(v) == 0
+      v <- variables if factorDegreeOfVariable(v) == 0
     } yield Factor.deterministicMaxEntropy(Array(v),Map(),domains, ring)
     this.copy(factors = factors ++ newFactors)
   }
 
-  def hasUncoveredVariable: Boolean = degrees.contains(0)
+  def hasUncoveredVariable: Boolean = factorDegreeOfVariable.contains(0)
 
   /** Compute the mutual information between a pair of variables induced only by direct interactions between them.
     * This is not the exact mutual information induced by the joint distribution.
