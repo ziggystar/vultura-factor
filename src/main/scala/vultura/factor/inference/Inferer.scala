@@ -36,16 +36,29 @@ trait MarginalI extends Inferer {
   /** The KL divergence for a specific variable marginal, when taking this [[MarginalI]] as the exact distribution. */
   def variableKL(estimate: MarginalI, v: Problem#VI): Double = {
     require(this.problem.domains(v) == estimate.problem.domains(v), "variable domains do not match")
+    require(this.ring == estimate.ring)
     val pr = this.varBelief(v).values
     val pt = estimate.varBelief(v).values
-    NormalD.expectation(pr,(pr zip pt).map(xx => xx._1 / xx._2).map(math.log))
+    val probs = this.ring.decode(pr)
+    var result = 0d
+    var i = 0
+    while(i < probs.length){
+      i += 1
+      if(probs(i) > 0d) {
+        if (this.ring == NormalD)
+          result += probs(i) * math.log(pr(i) / )
+        else if (this.ring == LogD)
+      }
+    }
+    result
+    NormalD.expectation(pr,(pr zip pt).map(xx => xx._1 / xx._2).map(math.log)).ensuring(_ >= 0d)
   }
 
   /** The sum of the KL divergence over all marginals, when taking this [[MarginalI]] as the exact distribution. */
-  def totalKLDiv(estimate: MarginalI): Double = this.problem.variables.map(variableKL(estimate,_)).sum
+  def totalKLDiv(estimate: MarginalI): Double = this.problem.variables.foldLeft(0d)(_ + variableKL(estimate,_))
 
   /** The total KL divergence divided by the number of nats required to represent one joint state. */
-  def normalizedKLDiv(estimate: MarginalI): Double = totalKLDiv(estimate) / problem.domains.map(math.log(_)).sum
+  def normalizedKLDiv(estimate: MarginalI): Double = totalKLDiv(estimate) / problem.domains.foldLeft(0d)(_ + math.log(_))
 }
 
 /** Trait that is implemented by inference algorithms that can compute the partition function. */
