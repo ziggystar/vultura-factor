@@ -71,6 +71,9 @@ libraryDependencies += "org.apache.commons" % "commons-math3" % "3.5"
 
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.6"
 
+// https://mvnrepository.com/artifact/com.lihaoyi/fastparse
+libraryDependencies += "com.lihaoyi" %% "fastparse" % "1.0.0"
+
 libraryDependencies +=  "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0"
 
 // --------------- Publishing ----------------------------------

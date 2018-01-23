@@ -2,10 +2,10 @@ package vultura.factor
 
 import java.io._
 
+import fastparse.WhitespaceApi
+import fastparse.core.Parsed.Success
 import vultura.factor.inference.VariableElimination
 import vultura.util.SSet
-
-import scala.util.Either.RightProjection
 
 /** A problem is basically a collection of factors, together with a domain and a ring.
   * It provides several inference methods based on the exact junction tree algorithm. */
@@ -22,7 +22,6 @@ case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[
 
   //noinspection SameElementsToEquals
   def uaiString: String = {
-    require(variables sameElements variables.indices)
     def writeDouble(d: Double): String = d match {
       case 0d => "0"
       case x => x.toString
@@ -106,6 +105,49 @@ case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[
 }
 
 object Problem{
+  /** @return Parser for a problem, and a boolean that indicates whether the file contained a bayesian network. */
+  def uaiParser: fastparse.all.P[(Problem,Boolean)] = {
+    val White = WhitespaceApi.Wrapper{
+      import fastparse.all._
+      NoTrace(P(CharIn(" \t\n").rep))
+    }
+    import White._
+
+    import fastparse.noApi._
+
+    def uintP: P[Int] = P(CharIn("1234567890").repX(min = 1).!).map(_.toInt).opaque("uint")
+
+    def doubleP: P[Double] = {
+      val digits        = P(CharIn("1234567890").repX(min = 1))
+      val exponent      = P(CharIn("eE") ~~ CharIn("+-").? ~~ digits )
+      val fractional    = P("." ~~ digits )
+      val integral      = P("0" | CharIn('1' to '9') ~~ digits.? )
+
+      P( CharIn("+-").? ~~ integral ~~ fractional.? ~~ exponent.? ).!.map(_.toDouble).opaque("float")
+    }
+
+    {
+      //this is required because fastparse's `flatMap` does not consume whitespace
+      //I still don't know why `~ Pass` doesn't work, but `~~ white` does
+      val white = P(CharIn(" \t\n").repX) //be sure to not use .rep, which would consume whitespace
+      for {
+        isBayes <- P("BAYES").map(_ => true) | P("MARKOV").map(_ => false) ~~ white
+        numVars <- uintP ~~ white
+        domains <- uintP.rep(exactly = numVars).map(_.toArray) ~~ white
+        numFactors <- uintP ~~ white
+        factorScopes <- (for{
+          size <- uintP ~~ white
+          vars <- uintP.rep(exactly = size).map(_.reverse)
+        } yield vars).rep(exactly = numFactors) ~~ white
+        factorValues <- (for{
+          size <- uintP ~~ white
+          vals <- doubleP.rep(exactly = size)
+        } yield vals).rep(exactly = numFactors) ~~ white
+        factors = factorScopes.zip(factorValues).map{case (sc,vals) => Factor(sc.toArray, vals.toArray)}
+      } yield (Problem(factors.toIndexedSeq, domains, NormalD), isBayes)
+    }
+  }
+
   def fromUaiString(s: String): Problem = parseUAIProblem(new StringReader(s)).right.get
   def loadUaiFile(s: String): Either[String,Problem] = loadUaiFile(new File(s))
   def loadUaiFile(f: File): Either[String,Problem] = {
@@ -120,38 +162,19 @@ object Problem{
   }
 
   def parseUAIProblem(in: InputStream): Either[String, Problem] = parseUAIProblem(new InputStreamReader(in))
+  def parseUAIProblem(in: Reader): Either[String,Problem] = parseBayesOrMarkov(in).right.map(_._1)
+
   /** @return first: the parsed problem; second: true if the input was a bayeschen network ("BAYES"). */
   def parseBayesOrMarkov(in: Reader): Either[String,(Problem,Boolean)] = {
-    val tokenStream = new BufferedReader(in)
-
-    val lines = Iterator.continually(tokenStream.readLine)
+    val r = new BufferedReader(in)
+    val lines = Iterator
+      .continually(r.readLine)
       .takeWhile(_ != null)
+      .map(_ + "\n")
 
-    val tokens: Iterator[String] = lines
-      .filterNot(_.startsWith("#")) //filter out comment lines
-      .flatMap(_.split(Array(' ','\t','\r')))
-      .filterNot(_.isEmpty)
-
-    //first token must be 'MARKOV'
-    (tokens.next().toUpperCase match {
-        case "BAYES" => Right(true)
-        case "MARKOV" => Right(false)
-        case l => Left(s"problem file must start with 'BAYES' or 'MARKOV' but found '$l'")
-    }).right.map { isBayes =>
-      val numVars = tokens.next().toInt
-      val domains: Array[Int] = Array.fill(numVars)(tokens.next().toInt)
-      val numFactors = tokens.next().toInt
-      val factorVars = Seq.fill(numFactors) {
-        val nv = tokens.next().toInt
-        Array.fill(nv)(tokens.next().toInt)
-      }
-      val factorValues = Seq.fill(numFactors) {
-        val nv = tokens.next().toInt
-        Array.fill(nv)(tokens.next().toDouble)
-      }
-      val factors = (factorVars, factorValues).zipped.map { case (vars, values) => Factor(vars.reverse, values)}
-      (Problem(factors.toIndexedSeq, domains, NormalD), isBayes)
+    uaiParser.parseIterator(lines) match {
+      case Success(v,_) => Right(v)
+      case failure => Left(failure.toString)
     }
   }
-  def parseUAIProblem(in: Reader): Either[String,Problem] = parseBayesOrMarkov(in).right.map(_._1)
 }
