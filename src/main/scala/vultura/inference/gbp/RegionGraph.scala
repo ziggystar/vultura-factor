@@ -235,7 +235,7 @@ object TwoLayerOC {
 
   def junctionTreeMinDegree(problemStructure: ProblemStructure): TwoLayerOC = {
     import vultura.util.TreeWidth._
-    val variableOrder: Seq[Int] = treeDecomposition(problemStructure.scopeOfFactor, problemStructure.domains)
+    val variableOrder: Seq[Int] = treeDecomposition(problemStructure.scopeOfFactor.filterNot(_.isEmpty), problemStructure.domains)
       .getOrElse(sys.error("could not find a small tree decomposition"))
 
     junctionTree(problemStructure,variableOrder)
