@@ -7,6 +7,7 @@ class NormalDTest extends Specification {
     "with zeros" ! (NormalD.logExpectation(Array(0d, 1), Array(0d, 1)) === 0d)
     "some test" ! (NormalD.logExpectation(Array(0.2,0.8), Array(1,2)) === 0.2 * math.log(1) + 0.8 * math.log(2))
     "of constant zero should yield -Inf" ! (NormalD.logExpectation(Array(0,0),Array(0,0)) === Double.NegativeInfinity)
+    "of one/zero should be -Inf" ! (NormalD.logExpectation(Array(1d),Array(0d)) === Double.NegativeInfinity)
   }
   "expectation" should {
     "test 1" ! (NormalD.expectation(Array(0d,1d),Array(0.3,0.7)) === 0.7)
