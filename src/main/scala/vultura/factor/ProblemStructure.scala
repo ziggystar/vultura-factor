@@ -85,7 +85,7 @@ trait ProblemStructure {
   def dotFactorGraph: DotGraph[Either[VI,FI]] =
     DotGraph(for{f <- factorIndices; v <- scopeOfFactor(f)} yield (Left(v),Right(f)), variables.map(Left(_)))
   def dotMarkovNetwork: DotGraph[VI] =
-    DotGraph(for{fs <- scopeOfFactor; v1 <- fs; v2 <- fs if v1 != v2} yield (v1,v2),variables)
+    DotGraph((for{fs <- scopeOfFactor; v1 <- fs; v2 <- fs if v1 < v2} yield (v1,v2)).toSet,variables)
 
   def markovNetwork: BiSetGraph[VI] =
     undirected.fromTuples(neighboursOfVariableEx.zipWithIndex.flatMap{case (ns,i) => ns.map(_ -> i)}, extraNodes = variableSet)
