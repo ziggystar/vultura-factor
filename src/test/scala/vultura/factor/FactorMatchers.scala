@@ -41,8 +41,8 @@ trait FactorMatchers {
     }
   }
 
-  def haveExactMarginals(p: Problem, tol: Double = 1e-9) = haveSameMarginals(new JunctionTree(p),tol)
-  def haveExactZ(p: Problem, tol: Double = 1e-9) = haveSameLogZ(new JunctionTree(p),tol)
+  def haveExactMarginals(p: Problem, tol: Double = 1e-9): Matcher[MarginalI] = haveSameMarginals(new JunctionTree(p),tol)
+  def haveExactZ(p: Problem, tol: Double = 1e-9): Matcher[ParFunI] = haveSameLogZ(new JunctionTree(p),tol)
 
   def haveSameMarginals(reference: MarginalI, tol: Double, logDomain: Boolean = true): Matcher[MarginalI] = new Matcher[MarginalI]{
     def apply[S <: MarginalI](t: Expectable[S]): MatchResult[S] = {

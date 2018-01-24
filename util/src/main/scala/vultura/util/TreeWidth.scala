@@ -307,13 +307,14 @@ object TreeWidth {
       case _ => None
     })
 
+  /** Build a tree-decomposition, and track the identity of the original hyper edges of type `A`. */
   def junctionTreesFromOrder[A](cliques: Seq[(Set[Int],A)], order: Seq[Int]): Seq[Tree[(Set[Int],Seq[A])]] = {
     //the first set contains variables to propagate upwards, the second set contains those in the local clique
     //the first set does not contain the eliminated vertex, the second one does; that's the reason for the two sets
     def jtRec(leafs: IndexedSeq[Tree[(Array[Int], Array[Int], List[A])]], order: List[Int]): IndexedSeq[Tree[(Set[Int], Seq[A])]] = order match {
       case Nil =>
         require(leafs.forall(_.rootLabel._1.isEmpty), "given order did not eliminate all variables")
-        leafs.map(tree => tree.map{case (_,c,a) => (c.toSet,a.toSeq:  Seq[A])})
+        leafs.map(tree => tree.map{case (_,c,a) => (c.toSet,a: Seq[A])})
 
       case next :: rest =>
         val (elim, remain) = leafs.partition(_.rootLabel._1.contains(next))
