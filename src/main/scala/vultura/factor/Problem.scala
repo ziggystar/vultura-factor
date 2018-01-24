@@ -15,26 +15,8 @@ case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[
 
   def factorsOfVariable(v: Int): Array[Factor] = factorIdxOfVariable(v).map(factors)
 
-  def filter(p: Factor => Boolean): Problem = this.copy(factors=factors.filter(p))
-  def map(p: Factor => Factor): Problem = this.copy(factors=factors.map(p))
 
   def logFactor(fi: Int): Factor = if(ring == LogD) factors(fi) else factors(fi).map(math.log)
-
-  //noinspection SameElementsToEquals
-  def uaiString: String = {
-    def writeDouble(d: Double): String = d match {
-      case 0d => "0"
-      case x => x.toString
-    }
-    Seq[Any](
-      "MARKOV",
-      variables.size,
-      domains.mkString(" "),
-      factors.size,
-      factors.map(f => f.variables.length + " " + f.variables.reverse.mkString(" ")).mkString("\n"),
-      factors.map(f => f.values.length + " " + ring.decode(f.values).map(writeDouble).mkString(" ")).mkString("\n")
-    ).mkString("\n")
-  }
 
   override def hashCode: Int = {
     import scala.util.hashing.MurmurHash3._
@@ -49,12 +31,9 @@ case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[
 
   lazy val hasDuplicateFactors: Boolean = factors.size != factors.toSet.size
 
-  def toRing(newRing: Ring[Double]): Problem = Problem(factors.map(f => newRing.encode(ring.decode(f))),domains,newRing)
+  def hasUncoveredVariable: Boolean = factorDegreeOfVariable.contains(0)
 
-  def toBriefString: String = f"(Problem: ${variables.size} variables, ${factors.size} factors, ring: $ring)"
-
-  /** @return Exact log Z obtained by junction tree algorithm. */
-  lazy val logZ: Double = VariableElimination(this).logZ
+  //----------------- operations
 
   /** merges factors into other factors where possible */
   def simplify: Problem = {
@@ -65,13 +44,36 @@ case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[
     copy(factors = aggregatedFactors)
   }
 
+  /** Filter factors. */
+  def filter(p: Factor => Boolean): Problem = this.copy(factors=factors.filter(p))
+
+  /** Map factors. */
+  def map(p: Factor => Factor): Problem = this.copy(factors=factors.map(p))
+
   /** Set some variables to values and simplify the problem.
     * @param condition Maps variables to the values they shall assume.
     * @return The resulting problem. It will contain a constant representing the product over the now assigned factors.
     */
   def condition(condition: Map[Var,Val]): Problem = {
     val factorsConditioned: Problem = map(_.condition(condition,domains))
-    factorsConditioned.copy(factors = factorsConditioned.factors ++ condition.map(kv => Factor.deterministicMaxEntropy(Array(kv._1),Map(kv),domains,ring)))
+    val conditioningFactor = condition.map(kv => Factor.deterministicMaxEntropy(Array(kv._1), Map(kv), domains, ring))
+    factorsConditioned.copy(
+      factors = factorsConditioned.factors ++ conditioningFactor)
+  }
+
+  /** Set some variables to values, and remove these variables from the problem.
+    * Note that this will change the set of variables, and thus the `domains` array.
+    */
+  def hardCondition(condition: Map[Var,Val]): Problem = {
+    //this array holds ((domain_size,old_index),new_index)
+    val newDomains: Array[((Int, VI), VI)] = domains.zipWithIndex.filterNot(dv => condition.keySet(dv._2)).zipWithIndex
+    val variableRename: Map[VI,VI] = newDomains.map{case ((_,oldVI),newVI) => oldVI -> newVI}(collection.breakOut)
+    this.copy(
+      domains = newDomains.map(_._1._1),
+      factors = this.factors
+        .map(_.condition(condition,domains)) //removes conditioned variables from the scope
+        .map(f => f.copy(variables = f.variables.map(variableRename))) //renames the remaining variables
+    )
   }
 
   /** Adds singleton uniform factors to any variable that has no incident factor. */
@@ -82,7 +84,13 @@ case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[
     this.copy(factors = factors ++ newFactors)
   }
 
-  def hasUncoveredVariable: Boolean = factorDegreeOfVariable.contains(0)
+  /** Change the encoding of the factor values. */
+  def toRing(newRing: Ring[Double]): Problem = Problem(factors.map(f => newRing.encode(ring.decode(f))),domains,newRing)
+
+  //------------------ inference
+
+  /** @return Exact log Z obtained by junction tree algorithm. */
+  lazy val logZ: Double = VariableElimination(this).logZ
 
   /** Compute the mutual information between a pair of variables induced only by direct interactions between them.
     * This is not the exact mutual information induced by the joint distribution.
@@ -102,6 +110,25 @@ case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[
 
     if(coveringFactors.isEmpty) 0d
     else factorMI(Factor.multiplyRetain(ring)(domains)(coveringFactors.map(factors), Array(v1,v2)).normalize(ring))
+  }
+
+  //------------------- output
+
+  /** Generate a low precision short string description. */
+  def toBriefString: String = f"(Problem: ${variables.size} variables, ${factors.size} factors, ring: $ring)"
+
+  /** Generate a problem decsription in uai format. */
+  def uaiString: String = {
+    def writeDouble(d: Double): String = if(d == 0d) "0" else d.toString
+
+    Seq[Any](
+      "MARKOV",
+      variables.size,
+      domains.mkString(" "),
+      factors.size,
+      factors.map(f => f.variables.length + " " + f.variables.reverse.mkString(" ")).mkString("\n"),
+      factors.map(f => f.values.length + " " + ring.decode(f.values).map(writeDouble).mkString(" ")).mkString("\n")
+    ).mkString("\n")
   }
 
   /** Returns a string representation that can be imported into R. */
