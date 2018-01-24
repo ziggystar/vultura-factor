@@ -74,6 +74,7 @@ case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[
     factorsConditioned.copy(factors = factorsConditioned.factors ++ condition.map(kv => Factor.deterministicMaxEntropy(Array(kv._1),Map(kv),domains,ring)))
   }
 
+  /** Adds singleton uniform factors to any variable that has no incident factor. */
   def fixUncoveredVariables: Problem = {
     val newFactors = for{
       v <- variables if factorDegreeOfVariable(v) == 0
@@ -101,6 +102,17 @@ case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[
 
     if(coveringFactors.isEmpty) 0d
     else factorMI(Factor.multiplyRetain(ring)(domains)(coveringFactors.map(factors), Array(v1,v2)).normalize(ring))
+  }
+
+  /** Returns a string representation that can be imported into R. */
+  def toRString: String = {
+    def rFactor(f: Factor): String = {
+      val values = f.values.mkString(",")
+      val dims = f.variables.map(domains).mkString(",")
+      val dimnames = f.variables.map(v => s"'$v'=NULL").mkString(",")
+      s"array(c($values),dim=c($dims),dimnames=list($dimnames))"
+    }
+    s"list(${factors.map(rFactor).mkString(",")})"
   }
 }
 
