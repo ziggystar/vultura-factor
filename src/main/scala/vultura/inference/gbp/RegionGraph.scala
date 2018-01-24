@@ -255,9 +255,11 @@ object TwoLayerOC {
     //2. merge all factors of each clique into one
     val compactedTrees: Seq[Tree[(Set[VI], Seq[FI])]] = compactJTrees(rawJunctionTrees)
 
-    val largeRegions: Map[Set[VI], Set[FI]] = compactedTrees.flatMap(_.flatten).map{
-      case (vs,fs) => (vs,fs.toSet)
-    }(collection.breakOut)
+    val largeRegions: Seq[(Set[VI], Set[FI])] = compactedTrees.flatMap(_.flatten).map{ case (vs,fs) => (vs,fs.toSet) }
+    val largeRegionsMap: Map[Set[VI], Set[FI]] = {
+      val (voids: Seq[(Set[VI], Set[FI])], rest) = largeRegions.partition(_._1 == Set())
+       rest.toMap + (Set[Int]() -> voids.flatMap(_._2).toSet)
+    }
 
     def slidingTree[A](t: Tree[A]): Stream[(A,A)] = t match {
       case Tree.Node(a, leafs)    => leafs.map(l => (a,l.rootLabel)) ++ leafs.flatMap(slidingTree)
@@ -274,8 +276,8 @@ object TwoLayerOC {
     new TwoLayerOC(
       problemStructure = problemStructure,
       smallRegionsScopes = smallRegionsWithParents.keySet,
-      largeRegionsScopes = largeRegions.keySet,
-      largeRegions.apply,
+      largeRegionsScopes = largeRegionsMap.keySet,
+      largeRegionsMap.apply,
       { (l: Set[VI], s: Set[VI]) => if (smallRegionsWithParents(s).contains(l)) s else Set() }
     )
   }
