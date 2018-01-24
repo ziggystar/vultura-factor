@@ -11,7 +11,7 @@ package object generation {
     */
   def pottsGrid(dimensions: Seq[(Int,Boolean)],
                 domainSize: Int = 2,
-                pairwisePotts: Generator[Double]): Generator[LabeledProblem[IndexedSeq[Int]]] =
+                pairwisePotts: Generator[Double] = Generator.uniform(0,1)): Generator[LabeledProblem[IndexedSeq[Int]]] =
     addPottsFactors(lattice(dimensions:_*), domainSize, _ => pairwisePotts)
 
   /** With constant domain size. */
