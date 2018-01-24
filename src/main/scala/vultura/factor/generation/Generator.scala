@@ -18,7 +18,8 @@ trait Generator[+A] { outer =>
     } while (!p(res))
     res
   }
-  def filter(p: A => Boolean): Generator[A] = withFilter(p)
+
+  def replicate(n: Int): Generator[IndexedSeq[A]] = Generator(r => IndexedSeq.fill(n)(this.generate(r)))
 }
 
 object Generator {
