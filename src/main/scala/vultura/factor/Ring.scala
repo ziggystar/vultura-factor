@@ -32,6 +32,9 @@ trait Ring[@specialized(Double) T]{
   def log(x: T): Double = sys.error("not supported")
   def pow(x: T, e: Double): T = sys.error("not supported")
   def div(n: T, d: T): T = sys.error("not supported")
+  def divA(n: Array[T], d: Array[T]): Array[T] = sys.error("not supported")
+  /** Compute the KL-Divergence between arrays, representing distrubtions in the given encoding. */
+  def klDivergence(p: Array[T], q: Array[T])(implicit eq: T =:= Double): Double = logExpectation(p,divA(p,q))
 }
 
 object Ring{
@@ -121,7 +124,7 @@ object NormalD extends Ring[Double]{
   @tailrec
   final def expectationR(p: Array[Double], f: Array[Double], accZ: Double = 0d, i: Int = 0, acc: Double = 0): Double =
     if(i < p.length) expectationR(p,f,accZ + p(i),i + 1, acc + Ring.safeProd(p(i), f(i))) else
-      if(accZ == 0) 0d else acc/accZ
+      if(accZ == 0) Double.NegativeInfinity else acc/accZ
 
   /** @return In normal representation (not log). */
   override def expectation(p: Array[Double], f: Array[Double]): Double = expectationR(p,f)
@@ -134,6 +137,7 @@ object NormalD extends Ring[Double]{
   override def pow(x: Double, e: Double): Double = math.pow(x,e)
 
   override def div(n: Double, d: Double): Double = n / d
+  override def divA(n: Array[Double], d: Array[Double]): Array[Double] = n.zip(d).map((div _).tupled)
 
   override def toString: String = "normal domain"
 }
@@ -243,5 +247,6 @@ object LogD extends Ring[Double] with LazyLogging {
   override def log(x: Double): Double = x
   override def pow(x: Double, e: Double): Double = x * e
   override def div(n: Double, d: Double): Double = n - d
+  override def divA(n: Array[Double], d: Array[Double]): Array[Double] = n.zip(d).map((div _).tupled)
   override def toString: String = "log domain"
 }
