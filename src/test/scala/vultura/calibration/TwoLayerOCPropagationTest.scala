@@ -3,8 +3,9 @@ package vultura.calibration
 import org.specs2.mutable.Specification
 import org.specs2.specification.core.Fragment
 import vultura.factor.inference.calibration.LBP
-import vultura.factor.{Factor, FactorMatchers, NormalD, Problem}
+import vultura.factor._
 import vultura.factor.generation._
+import vultura.factor.inference.gbp.RegionGraph
 import vultura.factor.inference.{ConvergenceStats, RegionBeliefs, VariationalResult}
 import vultura.inference.gbp.{RgDiagnosis, TwoLayerOC}
 
@@ -69,6 +70,13 @@ class TwoLayerOCPropagationTest extends Specification with FactorMatchers {
     "when there are redundant singleton factors" >> {
       aggregatedVsAsis(magnetized1, "lattice 4x4 with magnetization")
     }
+  }
+
+  "junction tree construction must assign factors with empty scope to somewhere" >> {
+    val p = generation.pottsGrid(Seq(2 -> false,2 -> false)).withSeed(0).problem
+    val withFactor = p.copy(factors = p.factors :+ Factor(Array(), Array(5d)))
+    val jt = TwoLayerOC.junctionTreeMinDegree(withFactor)
+    jt.regions.flatMap(jt.factorsOf) must containTheSameElementsAs(withFactor.factorIndices)
   }
 
 

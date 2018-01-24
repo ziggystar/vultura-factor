@@ -85,20 +85,17 @@ class TwoLayerOCPropagation(val rg: TwoLayerOC, val ring: Ring[Double])
     new RegionBeliefs[TwoLayerOC#Region] with VariationalResult with VarBeliefFromRegionBelief[TwoLayerOC#Region] {
       override def ring: Ring[Double] = outer.ring
       override def problem: ProblemStructure = rg.problemStructure
-      override def regions: Set[TwoLayerOC#Region] = rg.regions.map(identity) //set invariance...
+      override def regions: Set[TwoLayerOC#Region] = rg.regions.map(identity) //set invariance…
       override def scopeOfRegion(region: TwoLayerOC#Region): Set[Int] = rg.variablesOf(region.asInstanceOf[Region])
 
-      override def averageEnergy: Double = rg.largeRegions.foldLeft(0d){case (ae,large) =>
-        val toLog = if(ring == LogD) identity[Array[Double]]_ else (_:Array[Double]).map(math.log)
-        val logFactor = toLog(valuation(ParamNode(large)))
-        val rBel = regionBelief(large)
-        val regionEnergy = NormalD.expectation(rBel.values,logFactor)
-        ae + rg.weightOf(large) * regionEnergy
+      override def averageEnergy: Double = rg.largeRegions.foldLeft(0d){case (acc,large) =>
+        val regionEnergy = NormalD.logExpectation(regionBelief(large).values,ring.decode(valuation(ParamNode(large))))
+        acc + rg.weightOf(large) * regionEnergy
       }
 
-      override def entropy: Double = rg.regions.foldLeft(0d){case (h,r) =>
-        val hr = NormalD.entropy(regionBelief(r).values)
-        h + rg.weightOf(r) * hr
+      override def entropy: Double = rg.regions.foldLeft(0d){case (acc,r) =>
+        val regionEntropy = NormalD.entropy(regionBelief(r).values)
+        acc + rg.weightOf(r) * regionEntropy
       }
 
       /** In normal encoding. */
@@ -109,7 +106,8 @@ class TwoLayerOCPropagation(val rg: TwoLayerOC, val ring: Ring[Double])
           case _        => sys.error("supplying a region of the wrong region graph")
         }
         Factor.multiply(ring)(ps.domains)(inMsgs.map(msg => Factor(msg.variables,valuation(msg)))(collection.breakOut))
-          .normalize(ring).decodeWith(ring)
+          .normalize(ring)
+          .decodeWith(ring)
       }
     }
 }
