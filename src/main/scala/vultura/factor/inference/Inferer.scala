@@ -1,5 +1,6 @@
 package vultura.factor.inference
 
+import com.typesafe.scalalogging.LazyLogging
 import gnu.trove.TCollections
 import gnu.trove.map.hash.TIntObjectHashMap
 import vultura.factor._
@@ -11,7 +12,7 @@ trait Inferer {
 }
 
 /** Trait that is implemented by inference algorithms that can compute variable marginals. */
-trait MarginalI extends Inferer {
+trait MarginalI extends Inferer with LazyLogging {
   @deprecated("use varBelief", "24.0.0")
   def decodedVariableBelief(vi: Int): Factor = varBelief(vi)
 
@@ -36,22 +37,13 @@ trait MarginalI extends Inferer {
   /** The KL divergence for a specific variable marginal, when taking this [[MarginalI]] as the exact distribution. */
   def variableKL(estimate: MarginalI, v: Problem#VI): Double = {
     require(this.problem.domains(v) == estimate.problem.domains(v), "variable domains do not match")
-    require(this.ring == estimate.ring)
     val pr = this.varBelief(v).values
     val pt = estimate.varBelief(v).values
-    val probs = this.ring.decode(pr)
-    var result = 0d
-    var i = 0
-    while(i < probs.length){
-      i += 1
-      if(probs(i) > 0d) {
-        if (this.ring == NormalD)
-          result += probs(i) * math.log(pr(i) / )
-        else if (this.ring == LogD)
-      }
-    }
-    result
-    NormalD.expectation(pr,(pr zip pt).map(xx => xx._1 / xx._2).map(math.log)).ensuring(_ >= 0d)
+    //The non-negativity of the KL-divergence is ensured by Gibbs inequality
+    //The KL-divergence is a sum of positive and negative values; so numerical inaccuracies can result in a negative value
+    val result = NormalD.klDivergence(pr,pt)
+    if(result < -1e-14) logger.warn(s"a KL-divergence is quite negative: $result")
+    math.max(0,result)
   }
 
   /** The sum of the KL divergence over all marginals, when taking this [[MarginalI]] as the exact distribution. */
