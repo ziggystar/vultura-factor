@@ -11,11 +11,15 @@ trait Generator[+A] { outer =>
   def withSeed(s: Long = 0L): A = generate(new Random(s))
   def map[B](f: A => B): Generator[B] = (r: Random) => f(outer.generate(r))
   def flatMap[B](f: A => Generator[B]): Generator[B] = (r: Random) => f(outer.generate(r)).generate(r)
-  def withFilter(p: A => Boolean): Generator[A] = (r: Random) => {
+  def withFilter(p: A => Boolean, maxTries: Int = 1000): Generator[A] = (r: Random) => {
     var res: A = null.asInstanceOf[A]
+    var tries = 0
     do {
       res = outer.generate(r)
-    } while (!p(res))
+      tries += 1
+    } while (!p(res) && tries < maxTries)
+    if(tries >= maxTries)
+      sys.error(s"could not generate sample in filtered Generator; rejected maximal number of $maxTries samples")
     res
   }
 
@@ -24,7 +28,8 @@ trait Generator[+A] { outer =>
 
 object Generator {
   def apply[A](f: Random => A): Generator[A] = (r: Random) => f(r)
-  def draw[A](as: Seq[A]): Generator[A] = (r: Random) => as(r.nextInt(as.size))
+  def draw[A](as: Seq[A]): Generator[A] = (r: Random) =>
+    as(r.nextInt(as.size.ensuring(_ > 0, "cannot sample from empty collection")))
   def seq[X](xs: Seq[Generator[X]]): Generator[Seq[X]] = Generator(r => xs.map(_.generate(r)))
   def gaussian(mean: Double = 0d, sd: Double = 1d): Generator[Double] = Generator(_.nextGaussian() * sd + mean)
   def gamma(shape: Double, scale: Double): Generator[Double] = new Generator[Double] {
