@@ -99,12 +99,12 @@ object NormalD extends Ring[Double]{
 
   override def normalizeInplace(a: Array[Double]) {
     val z = sumA(a)
-    if(z == zero)
-      return
-    var i = 0
-    while(i < a.length){
-      a(i) = a(i) / z
-      i += 1
+    if(z != zero) {
+      var i = 0
+      while (i < a.length) {
+        a(i) = a(i) / z
+        i += 1
+      }
     }
   }
 
@@ -222,8 +222,6 @@ object LogD extends Ring[Double] with LazyLogging {
         a(i) -= z
         i += 1
       }
-    } else {
-      logger.warn("normalizing null quantity", a)
     }
   }
 
