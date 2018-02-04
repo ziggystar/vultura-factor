@@ -71,12 +71,14 @@ case class BeliefPropagation(ps: Problem) extends CalProblem
   override def buildResult(valuation: FactorNode => IR)
   : RegionBeliefs[Either[Problem#VI, Problem#FI]] with VariationalResult = {
 
-    def encodedVariableBelief(v: Int): Factor = {
+    lazy val encodedBeliefs: Map[Int,Factor] = ps.variables.map{v =>
       val incoming = ps.factorIdxOfVariable(v).map{ fi =>
         Factor(Array(v), valuation(F2V(fi,v)))
       }
-      Factor.multiply(ps.ring)(ps.domains)(incoming).normalize(ps.ring)
-    }
+      v -> Factor.multiply(ps.ring)(ps.domains)(incoming).normalize(ps.ring)
+    }(collection.breakOut)
+
+    def encodedVariableBelief(v: Int): Factor = encodedBeliefs(v)
 
     def encodedFactorBelief(fi: Int): Factor = {
       val incoming = ps.scopeOfFactor(fi).map{ vi =>
