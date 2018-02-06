@@ -20,14 +20,6 @@ class Calibrator[CP <: CalProblem](val cp: CP) extends StrictLogging {
   /** An node index. */
   type NI = Int
 
-  /** Holds information wrt a single edge within a computation graph.
-    * @param totalUpdates Number of total updates this edge has received.
-    * @param lastUpdate Iteration during which the last update was made.
-    * @param lastDiff Difference between last and second to last update.
-    * @param totalDiff Sum of differences over all updates of this edge.
-    */
-  case class EdgeInfo(totalUpdates: Long, lastUpdate: Long, lastDiff: Double, totalDiff: Double)
-
   protected val nodes: SIIndex[N] = new SIIndex(cp.nodes)
 
   protected var edgeLastUpdate: Array[Long] = null
@@ -109,9 +101,11 @@ class Calibrator[CP <: CalProblem](val cp: CP) extends StrictLogging {
 
           var newDiff = 0d
           var point = 0  //loop index going over the value array
+          val dampingCompl = 1d - damping
           while (point < newValue.length) {
-            newDiff = math.max(newDiff, math.abs(newValue(point) - oldValue(point)))
-            newValue(point) = (1 - damping) * newValue(point) + damping * oldValue(point)
+            if(damping > 0)
+              newValue(point) = dampingCompl * newValue(point) + damping * oldValue(point)
+            newDiff = math.max(newDiff, math.abs(if(newValue(point).isNegInfinity && oldValue(point).isNegInfinity) 0d else newValue(point) - oldValue(point)))
             point += 1
           }
           //only update the node if necessary
@@ -126,8 +120,9 @@ class Calibrator[CP <: CalProblem](val cp: CP) extends StrictLogging {
               edgeLastUpdate(ei)   = iteration
             }
           }
-          nodeConverged.fastSet(ei)
-          iterationDiff = math.max(iterationDiff, newDiff)
+          if(damping == 0 || newDiff < maxDiff)
+            nodeConverged.fastSet(ei)
+          iterationDiff = math.max(iterationDiff, newDiff.ensuring(!_.isNaN))
         }
         cni += 1
       }
@@ -137,7 +132,7 @@ class Calibrator[CP <: CalProblem](val cp: CP) extends StrictLogging {
 
     val convStats = ConvergenceStats(iteration,iterationDiff,iterationDiff < maxDiff)
     logger.debug(s"calibrated cyclic component of size ${component.length} with maxIt: $maxIterations, maxDiff: $maxDiff, damping: $damping: " + convStats)
-    convStats
+    convStats.ensuring(!_.maxDiff.isNaN)
   }
 
   /** Calibrate (part of) the problem.
@@ -226,6 +221,13 @@ class Calibrator[CP <: CalProblem](val cp: CP) extends StrictLogging {
     cp.asInstanceOf[cp.type with ResultBuilder[R]].buildResult(nodeState)
 }
 
+/** Holds information wrt a single edge within a computation graph.
+  * @param totalUpdates Number of total updates this edge has received.
+  * @param lastUpdate Iteration during which the last update was made.
+  * @param lastDiff Difference between last and second to last update.
+  * @param totalDiff Sum of differences over all updates of this edge.
+  */
+case class EdgeInfo(totalUpdates: Long, lastUpdate: Long, lastDiff: Double, totalDiff: Double)
 
 /**
   * Created by thomas on 20.04.16.
