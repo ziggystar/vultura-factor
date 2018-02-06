@@ -50,7 +50,7 @@ case class Problem(factors: IndexedSeq[Factor], domains: Array[Int], ring: Ring[
   /** Map factors. */
   def map(p: Factor => Factor): Problem = this.copy(factors=factors.map(p))
 
-  /** Set some variables to values and simplify the problem.
+  /** Set some variables to values.
     * @param condition Maps variables to the values they shall assume.
     * @return The resulting problem. It will contain a constant representing the product over the now assigned factors.
     */

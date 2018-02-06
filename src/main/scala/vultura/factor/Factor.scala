@@ -28,10 +28,8 @@ case class Factor(variables: Array[Int], values: Array[Double]) {
   }
 
   def condition(condition: Map[Int,Int], domains: Array[Int]): Factor = {
-    val (hitVars,remVars) = this.variables.partition(condition.contains)
-    if(hitVars.isEmpty)
-      this
-    else {
+    if(variables.exists(condition.keySet.contains)) { //only do something if this factor is hit
+      val (hitVars,remVars) = this.variables.partition(condition.contains)
       val remDomains = remVars.map(domains)
       val strides: Array[Int] = this.variables.map(domains).scanLeft(1)(_ * _)
 
@@ -60,6 +58,7 @@ case class Factor(variables: Array[Int], values: Array[Double]) {
 
       Factor(remVars, condVals)
     }
+    else this //do nothing
   }
 
   def normalize(ring: Ring[Double]) = Factor(variables,ring.normalize(values))
