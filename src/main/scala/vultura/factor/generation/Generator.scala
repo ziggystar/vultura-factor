@@ -10,7 +10,10 @@ trait Generator[+A] { outer =>
   def generate(r: Random): A
   def withSeed(s: Long = 0L): A = generate(new Random(s))
   def map[B](f: A => B): Generator[B] = (r: Random) => f(outer.generate(r))
+  def replace[B >: A](p: Double, that: Generator[B]): Generator[B] =
+    Generator.multinomialA(this -> (1-p), that -> p).flatten
   def flatMap[B](f: A => Generator[B]): Generator[B] = (r: Random) => f(outer.generate(r)).generate(r)
+  def flatten[B](implicit ev: A <:< Generator[B]): Generator[B] = this.flatMap(ev)
   def withFilter(p: A => Boolean, maxTries: Int = 1000): Generator[A] = (r: Random) => {
     var res: A = null.asInstanceOf[A]
     var tries = 0
@@ -30,6 +33,11 @@ object Generator {
   def apply[A](f: Random => A): Generator[A] = (r: Random) => f(r)
   def draw[A](as: Seq[A]): Generator[A] = (r: Random) =>
     as(r.nextInt(as.size.ensuring(_ > 0, "cannot sample from empty collection")))
+  def multinomial(ps: IndexedSeq[Double]): Generator[Int] = Generator.uniform(0,ps.sum).map{ r =>
+    ps.scanLeft(0d)(_ + _).indexWhere(_ >= r) - 1
+  }
+  def multinomialA[A](as: (A,Double)*): Generator[A] =
+    multinomial(as.map(_._2)(collection.breakOut)).map(idx => as(idx)._1)
   def seq[X](xs: Seq[Generator[X]]): Generator[Seq[X]] = Generator(r => xs.map(_.generate(r)))
   def gaussian(mean: Double = 0d, sd: Double = 1d): Generator[Double] = Generator(_.nextGaussian() * sd + mean)
   def gamma(shape: Double, scale: Double): Generator[Double] = new Generator[Double] {
