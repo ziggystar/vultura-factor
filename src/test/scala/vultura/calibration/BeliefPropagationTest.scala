@@ -19,10 +19,17 @@ class BeliefPropagationTest extends Specification with FactorMatchers {
     testLogVsNormal(pottsGrid(Seq(2 -> false, 2 -> false), 2, Generator.uniform(-1,1)).generate(new Random(0)).problem, "2x2 grid") ^
     testLogVsNormal(pottsGrid(Seq(4 -> false, 4 -> false), 4, Generator.uniform(-1,1)).generate(new Random(0)).problem, "4x4 grid, dom 4") ^
     testLogVsNormal(addZeros(pottsGrid(Seq(2 -> false, 2 -> false), 2, Generator.uniform(-1,1)).generate(new Random(0)).problem), "2x2 grid, with zeros") ^
-    testLogVsNormal(addZeros(pottsGrid(Seq(4 -> false, 4 -> false), 4, Generator.uniform(-1,1)).generate(new Random(0)).problem), "4x4 grid, dom 4, with zeros")
-    testLogVsNormal(addZeros(pottsGrid(Seq(4 -> false, 4 -> false), 2, Generator.uniform(-1,1)).generate(new Random(0)).problem, 0.7), "4x4 grid, dom 2, with more zeros")
-    testLogVsNormal(addZeros(pottsGrid(Seq(8 -> false, 4 -> false), 4, Generator.uniform(-1,1)).generate(new Random(0)).problem), "8x4 grid, dom 4, with more zeros")
+    testLogVsNormal(addZeros(pottsGrid(Seq(4 -> false, 4 -> false), 4, Generator.uniform(-1,1)).generate(new Random(0)).problem), "4x4 grid, dom 4, with zeros") ^
+    testLogVsNormal(addZeros(pottsGrid(Seq(4 -> false, 4 -> false), 2, Generator.uniform(-1,1)).generate(new Random(0)).problem, 0.7), "4x4 grid, dom 2, with more zeros") ^
+    testLogVsNormal(addZeros(pottsGrid(Seq(8 -> false, 4 -> false), 4, Generator.uniform(-1,1)).generate(new Random(0)).problem), "8x4 grid, dom 4, with more zeros") ^
+    testMaxDiffNaN(pottsGrid(Seq(4 -> false, 4 -> false), 2, Generator.uniform(-1,1).replace(0.3,Generator.only(Double.NegativeInfinity))).generate(new Random(0)).problem, "2x2 grid")
 
+
+  def testMaxDiffNaN(p: Problem, name: String) = s"maxdiff must not be NaN when using damping on $name" ! {
+    val pLog = p.toRing(LogD)
+    val (_,conv) = BeliefPropagation.infer(pLog, damping = 0.5)
+    conv.maxDiff.isNaN must beFalse
+  }
 
   def testLogVsNormal(p: Problem, name: String, verbose: Boolean = false) =
     s"log vs normal inference on $name" ! {
