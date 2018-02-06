@@ -105,6 +105,9 @@ trait MPEI { self: Inferer =>
   def mpe: Map[Var,Val]
 }
 
+/** This class does not retain a reference to the argument `mpi`, and can thus be used to simply copy the marginals from
+  * a result object to redfuce heap usage.
+  */
 class Result(mpi: MargParI) extends MargParI {
   override val problem: ProblemStructure = mpi.problem
   override def ring: Ring[Double] = mpi.ring
@@ -114,7 +117,7 @@ class Result(mpi: MargParI) extends MargParI {
 
   /** @return marginal distribution of variable in encoding specified by `ring`. */
   override def encodedVarBelief(vi: Var): Factor =  Factor(Array(vi),marginals(vi))
-  override val logZ = mpi.logZ
+  override val logZ: Double = mpi.logZ
   /** @return Partition function in encoding specified by `ring`. */
   override def Z: Double = math.exp(logZ)
 
@@ -138,12 +141,22 @@ object ConvergenceStats {
   def exact: ConvergenceStats = ConvergenceStats(1, 0d, isConverged = true)
 }
 
-trait VariationalResult extends MargParI {
+trait VariationalResult extends MargParI { outer =>
   def averageEnergy: Double
   def entropy: Double
 
   /** @return Natural logarithm of partition function. */
   final lazy val logZ: Double = averageEnergy + entropy
+
+  def copyValues: VariationalResult = new VariationalResult {
+    val mpiResult = outer.toResult
+    /** @return marginal distribution of variable in encoding specified by `ring`. */
+    override def encodedVarBelief(variable: Val): Factor = mpiResult.encodedVarBelief(variable)
+    override val averageEnergy: Double = outer.averageEnergy
+    override val entropy: Double = outer.entropy
+    override val ring: Ring[Double] = outer.ring
+    override val problem: ProblemStructure = outer.problem
+  }
 }
 
 trait RegionBeliefs[R] extends MarginalI {
