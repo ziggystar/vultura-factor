@@ -104,10 +104,13 @@ case class BeliefPropagation(ps: Problem) extends CalProblem
         case Right(fi) => if (problem.ring == LogD) problem.factors(fi) else problem.factors(fi).map(math.log)
       }
 
-      override def regionBelief(region: Either[Problem#VI, Problem#FI]): Factor = {
-        val encoded = region.fold(encodedVariableBelief,encodedFactorBelief)
-        encoded.copy(values = ps.ring.decode(encoded.values))
-      }
+      val regionBeliefs: Map[Either[Problem#VI, Problem#FI],Factor] =
+        regions.map{r =>
+          val encoded = r.fold(encodedVariableBelief,encodedFactorBelief)
+          r -> encoded.copy(values = ps.ring.decode(encoded.values))
+        }(collection.breakOut)
+
+      override def regionBelief(region: Either[Problem#VI, Problem#FI]): Factor = regionBeliefs(region)
 
       /** @return marginal distribution of variable in encoding specified by `ring`. */
       override def encodedVarBelief(variable: Int): Factor = {
