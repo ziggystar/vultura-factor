@@ -128,11 +128,10 @@ class Calibrator[CP <: CalProblem](val cp: CP) extends StrictLogging {
       }
 
       iteration += 1
-    } while (!(iterationDiff < maxDiff) && iteration < maxIterations)
+    } while ((iterationDiff > maxDiff) && iteration < maxIterations)
 
-    val convStats = ConvergenceStats(iteration,iterationDiff,iterationDiff < maxDiff)
-    logger.debug(s"calibrated cyclic component of size ${component.length} with maxIt: $maxIterations, maxDiff: $maxDiff, damping: $damping: " + convStats)
-    convStats.ensuring(!_.maxDiff.isNaN)
+    logger.debug(s"calibrated cyclic component of size ${component.length} with maxIt: $maxIterations, maxDiff: $maxDiff, damping: $damping")
+    ConvergenceStats(iteration,iterationDiff,iterationDiff < maxDiff)
   }
 
   /** Calibrate (part of) the problem.
