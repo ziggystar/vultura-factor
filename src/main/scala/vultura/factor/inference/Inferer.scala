@@ -42,7 +42,7 @@ trait MarginalI extends Inferer with LazyLogging {
     //The non-negativity of the KL-divergence is ensured by Gibbs inequality
     //The KL-divergence is a sum of positive and negative values; so numerical inaccuracies can result in a negative value
     val result = NormalD.klDivergence(pr,pt)
-    if(result < -1e-14) logger.warn(s"a KL-divergence is quite negative: $result")
+    if(result < -1e-13) logger.warn(s"a KL-divergence is quite negative: $result")
     math.max(0,result)
   }
 
@@ -110,7 +110,7 @@ trait MPEI { self: Inferer =>
   */
 class Result(mpi: MargParI) extends MargParI {
   override val problem: ProblemStructure = mpi.problem
-  override def ring: Ring[Double] = mpi.ring
+  override val ring: Ring[Double] = mpi.ring
 
   def lookupFromMPI(x: MargParI): Array[Array[Double]] = x.problem.variables.indices.map(v => x.encodedVarBelief(v).values)(collection.breakOut)
   val marginals: Array[Array[Double]] = lookupFromMPI(mpi)
