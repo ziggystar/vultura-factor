@@ -29,9 +29,8 @@ class CompareImplementations extends Specification with FactorMatchers {
       "all exact on center-conditioned 1D" ! allExactOn(centerConditionedString).pendingUntilFixed ^
       "all exact on multi-conditioned 1D small" ! allExactOn(multiConditionedStringSmall).pendingUntilFixed ^
       "all exact on multi-conditioned 1D" ! allExactOn(multiConditionedString).pendingUntilFixed ^
-      "exact lcbp agree on singly conditioned 3x3" ! exactAgreeOn(grid3x3_center) ^
       "bp lcbp agree on singly conditioned 3x3" ! bpAgreeOn(grid3x3_center) ^
-      "all agree on meta loop" ! agreeOn(LCBPAlg.all.filterNot(_ == OldLCBP),metaLoop1,1000000).pendingUntilFixed ^ //old implementation takes forever
+      "all agree on meta loop" ! agreeOn(LCBPAlg.all,metaLoop1,1000000).pendingUntilFixed ^ //old implementation takes forever
     p^
     "log ring" ^
       "all exact on singly split tree 0" ! allExactOn(asLog(treeSplit0)) ^
@@ -40,9 +39,8 @@ class CompareImplementations extends Specification with FactorMatchers {
       "all exact on center-conditioned 1D" ! allExactOn(asLog(centerConditionedString)).pendingUntilFixed ^
       "all exact on multi-conditioned 1D small" ! allExactOn(asLog(multiConditionedStringSmall)).pendingUntilFixed ^
       "all exact on multi-conditioned 1D" ! allExactOn(asLog(multiConditionedString)).pendingUntilFixed ^
-      "exact lcbp agree on singly conditioned 3x3" ! exactAgreeOn(asLog(grid3x3_center)) ^
       "bp lcbp agree on singly conditioned 3x3" ! bpAgreeOn(asLog(grid3x3_center)) ^
-      "all agree on meta loop" ! agreeOn(LCBPAlg.all.filterNot(_ == OldLCBP),asLog(metaLoop1),1000000).pendingUntilFixed //old implementation takes forever
+      "all agree on meta loop" ! agreeOn(LCBPAlg.all,asLog(metaLoop1),1000000).pendingUntilFixed //old implementation takes forever
 
   def allExactOn(scheme: FactoredScheme) = foreach(LCBPAlg.all.filterNot(_ == LCBP_G_Exact))(exactOn(_,scheme))
 
@@ -54,7 +52,6 @@ class CompareImplementations extends Specification with FactorMatchers {
       (r._1.as(_ => a.toString) must haveSameMarginals(exact,1e-9))
   }
 
-  def exactAgreeOn(s: FactoredScheme) = agreeOn(Seq(OldLCBP,LCBP_G_Exact),s)
   def bpAgreeOn(s: FactoredScheme) = agreeOn(Seq(LCBP_BP(false),LCBP_BP(true),LCBP_G_BP),s)
   def allAgreeOn(s: FactoredScheme, maxIter: Int = 100000, printTimes: Boolean = false) =
     agreeOn(LCBPAlg.all,s,maxIter, printTimes = printTimes)

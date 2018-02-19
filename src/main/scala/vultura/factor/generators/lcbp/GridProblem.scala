@@ -1,7 +1,7 @@
 package vultura.factor.generators.lcbp
 
 import vultura.factor.inference.BeliefPropagation
-import vultura.factor.inference.conditioned.lcbp.{FactoredScheme, DCon, GScheme, LScheme}
+import vultura.factor.inference.conditioned.lcbp.{FactoredScheme}
 import vultura.factor.{LogD, Problem}
 
 import scala.util.Random
@@ -31,14 +31,8 @@ case class GridProblem(width: Int, margin: Int, influence: Int, coupling: Double
     Seq((margin, margin), (opposite, margin), (margin, opposite), (opposite, opposite)).take(numConditioned)
   }
 
-  def variable(x: Int, y: Int) = x + width * y
-  def influences(cx: Int, cy: Int)(x: Int, y: Int) = math.abs(cx - x) <= influence && math.abs(cy - y) <= influence
-
-  val gscheme: GScheme = GScheme(problem.domains, (for{
-    x <- 0 until width
-    y <- 0 until width
-    cvars = conditionVariables.filter{case (cx,cy) => influences(cx,cy)(x,y)}
-  } yield variable(x,y) -> DCon(cvars.map{case (cx,cy) => LScheme.split(variable(cx,cy),problem.domains)}:_*)).toMap)
+  def variable(x: Int, y: Int): Int = x + width * y
+  def influences(cx: Int, cy: Int)(x: Int, y: Int): Boolean = math.abs(cx - x) <= influence && math.abs(cy - y) <= influence
 
   val fScheme: FactoredScheme = FactoredScheme(problem, (for{
     x <- 0 until width

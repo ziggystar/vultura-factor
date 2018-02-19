@@ -9,7 +9,9 @@ import vultura.util.{SSet, ArrayIndex}
 import scala.runtime.ObjectRef
 
 /** LCBP inference where inference on the meta problem can be any inference algorithm.
+  * Provides the same functionality as LCBPFactoredGeneral
  */
+@deprecated("use LCBPFactoredGeneral instead")
 case class LCBPGeneral(scheme: FactoredScheme,
                        inferer: Problem => JointMargI with ParFunI = p => new JunctionTree(p),
                        maxUpdates: Long = 100000,

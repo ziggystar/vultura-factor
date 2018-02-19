@@ -13,6 +13,7 @@ import scala.util.Random
  * these conditioning variables are fully split, each.
  * @author Thomas Geier <thomas.geier@uni-ulm.de>
  */
+@deprecated("use FactoredScheme instead")
 case class SimpleScheme(problem: Problem, splits: Set[(Set[Int],Int)]) {
   require(splits.map(_._2).subsetOf(problem.variableSet))
   require(splits.forall{case (scope, cv) => scope contains cv})
@@ -85,11 +86,4 @@ case class SimpleScheme(problem: Problem, splits: Set[(Set[Int],Int)]) {
         |}
     """.stripMargin
   }
-}
-
-object Test extends App {
-  import vultura.factor.generators._
-  val p = grid(3,3,2,expGauss(1),new Random(0))
-  val scheme = SimpleScheme(p,Set(Set(0,1,3,4,6,7) -> 3,Set(1,2,4,5,7,8) -> 5))
-  println(scheme.toDot)
 }

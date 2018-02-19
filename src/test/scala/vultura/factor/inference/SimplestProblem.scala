@@ -28,5 +28,5 @@ class SimplestProblem extends Specification {
 
   def inferJT(p: Problem): Double = new JunctionTree(p).logZ
 //  def inferBP(p: Problem): Double
-  def inferVE(p: Problem): Double = math.log(variableElimination(p))
+  def inferVE(p: Problem): Double = VariableElimination(p).logZ
 }

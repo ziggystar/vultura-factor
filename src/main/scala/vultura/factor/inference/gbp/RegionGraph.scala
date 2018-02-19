@@ -8,6 +8,7 @@ import vultura.util.graph.graphviz.DotGraph
 import scala.annotation.tailrec
 import scala.collection.immutable.HashMap
 
+@deprecated("thesis cleanup")
 trait RegionGraph {
   def problemStructure: ProblemStructure
 
@@ -81,6 +82,7 @@ trait RegionGraph {
   }
 }
 
+@deprecated("thesis cleanup")
 object RegionGraph {
   def betheRG(ps: ProblemStructure): JunctionGraph = {
     val upper: SSet[Int] = new SSet(ps.scopeOfFactor.map(_.toSet)(collection.breakOut))
@@ -93,24 +95,38 @@ object RegionGraph {
 }
 
 /** Notation from Wang et Zhou: "Simplifying Generalized Belief Propagation...". */
+@deprecated("thesis cleanup")
 object WangZhouNotation {
-  implicit class WZRegionGraph(val rg: RegionGraph) extends AnyVal {
+  trait WZRegionGraph {
+    type R
+    def <(r1: R, r2: R): Boolean
+    def >(r1: R, r2: R): Boolean
+    def <=(r1: R, r2: R): Boolean  = <(r1,r2) || r1 == r2
+    def >=(r1: R, r2: R): Boolean = >(r1,r2) || r1 == r2
+    def all_<(r: R): Set[R]
+    def all_>(r: R): Set[R]
+    def all_<=(r: R): Set[R]
+    def all_>=(r: R): Set[R]
+    /** Return all regions in the boundary of `r`. */
+    def B(r: R): Set[R]
+    def I(r: R): Set[R] = all_<=(r)
+    def A(r: R): Set[R] = all_>(r)
+  }
+
+  implicit class WZRegionGraphWrapper(val rg: RegionGraph) extends WZRegionGraph {
     type R = rg.Region
     def <(r1: R, r2: R): Boolean = rg.descendants(r2).contains(r1)
     def >(r1: R, r2: R): Boolean = rg.descendants(r1).contains(r2)
-    def <=(r1: R, r2: R): Boolean = <(r1,r2) || r1 == r2
-    def >=(r1: R, r2: R): Boolean = >(r1,r2) || r1 == r2
     def all_<(r: R): Set[R] = rg.descendants(r)
     def all_>(r: R): Set[R] = rg.ancestors(r)
     def all_<=(r: R): Set[R] = rg.descendants(r) + r
     def all_>=(r: R): Set[R] = rg.ancestors(r) + r
-    def I(r: R): Set[R] = all_<=(r)
-    def A(r: R): Set[R] = all_>(r)
     def B(r: R): Set[R] = rg.boundary(r)
   }
 }
 
 /** Somewhat efficient implementation of region graph methods. */
+@deprecated("thesis cleanup")
 trait ChildMapRG { self: RegionGraph =>
   protected def childrenInitializer(r: Region): Set[Region]
   protected lazy val childMap: Map[Region, Set[Region]] =
@@ -125,6 +141,7 @@ trait ChildMapRG { self: RegionGraph =>
   final override def parents(r: Region): Set[Region] = parentMap(r)
 }
 
+@deprecated("thesis cleanup")
 trait OverCountingNumbers {self: RegionGraph =>
   protected lazy val overCountingNumbers: Map[Region,Int] = {
     require(regions.nonEmpty, "cannot compute overcounting numbers for empty region graph")

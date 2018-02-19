@@ -21,7 +21,6 @@ trait LCBPAlg { self: Product =>
 
 object LCBPAlg {
   val all = Seq(
-    OldLCBP,
     LCBP_G_Exact,
     LCBP_G_BP,
     LCBP_BP(corrected = false),
@@ -33,18 +32,6 @@ object LCBPAlg {
   )
 }
 
-
-/** The old implementation, using exact meta inference with counting. */
-case object OldLCBP extends LCBPAlg {
-  override type R = LCBP
-
-  override def infer(s: FactoredScheme, tol: Double, maxIter: Int): OldLCBP.R =
-    new LCBP(s.problem,s.toGScheme,tol,maxIter)
-  override def result(r: OldLCBP.R): (MargParI, Boolean) = (r,r.calibrator.isConverged)
-  override def calibrationGraph(r: OldLCBP.R): DotGraph[_] = r.calibrator.toDot
-
-  override def nodeCSV(r: R): String = r.calibrator.toCSV
-}
 
 /** The new lcbp implementation, using exact meta inference with junction tree. */
 case object LCBP_G_Exact extends LCBPAlg {

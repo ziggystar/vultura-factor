@@ -4,6 +4,7 @@ import vultura.factor.ProblemStructure
 
 /** An `OvercountingRegionGraph` is defined by a set of variable-subsets, and an assignment of factors to outer regions.
   * It has its region weights defined automatically as the overcounting numbers. */
+@deprecated("thesis cleanup")
 case class OvercountingRegionGraph(problemStructure: ProblemStructure,
                                    regions: Set[Set[ProblemStructure#VI]],
                                    factorAssignment: Map[ProblemStructure#FI,Set[ProblemStructure#VI]])

@@ -7,7 +7,7 @@ import vultura.util.IntDomainCPI
 
 import scala.collection.mutable
 
-/** Just one set of variables gets conditioned. */
+/** Locally conditioned mean field. Just one set of variables gets conditioned. */
 class SinglyLCMF(val problem: Problem, val scheme: SimpleScheme, val tol: Double = 1e-9, maxIterations: Int = 1000) extends MargParI {
 
   require(problem.ring == NormalD, "mean field only supports calculation in normal domain")

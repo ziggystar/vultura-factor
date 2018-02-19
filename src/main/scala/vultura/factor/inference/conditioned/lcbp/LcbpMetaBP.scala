@@ -19,7 +19,7 @@ class LcbpMetaBP(val scheme: FactoredScheme, val maxUpdates: Long = 1000000, val
     override type InEdge = MetaF2V
     override def inputs: IndexedSeq[InEdge] =
       for(nf <- metaStructure.factorIdxOfVariable(v) if nf != fi) yield MetaF2V(nf,v)
-    def mCompute() = {
+    def mCompute(): (IndexedSeq[Array[Double]], Array[Double]) => Unit = {
       //this must be lazy, otherwise inputs gets called indefinitely
       val spTask = SumProductTask(
         remainingVars = variables,

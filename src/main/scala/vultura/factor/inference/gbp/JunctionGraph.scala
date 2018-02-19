@@ -4,6 +4,7 @@ import vultura.factor.ProblemStructure
 
 /** A two-layer region graph, as described in Yedidia,Freeman,Weiss (Constructing Free...), which is a
   * generalization of the jg described in Aji-McEliece. */
+@deprecated("thesis cleanup")
 case class JunctionGraph(problemStructure: ProblemStructure,
                          lowerRegions: Set[Set[ProblemStructure#VI]],
                          upperRegions: Set[Set[ProblemStructure#VI]],

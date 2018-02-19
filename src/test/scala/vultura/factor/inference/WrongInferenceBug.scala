@@ -37,6 +37,6 @@ class WrongInferenceBug extends Specification {
   def is =
     s2"" ^
     (JunctionTree.logZ(problem) must beCloseTo(result,1e-3)) ^
-    (math.log(vultura.factor.variableElimination(problem)) must beCloseTo(result,1e-3)) ^
+    (VariableElimination(problem).logZ must beCloseTo(result,1e-3)) ^
     "bp must infer correct result" ! (new BeliefPropagation(problem,new Random(0),1e-10,100).logZ must beCloseTo(result,1e-3))
 }
