@@ -1,6 +1,7 @@
-package vultura.factor.inference
+package vultura.inference
 
-import vultura.factor.{Ring, LogD, Factor, Problem}
+import vultura.factor.inference.MargParI
+import vultura.factor.{Factor, LogD, Problem, Ring}
 import vultura.util.CrossProductIndexer
 
 /** Exact inference of marginal probabilities and partition function by iterating over all assignments.

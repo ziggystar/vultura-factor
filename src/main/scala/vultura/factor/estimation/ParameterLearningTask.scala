@@ -5,10 +5,10 @@ import java.util.logging.Logger
 import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.BOBYQAOptimizer
 import vultura.factor._
 import vultura.factor.inference.{JointMargI, JunctionTree, ParFunI}
-import vultura.util.stats._
 import vultura.util._
+import vultura.util.stats._
 
-import scala.collection.{immutable, mutable}
+import scala.collection.mutable
 import scala.language.reflectiveCalls
 
 trait UnconstraintDifferentiableFunction { outer =>

@@ -62,9 +62,5 @@ object Generator {
 
   /** @param p Probability of one. */
   def bernoulli(p: Double): Generator[Boolean] = Generator(_.nextDouble() < p)
-  def only[A](a: A): Generator[A] = Constant(a)
-}
-
-case class Constant[+A](a: A) extends Generator[A]{
-  override def generate(r: Random): A = a
+  def only[A](a: A): Generator[A] = _ => a
 }

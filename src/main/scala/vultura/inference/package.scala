@@ -1,14 +1,16 @@
 package vultura
 
+import vultura.calibration._
 import vultura.factor.Problem
-import vultura.factor.inference.{ConvergenceStats, MinDegreeOrderer, VariableOrderer, VariationalResult}
+import vultura.factor.inference.VariationalResult
 import vultura.inference.gbp.TwoLayerOC
+import vultura.inference.treedecomposition.{MinDegreeOrderer, VariableOrderer}
 
-package object calibration {
+package object inference {
   /** Junctiontree inference with a provided variable orderer. */
   def junctionTreeOrdered(problem: Problem, vo: VariableOrderer, cc: CalConfig = CalConfig()): (ConvergenceStats, VariationalResult) = {
     val jg = TwoLayerOC.junctionTree(problem, vo(problem).order)
-    val cp = new TwoLayerOCPropagation(jg, problem.ring)
+    val cp = new ClusterGraphPropagation(jg, problem.ring)
     val cal = new Calibrator(cp)
     cal.initialize(problem.factors)
     val calRes = cal.calibrate(maxIterations = cc.maxIterations, maxDiff = cc.maxDiff, damping = cc.damping)

@@ -1,7 +1,8 @@
-package vultura.calibration
+package vultura.inference
 
+import vultura.calibration.{CalProblem, ResultBuilder}
 import vultura.factor._
-import vultura.factor.inference.{VarBeliefFromRegionBelief, VariationalResult, RegionBeliefs}
+import vultura.factor.inference.{RegionBeliefs, VarBeliefFromRegionBelief, VariationalResult}
 import vultura.inference.gbp.TwoLayerOC
 
 /** Message-Passing algorithm implementing two-way message passing on bipartite region graphs.
@@ -10,7 +11,7 @@ import vultura.inference.gbp.TwoLayerOC
   * @param rg
   * @param ring
   */
-class TwoLayerOCPropagation(val rg: TwoLayerOC, val ring: Ring[Double])
+class ClusterGraphPropagation(val rg: TwoLayerOC, val ring: Ring[Double])
   extends CalProblem with ResultBuilder[RegionBeliefs[TwoLayerOC#Region] with VariationalResult] { outer =>
 
   type Region = rg.Region

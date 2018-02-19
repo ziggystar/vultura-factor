@@ -1,8 +1,8 @@
 package vultura.factor.inference.conditioned
 
-import vultura.factor.{Ring, Factor, LogD, Problem}
 import vultura.factor.inference.MargParI
-import vultura.factor.inference.calibration.{LBP, BPResult}
+import vultura.factor.inference.calibration.{BPResult, LBP}
+import vultura.factor.{Factor, LogD, Problem, Ring}
 
 
 /** Condition on all assignments to a given set of variables, and approximate the result by running BeliefPropagation

@@ -1,6 +1,6 @@
 package vultura.factor.generation
 
-import vultura.factor.{Factor, LogD}
+import vultura.factor.{Factor, LabeledProblem, LogD}
 
 @deprecated("use SingletonParameterization", "0")
 /** A generator for singleton potentials. */

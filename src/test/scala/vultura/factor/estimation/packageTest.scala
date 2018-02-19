@@ -1,11 +1,12 @@
 package vultura.factor.estimation
 
 import org.specs2.Specification
-import vultura.factor._
-import generators._
-import scala.util.Random
-import vultura.factor.inference.JunctionTree
 import org.specs2.matcher.MatchResult
+import vultura.factor._
+import vultura.factor.generators._
+import vultura.factor.inference.JunctionTree
+
+import scala.util.Random
 
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>

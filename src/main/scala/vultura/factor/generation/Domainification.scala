@@ -1,6 +1,5 @@
 package vultura.factor.generation
 
-import vultura.factor.StructureOnly
 import vultura.factor.generation.graph.Graph
 import vultura.util.SIIndex
 
@@ -20,6 +19,6 @@ case class IIDDomainSize(ds: Generator[Int]) extends Domainification[Any] {
 
 /** Constant domain size for all variables. */
 case class FixedDomainsSize(n: Int = 2) extends Domainification[Any]{
-  val inner = IIDDomainSize(Constant(n))
+  val inner = IIDDomainSize(Generator.only(n))
   override def addDomains[L <: Any](graph: Graph[L]): Generator[LabeledProblemStructure[L]] = inner.addDomains(graph)
 }

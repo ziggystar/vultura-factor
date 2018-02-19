@@ -1,6 +1,7 @@
 package vultura.factor.generators
 
 import org.specs2._
+
 import scala.util.Random
 
 class packageTest extends Specification {

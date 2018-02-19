@@ -2,10 +2,10 @@ package vultura.factor
 
 import vultura.factor.inference.BeliefPropagation
 import vultura.factor.inference.calibration.LBP
+import vultura.util.stats._
 
 import scala.language.reflectiveCalls
 import scala.util.Random
-import vultura.util.stats._
 
 
 /**

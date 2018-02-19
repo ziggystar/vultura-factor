@@ -1,11 +1,10 @@
 package vultura.calibration
 
 import com.typesafe.scalalogging.StrictLogging
-import vultura.factor.inference.ConvergenceStats
-import vultura.util.{FastBitSet, OpenBitSet, SIIndex}
+import vultura.util.{OpenBitSet, SIIndex}
 
-import collection.mutable
 import scala.collection.immutable.IndexedSeq
+import scala.collection.mutable
 
 /** Mutable class that holds a calibration state.
   * This is the latest, and most featureful implementation of a calibrator.

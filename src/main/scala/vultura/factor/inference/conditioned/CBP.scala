@@ -1,7 +1,7 @@
 package vultura.factor.inference.conditioned
 
 import vultura.factor.inference._
-import vultura.factor.{LogD, Factor, Problem}
+import vultura.factor.{Factor, LogD, Problem}
 import vultura.util.seq2randomSeq
 
 import scala.collection.mutable

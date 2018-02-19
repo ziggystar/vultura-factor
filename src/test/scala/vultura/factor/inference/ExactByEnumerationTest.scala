@@ -1,7 +1,8 @@
 package vultura.factor.inference
 
 import org.specs2.mutable.Specification
-import vultura.factor.{NormalD, Factor, Problem}
+import vultura.factor.{Factor, NormalD, Problem}
+import vultura.inference.ExactByEnumeration
 
 class ExactByEnumerationTest extends Specification {
   "on single factor problem" >> {

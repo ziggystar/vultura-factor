@@ -2,7 +2,7 @@ package vultura.factor.inference.conditioned
 
 import vultura.factor.inference.MargParI
 import vultura.factor.inference.calibration._
-import vultura.factor.{Ring, Problem}
+import vultura.factor.{Problem, Ring}
 
 /** Approximate BP solver plugin based on cp2 implementation. */
 case class BPSolverPlugin(tol: Double = 1e-10, maxSteps: Long = 10000) extends ApproximateSolver[ExtendedBPResult]{

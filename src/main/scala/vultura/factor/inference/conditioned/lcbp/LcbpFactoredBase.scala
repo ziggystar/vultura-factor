@@ -1,7 +1,7 @@
 package vultura.factor.inference.conditioned.lcbp
 
-import vultura.factor.inference.conditioned.Condition
 import vultura.factor._
+import vultura.factor.inference.conditioned.Condition
 import vultura.util.{ArrayIndex, CrossProductIndexer}
 
 /** This trait exposes the meta problem by providing a [[ProblemStructure]] and edges

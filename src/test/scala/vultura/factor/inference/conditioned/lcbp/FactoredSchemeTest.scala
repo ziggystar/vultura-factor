@@ -1,8 +1,8 @@
 package vultura.factor.inference.conditioned.lcbp
 
 import org.specs2.Specification
-import vultura.factor.{NormalD, Problem}
 import vultura.factor.generators._
+import vultura.factor.{NormalD, Problem}
 
 class FactoredSchemeTest extends Specification {
   val problem4v = Problem(IndexedSeq(), Array(2,2,2,2), NormalD)

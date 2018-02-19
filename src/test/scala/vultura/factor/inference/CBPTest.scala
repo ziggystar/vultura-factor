@@ -1,9 +1,10 @@
 package vultura.factor.inference
 
 import org.specs2.Specification
+import vultura.factor.inference.conditioned.{CBP, CBPConfig}
 import vultura.factor.{Problem, generators}
+
 import scala.util.Random
-import vultura.factor.inference.conditioned.{CBPConfig, CBP}
 
 /**
  * @author Thomas Geier

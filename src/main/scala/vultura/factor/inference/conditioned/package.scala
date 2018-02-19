@@ -1,6 +1,6 @@
 package vultura.factor.inference
 
-import vultura.factor.{Val, Var, Factor, Problem}
+import vultura.factor.{Factor, Problem, Val, Var}
 
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>

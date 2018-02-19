@@ -1,9 +1,8 @@
 package vultura.factor.generators
 
 import vultura.factor.inference.conditioned.lcbp.FactoredScheme
-import vultura.factor.{Problem, LabeledPS, FactorGenerator}
+import vultura.factor.{FactorGenerator, LabeledPS, Problem}
 
-import scala.collection.immutable
 import scala.util.Random
 
 /** Two-Layer hierarchical grid problems.

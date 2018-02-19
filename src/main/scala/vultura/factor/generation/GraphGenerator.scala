@@ -29,4 +29,4 @@ object LabeledProblemStructure {
   }
 }
 
-case class LabeledProblem[N](problem: Problem, variableLabels: Index[N])
+

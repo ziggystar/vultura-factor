@@ -1,20 +1,19 @@
-package vultura.calibration
+package vultura.inference
 
 import org.specs2.mutable.Specification
 import org.specs2.specification.core.Fragment
-import vultura.factor.inference.calibration.LBP
+import vultura.calibration.{Calibrator, ConvergenceStats}
 import vultura.factor._
 import vultura.factor.generation._
-import vultura.factor.inference.gbp.RegionGraph
-import vultura.factor.inference.{ConvergenceStats, RegionBeliefs, VariationalResult}
-import vultura.inference.gbp.{RgDiagnosis, TwoLayerOC}
+import vultura.factor.inference.{RegionBeliefs, VariationalResult}
+import vultura.inference.gbp.TwoLayerOC
 
 import scala.util.Random
 
 /**
   * Created by thomas on 11.12.15.
   */
-class TwoLayerOCPropagationTest extends Specification with FactorMatchers {
+class ClusterGraphPropagationTest extends Specification with FactorMatchers {
 
   val p1: Problem =
     problemGenerator(Generator.only(graph.lattice(4 -> false, 4 -> false))).generate(new Random(0)).problem.toRing(NormalD)
@@ -37,7 +36,7 @@ class TwoLayerOCPropagationTest extends Specification with FactorMatchers {
 
   def jt(p: Problem): (RegionBeliefs[TwoLayerOC#TLR] with VariationalResult, ConvergenceStats) = {
     val rg = TwoLayerOC.junctionTreeMinDegree(p)
-    val prop = new TwoLayerOCPropagation(rg, p.ring)
+    val prop = new ClusterGraphPropagation(rg, p.ring)
     Calibrator.calibrateParam(prop, p.factors, 1)
   }
 
@@ -90,7 +89,7 @@ class TwoLayerOCPropagationTest extends Specification with FactorMatchers {
   def aggregatedVsAsis(p: Problem, name: String, maxIterations: Long = 10000, maxDiff: Double = 1e-12, damping: Double = 0d): Fragment = {
     s"$name" ! {
       def calibrate(rg: TwoLayerOC): (RegionBeliefs[TwoLayerOC#TLR], ConvergenceStats) = {
-        val cp = new TwoLayerOCPropagation(rg, p.ring)
+        val cp = new ClusterGraphPropagation(rg, p.ring)
         Calibrator.calibrateParam(cp, p.factors, maxIterations, tol = maxDiff, damping = damping)
       }
       val (aggr_res, aggr_stats) = calibrate(TwoLayerOC.betheRegionGraph(p,aggregateFactors = true))

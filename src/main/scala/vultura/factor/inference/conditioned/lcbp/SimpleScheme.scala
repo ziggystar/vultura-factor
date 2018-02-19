@@ -3,8 +3,6 @@ package vultura.factor.inference.conditioned.lcbp
 import vultura.factor.{Factor, Problem}
 import vultura.util.DomainCPI
 
-import scala.util.Random
-
 /**
  * A simple conditioning scheme is defined by a set of variables, accompanied by a scope. The scope
  * must contain the variable itself.

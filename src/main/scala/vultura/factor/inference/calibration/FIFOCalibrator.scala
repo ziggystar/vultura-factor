@@ -2,6 +2,7 @@ package vultura.factor.inference.calibration
 
 import vultura.util._
 import vultura.util.graph.DotGraph
+
 import scala.collection.mutable
 
 /**
@@ -13,6 +14,7 @@ import scala.collection.mutable
  *
  * @see Edge, EdgeValues
  */
+@deprecated("use vultura.calibration")
 class FIFOCalibrator[E <: Edge](val problem: Iterable[E])(
   val convergenceTest: ConvergenceTest[E] = ConvergenceTest.MaxDiff(),
   val maxSteps: Long = 1000000,

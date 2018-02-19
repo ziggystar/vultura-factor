@@ -1,7 +1,7 @@
 package vultura.factor
 
 import org.specs2._
-import Utils._
+import vultura.factor.Utils._
 
 /**
  * Created by IntelliJ IDEA.
@@ -9,7 +9,7 @@ import Utils._
  * Date: 4/9/13
  */
 class LogDTest extends Specification {
-  import math.{log,exp}
+  import math.{exp, log}
 
   def is =
     "simple sum" ! (LogD.sum(log(3),log(4)) must beCloseTo(log(7),0.01)) ^

@@ -1,8 +1,9 @@
 package vultura.factor.inference
 
 import org.specs2.Specification
-import vultura.factor.generators._
 import vultura.factor.Problem
+import vultura.factor.generators._
+import vultura.inference.VariableElimination
 
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>

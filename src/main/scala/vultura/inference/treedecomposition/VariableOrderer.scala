@@ -1,4 +1,4 @@
-package vultura.factor.inference
+package vultura.inference.treedecomposition
 
 import vultura.factor.{Problem, Var}
 import vultura.util.TreeWidth

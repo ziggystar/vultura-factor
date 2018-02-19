@@ -1,7 +1,9 @@
 package vultura.factor.inference
 
-import vultura.factor._
 import org.specs2._
+import vultura.factor._
+import vultura.inference.VariableElimination
+
 import scala.util.Random
 
 /**

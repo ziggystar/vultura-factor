@@ -1,7 +1,8 @@
-package vultura.calibration
+package vultura.inference
 
+import vultura.calibration.{CalProblem, ResultBuilder}
 import vultura.factor.inference.VariationalResult
-import vultura.factor.{Ring, Factor, NormalD, Problem}
+import vultura.factor.{Factor, NormalD, Problem, Ring}
 
 /** Mean field approximation. */
 case class MeanField(p: Problem) extends CalProblem with ResultBuilder[VariationalResult] {

@@ -1,6 +1,6 @@
 package vultura.factor.inference.conditioned.lcbp
 
-import java.io.{PrintStream, FileOutputStream}
+import java.io.{FileOutputStream, PrintStream}
 
 import vultura.factor.Problem
 import vultura.factor.inference.conditioned.Condition

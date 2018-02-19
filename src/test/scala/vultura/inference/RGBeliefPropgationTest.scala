@@ -1,10 +1,11 @@
-package vultura.calibration
+package vultura.inference
 
 import org.specs2.mutable.Specification
-import vultura.factor.inference.calibration.{LBP, BPResult}
-import vultura.factor.inference.gbp.{OvercountingRegionGraph, RegionGraph}
-import vultura.factor.{FactorMatchers, LogD, Problem}
+import vultura.calibration.Calibrator
 import vultura.factor.generators._
+import vultura.factor.inference.calibration.{BPResult, LBP}
+import vultura.factor.inference.gbp.{OvercountingRegionGraph, RegionGraph}
+import vultura.factor.{FactorMatchers, LabeledProblem, LogD, Problem}
 
 import scala.util.Random
 
@@ -15,7 +16,7 @@ class RGBeliefPropgationTest extends Specification with FactorMatchers {
   "compare PTC on bethe RG with ordinary LBP result" >> {
     val regularBPResult: BPResult = LBP.infer(p1,tol=1e-15)
 
-    val (ptcResult, status) = Calibrator.calibrate(RGBeliefPropagation(RegionGraph.betheRG(p1),p1),tol=1e-15)
+    val (ptcResult, status) = Calibrator.calibrate(ParentToChildPropagation(RegionGraph.betheRG(p1),p1),tol=1e-15)
 
     status.isConverged and (ptcResult must haveSameMarginals(LBP.infer(p1,tol=1e-15),1e-12))
   }
@@ -23,7 +24,7 @@ class RGBeliefPropgationTest extends Specification with FactorMatchers {
   "compare PTC on bethe RG with ordinary LBP result (normal encoding)" >> {
     val regularBPResult: BPResult = LBP.infer(p1_normal,tol=1e-15)
 
-    val (ptcResult, status) = Calibrator.calibrate(RGBeliefPropagation(RegionGraph.betheRG(p1_normal),p1_normal),tol=1e-15)
+    val (ptcResult, status) = Calibrator.calibrate(ParentToChildPropagation(RegionGraph.betheRG(p1_normal),p1_normal),tol=1e-15)
 
     status.isConverged and (ptcResult must haveSameMarginals(LBP.infer(p1_normal,tol=1e-15),1e-12))
   }
@@ -42,7 +43,7 @@ class RGBeliefPropgationTest extends Specification with FactorMatchers {
     )
 
     "have valid marignals as result" >> {
-      val p2c = RGBeliefPropagation(conditionRG, problem)
+      val p2c = ParentToChildPropagation(conditionRG, problem)
 
       val (rgResult, status) = Calibrator.calibrate(p2c, damping = 0.3)
       (status.isConverged.aka("rgBP is converged") must beTrue) and

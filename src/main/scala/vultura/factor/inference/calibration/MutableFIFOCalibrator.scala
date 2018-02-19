@@ -10,6 +10,7 @@ import scala.collection.mutable
   * result in a significant change according to `differ`.
   * @param maxSteps Number of edge updates to perform initially.
   */
+@deprecated("use vultura.calibration")
 class MutableFIFOCalibrator[E <: MEdge](val problem: Iterable[E])(
   val convergenceTest: ConvergenceTest[E] = ConvergenceTest.MaxDiff(),
   val maxSteps: Long = 1000000,

@@ -1,7 +1,7 @@
 package vultura.factor.generators.lcbp
 
 import vultura.factor.inference.BeliefPropagation
-import vultura.factor.inference.conditioned.lcbp.{FactoredScheme}
+import vultura.factor.inference.conditioned.lcbp.FactoredScheme
 import vultura.factor.{LogD, Problem}
 
 import scala.util.Random

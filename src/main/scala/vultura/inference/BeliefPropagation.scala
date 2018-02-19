@@ -1,10 +1,11 @@
-package vultura.calibration
+package vultura.inference
 
 import com.typesafe.scalalogging.LazyLogging
+import vultura.calibration.{CalProblem, Calibrator, ConvergenceStats, ResultBuilder}
 import vultura.factor._
 import vultura.factor.inference._
 import vultura.util.SSet
-import vultura.util.graph.graphviz.{DotGraph, NAttr, Shape}
+import vultura.util.graph.graphviz.{DotGraph, Shape}
 
 /** Belief propagation on the factor graph representation. Parameters are factor-to-variable messages (F2V), and
   * variable-to-factor messages (V2F). */

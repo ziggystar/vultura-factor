@@ -1,6 +1,7 @@
 package vultura.factor.inference
 
 import vultura.factor._
+import vultura.inference.treedecomposition.{MinDegreeOrderer, VariableOrder, VariableOrderer}
 import vultura.util.TreeWidth._
 import vultura.util._
 import vultura.util.graph.Tree

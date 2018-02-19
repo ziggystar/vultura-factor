@@ -1,6 +1,8 @@
-package vultura.factor.inference
+package vultura.inference
 
-import vultura.factor.{Ring, NormalD, Factor, Problem}
+import vultura.factor.inference.ParFunI
+import vultura.factor.{Factor, NormalD, Problem, Ring}
+import vultura.inference.treedecomposition.{MinDegreeOrderer, VariableOrderer}
 
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>

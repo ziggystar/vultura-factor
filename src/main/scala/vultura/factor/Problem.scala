@@ -4,7 +4,7 @@ import java.io._
 
 import fastparse.WhitespaceApi
 import fastparse.core.Parsed.Success
-import vultura.factor.inference.VariableElimination
+import vultura.inference.VariableElimination
 import vultura.util.SSet
 
 /** A problem is basically a collection of factors, together with a domain and a ring.
@@ -151,7 +151,6 @@ object Problem{
       NoTrace(P(CharIn(" \t\n").rep))
     }
     import White._
-
     import fastparse.noApi._
 
     def uintP: P[Int] = P(CharIn("1234567890").repX(min = 1).!).map(_.toInt).opaque("uint")

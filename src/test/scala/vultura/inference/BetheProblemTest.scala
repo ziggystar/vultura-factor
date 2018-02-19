@@ -1,4 +1,4 @@
-package vultura.calibration
+package vultura.inference
 
 import org.specs2.mutable.Specification
 import vultura.factor.inference.calibration.LBP

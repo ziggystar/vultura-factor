@@ -1,9 +1,9 @@
 package vultura.factor.inference.conditioned.lcbp
 
 import vultura.factor._
-import vultura.factor.inference.calibration.{MutableFIFOCalibrator, ConvergenceTest, EdgeValues, Edge}
+import vultura.factor.inference.calibration.{ConvergenceTest, Edge, EdgeValues, MutableFIFOCalibrator}
 import vultura.factor.inference.conditioned._
-import vultura.factor.inference.{JointMargI, ParFunI, JunctionTree, MargParI}
+import vultura.factor.inference.{JointMargI, JunctionTree, MargParI, ParFunI}
 
 import scala.runtime.ObjectRef
 

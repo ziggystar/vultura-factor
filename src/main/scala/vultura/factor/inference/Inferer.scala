@@ -58,6 +58,7 @@ trait ParFunI extends Inferer {
   /** @return Natural logarithm of partition function. */
   def logZ: Double
   /** @return Partition function in encoding specified by `ring`. */
+
   @deprecated("use only logZ", "24.0.0")
   def Z: Double = math.exp(logZ)
   @deprecated("use only logZ", "24.0.0")
@@ -92,14 +93,6 @@ trait JMIFromRB[R] extends JointMargI {self : RegionBeliefs[R] =>
   }
 }
 
-/** Trait that is implemented by inference algorithms that can compute the most probable explanation, most probable
-  * assignment, maximum aposteriori assignment.
-  */
-trait MPEI { self: Inferer =>
-  /** @return the most probably variable assignment. */
-  def mpe: Map[Var,Val]
-}
-
 /** This class does not retain a reference to the argument `mpi`, and can thus be used to simply copy the marginals from
   * a result object to reduce heap usage.
   */
@@ -122,18 +115,6 @@ class Result(mpi: MargParI) extends MargParI {
     case r: Result => r.logZ == this.logZ && r.problem == this.problem && this.marginals.deep == r.marginals.deep
     case _ => false
   }
-}
-
-case class ConvergenceStats(iterations: Long, maxDiff: Double, isConverged: Boolean) {
-  def max(other: ConvergenceStats) = ConvergenceStats(
-    iterations max other.iterations,
-    maxDiff max other.maxDiff,
-    isConverged && other.isConverged
-  )
-}
-
-object ConvergenceStats {
-  def exact: ConvergenceStats = ConvergenceStats(1, 0d, isConverged = true)
 }
 
 trait VariationalResult extends MargParI { outer =>

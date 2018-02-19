@@ -1,7 +1,7 @@
 package vultura.util
 
 import org.specs2.mutable.Specification
-import TreeWidth._
+import vultura.util.TreeWidth._
 import vultura.util.graph.Tree
 
 import scala.util.Random

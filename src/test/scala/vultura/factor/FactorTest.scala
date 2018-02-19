@@ -1,8 +1,8 @@
 package vultura.factor
 
 import org.specs2._
-import Factor._
-import Utils._
+import vultura.factor.Factor._
+import vultura.factor.Utils._
 
 /**
  * Created by IntelliJ IDEA.

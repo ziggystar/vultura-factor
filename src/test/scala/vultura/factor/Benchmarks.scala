@@ -1,11 +1,12 @@
 package vultura.factor
 
-import java.lang.management.{ThreadMXBean, ManagementFactory}
+import java.lang.management.{ManagementFactory, ThreadMXBean}
+
+import vultura.factor
+import vultura.util.stats._
 
 import scala.language.reflectiveCalls
 import scala.util.Random
-import vultura.factor
-import vultura.util.stats._
 
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>

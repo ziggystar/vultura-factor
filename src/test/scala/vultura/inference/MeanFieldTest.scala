@@ -1,10 +1,10 @@
-package vultura.calibration
+package vultura.inference
 
 import org.specs2.matcher.MatchResult
 import org.specs2.mutable.Specification
+import vultura.calibration.Calibrator
 import vultura.factor.generation._
 import vultura.factor.{FactorMatchers, NormalD, Problem}
-import vultura.util.graph.graphviz.Directed
 
 class MeanFieldTest extends Specification with FactorMatchers {
 

@@ -1,9 +1,10 @@
 package vultura.util.random
 
+import java.util.{Random => JRandom}
+
 import org.specs2.mutable.Specification
 
 import scala.util.Random
-import java.util.{Random => JRandom}
 
 class Dist$Test extends Specification {
 

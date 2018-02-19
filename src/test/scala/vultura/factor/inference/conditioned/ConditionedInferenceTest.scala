@@ -1,7 +1,7 @@
 package vultura.factor.inference.conditioned
 
 import org.specs2.mutable.Specification
-import vultura.factor.{SampleProblems, Problem}
+import vultura.factor.SampleProblems
 
 class ConditionedInferenceTest extends Specification {
 

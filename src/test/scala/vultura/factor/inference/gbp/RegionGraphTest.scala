@@ -2,7 +2,7 @@ package vultura.factor.inference.gbp
 
 import org.specs2.mutable.Specification
 import org.specs2.specification.core.Fragments
-import vultura.factor.{SampleProblems, Problem}
+import vultura.factor.{Problem, SampleProblems}
 
 
 class RegionGraphTest extends Specification {

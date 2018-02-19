@@ -2,7 +2,10 @@ package vultura.factor.inference
 
 import org.specs2.Specification
 import vultura.factor._
-import generators._
+import vultura.factor.generators._
+import vultura.inference.ExactByEnumeration
+import vultura.inference.treedecomposition.{RandomOrderer, VariableOrderer}
+
 import scala.util.Random
 
 /**

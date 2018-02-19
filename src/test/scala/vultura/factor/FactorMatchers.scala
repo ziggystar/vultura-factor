@@ -1,7 +1,7 @@
 package vultura.factor
 
-import org.specs2.matcher.{MatchResult, Expectable, Matcher}
-import vultura.factor.inference.{VariableElimination, MarginalI, ParFunI, JunctionTree}
+import org.specs2.matcher.{Expectable, MatchResult, Matcher}
+import vultura.factor.inference.{JunctionTree, MarginalI, ParFunI}
 
 /**
  * Matchers for use with FastFactor objects.

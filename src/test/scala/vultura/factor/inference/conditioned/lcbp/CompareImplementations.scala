@@ -1,11 +1,11 @@
 package vultura.factor.inference.conditioned.lcbp
 
-import java.io.{PrintStream, FileOutputStream}
+import java.io.{FileOutputStream, PrintStream}
 
 import org.specs2._
-import vultura.factor.inference.JunctionTree
-import vultura.factor.{LogD, Benchmarks, FactorMatchers}
 import vultura.factor.generators._
+import vultura.factor.inference.JunctionTree
+import vultura.factor.{Benchmarks, FactorMatchers, LogD}
 
 import scala.util.Random
 

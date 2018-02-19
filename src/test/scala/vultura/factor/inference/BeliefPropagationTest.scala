@@ -1,11 +1,10 @@
 package vultura.factor.inference
 
 import org.specs2.Specification
-import vultura.factor._
 import vultura.factor.Utils._
-import vultura.factor.Problem
+import vultura.factor.{Problem, _}
+
 import scala.util.Random
-import org.specs2.matcher.{MatchResult, Expectable, Matcher}
 
 /**
  * Created by IntelliJ IDEA.

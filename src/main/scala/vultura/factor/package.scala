@@ -1,7 +1,5 @@
 package vultura
 
-import vultura.util.TreeWidth
-
 /**
  * Created by IntelliJ IDEA.
  * User: Thomas Geier

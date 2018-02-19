@@ -59,7 +59,5 @@ object CalProblem {
   type Aux[P] = CalProblem {type Parameter = P}
 }
 
-trait ResultBuilder[+R] {outer: CalProblem =>
-  def buildResult(valuation: outer.N => IR): R
-}
+
 

@@ -1,7 +1,7 @@
 package vultura.factor.inference.conditioned
 
 import vultura.factor.inference.{MargParI, ParFunI, Result}
-import vultura.factor.{Ring, Factor, LogD, Problem}
+import vultura.factor.{Factor, LogD, Problem, Ring}
 import vultura.util._
 
 import scala.annotation.tailrec

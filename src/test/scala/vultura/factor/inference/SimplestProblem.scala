@@ -2,6 +2,7 @@ package vultura.factor.inference
 
 import org.specs2.Specification
 import vultura.factor._
+import vultura.inference.VariableElimination
 
 /**
  * Created by IntelliJ IDEA.

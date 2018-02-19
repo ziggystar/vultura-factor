@@ -1,14 +1,15 @@
-package vultura.calibration
+package vultura.inference
 
 import com.typesafe.scalalogging.StrictLogging
-import vultura.factor.inference.{VarBeliefFromRegionBelief, RegionBeliefs, VariationalResult}
+import vultura.calibration.{CalProblem, ResultBuilder}
 import vultura.factor._
 import vultura.factor.inference.gbp.RegionGraph
+import vultura.factor.inference.{RegionBeliefs, VarBeliefFromRegionBelief, VariationalResult}
 
 /** Implementation of the parent-to-child algorithm to optimize region graph free energies.
   * This is along eq (18) in "Simplifying Generalized Belief Propagation on Redundant Region Graphs" (Wang et Zhou).
   */
-case class RGBeliefPropagation(rg: RegionGraph, parameters: Problem) extends CalProblem
+case class ParentToChildPropagation(rg: RegionGraph, parameters: Problem) extends CalProblem
 with StrictLogging with ResultBuilder[RegionBeliefs[RegionGraph#Region] with VariationalResult]{
   if(rg.Diagnosis.isNonRedundant && logger.underlying.isWarnEnabled)
     logger.warn( "running rgBP on redundant region graph")

@@ -1,6 +1,6 @@
 package vultura.factor.inference.conditioned.lcbp
 
-import vultura.factor.{Var, Problem}
+import vultura.factor.{Problem, Var}
 
 import scala.annotation.tailrec
 

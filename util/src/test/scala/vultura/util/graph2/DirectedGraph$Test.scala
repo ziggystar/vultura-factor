@@ -3,9 +3,9 @@ package vultura.util.graph2
 import org.specs2.matcher.Matcher
 import org.specs2.mutable.Specification
 import org.specs2.specification.core.Fragment
-import vultura.util.graph.{LabeledGraph, DiGraphOps, IsDirectedGraph}
 import vultura.util.graph.directed._
 import vultura.util.graph.directed.instances.TupleSeqs._
+import vultura.util.graph.{DiGraphOps, IsDirectedGraph, LabeledGraph}
 
 
 class DirectedGraph$Test extends Specification {

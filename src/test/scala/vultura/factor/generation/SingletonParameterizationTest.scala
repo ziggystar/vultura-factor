@@ -3,7 +3,7 @@ package vultura.factor.generation
 import org.specs2.Specification
 import org.specs2.matcher.{MatchResult, Matcher}
 import org.specs2.specification.core.SpecStructure
-import vultura.factor.Problem
+import vultura.factor.{LabeledProblem, Problem}
 
 import scala.util.Random
 /**

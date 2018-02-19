@@ -1,8 +1,8 @@
-package vultura.calibration
+package vultura.inference
 
 import org.specs2._
-import vultura.factor.{FactorMatchers, LogD, NormalD, Problem}
 import vultura.factor.generation._
+import vultura.factor.{FactorMatchers, LogD, NormalD, Problem}
 
 import scala.util.Random
 /**

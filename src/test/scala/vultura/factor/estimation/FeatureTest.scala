@@ -1,9 +1,9 @@
 package vultura.factor.estimation
 
 import org.specs2._
+import org.specs2.matcher.MatchResult
 import vultura.factor._
 import vultura.factor.generators._
-import org.specs2.matcher.MatchResult
 
 /**
  * @author Thomas Geier <thomas.geier@uni-ulm.de>

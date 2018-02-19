@@ -1,10 +1,10 @@
 package vultura.factor.inference.conditioned.lcbp
 
-import vultura.factor.inference.calibration._
 import vultura.factor._
+import vultura.factor.inference.calibration._
 import vultura.factor.inference.conditioned.Condition
-import vultura.factor.inference.{JunctionTree, ParFunI, MargParI, JointMargI}
-import vultura.util.{SSet, ArrayIndex}
+import vultura.factor.inference.{JointMargI, JunctionTree, MargParI, ParFunI}
+import vultura.util.{ArrayIndex, SSet}
 
 import scala.runtime.ObjectRef
 

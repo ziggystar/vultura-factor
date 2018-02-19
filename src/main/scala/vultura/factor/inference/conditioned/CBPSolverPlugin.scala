@@ -1,7 +1,8 @@
 package vultura.factor.inference.conditioned
 
 import vultura.factor.Problem
-import vultura.factor.inference.{JunctionTree, MargParI, VariableOrderer}
+import vultura.factor.inference.{JunctionTree, MargParI}
+import vultura.inference.treedecomposition.VariableOrderer
 import vultura.util.TreeWidth
 
 /** A `CBPSolverPlugin` handles the inference within an instance of [[ConditionedInference]].

@@ -1,6 +1,6 @@
 package vultura.util.graph
 
-import vultura.util.{SIIndex, Index}
+import vultura.util.{Index, SIIndex}
 
 import scala.collection.mutable
 
