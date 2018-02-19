@@ -3,13 +3,19 @@ package vultura.calibration
 import com.typesafe.scalalogging.StrictLogging
 import vultura.factor.inference.ConvergenceStats
 import vultura.util.{FastBitSet, OpenBitSet, SIIndex}
-import FastBitSet._
-import vultura.factor.inference.conditioned.CBP.CLAMP_METHOD
 
 import collection.mutable
 import scala.collection.immutable.IndexedSeq
 
-/** Mutable class that holds a calibration state. */
+/** Mutable class that holds a calibration state.
+  * This is the latest, and most featureful implementation of a calibrator.
+  * - supports only values of type `Array[Double]`
+  * - damping
+  * - strongly-connected component analysis, which makes it efficient for tree-structured computations
+  * - computes detailed edge statistics, if requested
+  * - supports parameter nodes
+  * - supports selective calibration of subsets of nodes, thus allowing Schedules to be implemented externally
+  */
 class Calibrator[CP <: CalProblem](val cp: CP) extends StrictLogging {
   /** Internal representation of edge state. */
   type IR = Array[Double]
@@ -220,17 +226,6 @@ class Calibrator[CP <: CalProblem](val cp: CP) extends StrictLogging {
     cp.asInstanceOf[cp.type with ResultBuilder[R]].buildResult(nodeState)
 }
 
-/** Holds information wrt a single edge within a computation graph.
-  * @param totalUpdates Number of total updates this edge has received.
-  * @param lastUpdate Iteration during which the last update was made.
-  * @param lastDiff Difference between last and second to last update.
-  * @param totalDiff Sum of differences over all updates of this edge.
-  */
-case class EdgeInfo(totalUpdates: Long, lastUpdate: Long, lastDiff: Double, totalDiff: Double)
-
-/**
-  * Created by thomas on 20.04.16.
-  */
 object Calibrator {
   def calibrateParam[R,P](cp: CalProblem.Aux[P] with ResultBuilder[R],
                      parameters: P,

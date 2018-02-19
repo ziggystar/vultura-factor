@@ -8,7 +8,7 @@ import vultura.factor.inference.conditioned._
  * It is guaranteed, that the conditions C_sup of a set of variables X are sub-conditions
  * of exactly one condition from the set of conditions C_sub of a super-set of variables Y (X \subseteq Y).
  * The conditions factor over single variables, i.e. every global condition can be enforced by a product of 
- * (deterministic 1/0)single variable factors.
+ * (deterministic 1/0) single variable factors.
  */
 trait Scheme {
   /** Values of this type are associated with global conditions. */

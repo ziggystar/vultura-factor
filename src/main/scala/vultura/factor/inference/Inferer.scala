@@ -66,11 +66,6 @@ trait ParFunI extends Inferer {
 
 trait MargParI extends MarginalI with ParFunI{
   def toResult = new Result(this)
-  def maxDiff(other: MargParI): Double = {
-    require(this.problem.domains.deep == other.problem.domains.deep, "variable domains must match for marginal difference")
-    ???
-  }
-
 }
 
 @deprecated("use RegionBeliefs instead", "24.0.0")
@@ -106,7 +101,7 @@ trait MPEI { self: Inferer =>
 }
 
 /** This class does not retain a reference to the argument `mpi`, and can thus be used to simply copy the marginals from
-  * a result object to redfuce heap usage.
+  * a result object to reduce heap usage.
   */
 class Result(mpi: MargParI) extends MargParI {
   override val problem: ProblemStructure = mpi.problem
@@ -149,7 +144,7 @@ trait VariationalResult extends MargParI { outer =>
   final lazy val logZ: Double = averageEnergy + entropy
 
   def copyValues: VariationalResult = new VariationalResult {
-    val mpiResult = outer.toResult
+    val mpiResult: Result = outer.toResult
     /** @return marginal distribution of variable in encoding specified by `ring`. */
     override def encodedVarBelief(variable: Val): Factor = mpiResult.encodedVarBelief(variable)
     override val averageEnergy: Double = outer.averageEnergy

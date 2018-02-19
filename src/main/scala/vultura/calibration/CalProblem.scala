@@ -2,8 +2,6 @@ package vultura.calibration
 
 import vultura.util.graph.graphviz.DotGraph
 
-trait Edge
-
 /** Features:
   * - damping
   * - mutable updating of edge values (set operation)

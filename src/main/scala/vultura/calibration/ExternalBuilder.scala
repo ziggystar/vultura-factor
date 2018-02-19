@@ -1,6 +1,6 @@
 package vultura.calibration
 
-trait ExternalBuilder[CP <: CalProblem, R] { outer =>
+trait ExternalBuilder[CP <: CalProblem, R] {
   def build(cp: CP)(valuation: cp.N => cp.IR): R
 
   def apply(calibrator: Calibrator[CP]): R = build(calibrator.cp)(calibrator.nodeState)

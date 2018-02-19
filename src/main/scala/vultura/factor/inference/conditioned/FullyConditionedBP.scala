@@ -5,7 +5,7 @@ import vultura.factor.inference.MargParI
 import vultura.factor.inference.calibration.{LBP, BPResult}
 
 
-/** Condition on all assignments to a given set of variables, and approximate the result by runnning BeliefPropagation
+/** Condition on all assignments to a given set of variables, and approximate the result by running BeliefPropagation
   * on each subproblem.
   *
   * @param problem
